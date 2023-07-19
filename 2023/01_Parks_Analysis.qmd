@@ -1,0 +1,58 @@
+---
+title: "HEAL Parks 2023 Analysis"
+author: "Ronald Buie"
+date-modified: "`r Sys.Date()`"
+
+format: 
+  pdf:
+    toc: true
+    number-sections: true
+---
+
+# Front Matter
+
+## ITHS REDCap
+
+Data are currently stored in ITHS REDCap. This is currently managed by the program managers and Ronald. This script will pull from the project if correct information is provided (see **secrets and tokens** in the **Setting Environment** section below.)
+
+## This is a Quarto Document
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+
+# 1 Setting Up Environment
+
+```{r load required packages}
+# we prefer to use pacman to manage cran packages. 
+# First check if pacman is installed. If not, install it.
+if(!"pacman" %in% installed.packages()) {
+  install.packages("pacman")
+}
+
+# load and install packages using pacman. 
+# Pacman will install and load missing packages.
+pacman::p_load("here") #used to simplify calls to local directory
+
+```
+
+## Secrets and tokens
+
+In order to pull data directly from REDCap, API information must be provided. You should create a file called "secrets.txt" in this directory. This file should contain the following information:
+
+Note, that the .gitignore for this project is configured to exclude your secrets.txt file, so, by default, it will not upload to github, and you will not be able to see other users' secrets.txt. They are only stored on your machine.
+
+
+# 2 Load Data
+
+```{r import data}
+if (file.exists(here("2023/secrets.txt"))) {
+  
+} else {
+  warning("secrets not found. checking for data.csv")
+  if(!file.exists(here("2023/data.csv"))){
+    stop("data not found")
+  }
+}
+```
+
+
