@@ -45,14 +45,109 @@ Note, that the .gitignore for this project is configured to exclude your secrets
 # 2 Load Data
 
 ```{r import data}
+library(RCurl)
+library(jsonlite)
+library(here)
+library(data.table)
 if (file.exists(here("2023/secrets.txt"))) {
-  
+  source(here("2023/secrets.txt"))
 } else {
   warning("secrets not found. checking for data.csv")
   if(!file.exists(here("2023/data.csv"))){
     stop("data not found")
   }
 }
+
+
+#!/usr/bin/env Rscript
+token <- "FBB8FA4EA7136C81F88BEA9D15254338"
+url <- "https://redcap.iths.org/api/"
+
+formData <- list("token"=token,
+    content='record',
+    action='export',
+    format='json',
+    type='flat',
+    csvDelimiter='',
+    rawOrLabel='label',
+    rawOrLabelHeaders='label',
+    exportCheckboxLabel='true',
+    exportSurveyFields='true',
+    exportDataAccessGroups='false',
+    returnFormat='json',
+    dateRangeBegin='2023-07-01 01:01:01'
+)
+response <- httr::POST(url, body = formData, encode = "form")
+result <- httr::content(response)
+print(result)
 ```
 
+```{r}
+result <- postForm(
+    api_url,
+    token=api_token,
+    content='record',
+    format='json',
+    type='flat',
+    csvDelimiter='',
+    rawOrLabel='label',
+    rawOrLabelHeaders='label',
+    exportCheckboxLabel='true',
+    exportSurveyFields='true',
+    exportDataAccessGroups='false',
+    returnFormat='json',
+    dateRangeBegin='2023-07-01 01:01:01'
+)
+
+AllSOPARCObservations <- as.data.table(fromJSON(result))
+
+SOPARCObservations <- AllSOPARCObservations[record_id >= 141,]
+
+```
+
+
+# Parameterizing data
+
+Parks are observed multiple times. 8 times per day. These are in a morning, lunch, afternoon, and evening period (two data collections per period). This process is repeated for 3 days (24 sets of observations per park).
+
+Each park is divided into one or more areas. All areas should be observed during a single observation period. Some areas may be further divided into sub areas. In our data, each area is simply assigned a number.
+
+```{r, period assignment based on timestamp}
+#For each park, identify and average the observations for each time period within the same day. 
+#
+
+expectedTimes <- c("07:30", "07:59", #morning1
+                   "08:00", "08:29", #morning2
+                   "12:30", "12:59", #lunch1
+                   "13:00", "13:30", #lunch2
+                   "15:30", "15:59", #afternoon1
+                   "16:00", "16:29", #afternoon2
+                   "18:30", "18:59", #evening1
+                   "19:00", "19:29") #evening2
+
+periods <- c("morning1",
+             "morning2",
+             "lunch1",
+             "lunch2",
+             "afternoon1",
+             "afternoon2",
+             "evening1",
+             "evening2")
+
+timesRaw <- as.POSIXct(strptime(expectedTimes, "%H:%M"),"America/Los_Angeles" )
+#times <- as.POSIXct(AllSOPARCObservations$start_time
+
+SOPARCObservationWTime <- SOPARCObservations[start_time != "",]
+ 
+dataCollectionTimes <- as.POSIXct(strptime(SOPARCObservationWTime$start_time, "%Y-%m-%d %H:%M"), "America/Los_Angeles") 
+
+#For each park, use the max area number for that park, and confirm th 
+
+test <- periods[findInterval(format(dataCollectionTimes, format = "%H%M"), format(timesRaw, format = "%H%M"))]
+SOPARCObservationWTime$periodBasedOnTimestamp <- periods[findInterval(format(dataCollectionTimes, format = "%H%M"), format(timesRaw, format = "%H%M"))]
+```
+
+
+
+For each park, there are multible areas . Some Target Areas may have Sub Areas. 
 

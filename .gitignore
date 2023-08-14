@@ -50,3 +50,4 @@ rsconnect/
 
 # Secrets
 secrets.txt
+.Rproj.user
