@@ -79,7 +79,7 @@ formData <- list("token"=token,
 )
 response <- httr::POST(url, body = formData, encode = "form")
 result <- httr::content(response)
-print(result)
+#print(result)
 ```
 
 ```{r}
@@ -99,11 +99,26 @@ result <- postForm(
     dateRangeBegin='2023-07-01 01:01:01'
 )
 
-AllSOPARCObservations <- as.data.table(fromJSON(result))
-
-SOPARCObservations <- AllSOPARCObservations[record_id >= 141,]
+AllSOPARCObservations <- as.data.table(fromJSON(result), )
 
 ```
+
+```{r preliminary cleaning and data typing}
+
+SOPARCObservations <- copy(AllSOPARCObservations)
+
+#remove pre-study observation (test data)
+SOPARCObservations <- SOPARCObservations[record_id >= 141,]
+
+
+#drop observations without a time, we cannot use these
+SOPARCObservations <- SOPARCObservations[start_time != "",]
+
+
+#convert countables to numeric
+
+```
+
 
 
 # Parameterizing data
@@ -112,42 +127,93 @@ Parks are observed multiple times. 8 times per day. These are in a morning, lunc
 
 Each park is divided into one or more areas. All areas should be observed during a single observation period. Some areas may be further divided into sub areas. In our data, each area is simply assigned a number.
 
-```{r, period assignment based on timestamp}
-#For each park, identify and average the observations for each time period within the same day. 
-#
+```{r period assignment based on sequence}
+expectedTimeBreakpoints <- c("08:00", #start morning2
+                             "08:30", #between M2 and L1
+                             "12:30", #start L1
+                             "13:00", #start L2
+                             "13:30", # between L2 and A1
+                             "15:30", #start A1
+                             "16:00", #start A2
+                             "16:30", #between A2 and E1
+                             "18:30", #start E1
+                             "19:00") #start E2
 
-expectedTimes <- c("07:30", "07:59", #morning1
-                   "08:00", "08:29", #morning2
-                   "12:30", "12:59", #lunch1
-                   "13:00", "13:30", #lunch2
-                   "15:30", "15:59", #afternoon1
-                   "16:00", "16:29", #afternoon2
-                   "18:30", "18:59", #evening1
-                   "19:00", "19:29") #evening2
+expectedTimeBreakpoints <- c(0800, #start morning2
+                             0830, #between M2 and L1
+                             1230, #start L1
+                             1300, #start L2
+                             1330, # between L2 and A1
+                             1530, #start A1
+                             1600, #start A2
+                             1630, #between A2 and E1
+                             1830, #start E1
+                             1900) #start E2
 
-periods <- c("morning1",
+
+#format table to POSIX for use in analysis
+breakpointsRaw <- as.POSIXct(strptime(expectedTimeBreakpoints, "%H:%M"),"America/Los_Angeles" )
+
+breakPointLabels <- c("morning1",
              "morning2",
+             "betweenML",
              "lunch1",
              "lunch2",
+             "betweenLA",
              "afternoon1",
              "afternoon2",
+             "betweeenAE",
              "evening1",
              "evening2")
 
-timesRaw <- as.POSIXct(strptime(expectedTimes, "%H:%M"),"America/Los_Angeles" )
-#times <- as.POSIXct(AllSOPARCObservations$start_time
 
-SOPARCObservationWTime <- SOPARCObservations[start_time != "",]
  
-dataCollectionTimes <- as.POSIXct(strptime(SOPARCObservationWTime$start_time, "%Y-%m-%d %H:%M"), "America/Los_Angeles") 
+#for remaining observations, create a list of their times, standardized to POSIX
+dataCollectionTimes <- as.POSIXct(strptime(SOPARCObservations$start_time, "%Y-%m-%d %H:%M"), "America/Los_Angeles") 
 
-#For each park, use the max area number for that park, and confirm th 
+breakpointAssignments <- breakPointLabels[findInterval(format(dataCollectionTimes, format = "%H%M"), expectedTimeBreakpoints, left.open = T, all.inside = FALSE, rightmost.closed = FALSE)+1]
 
-test <- periods[findInterval(format(dataCollectionTimes, format = "%H%M"), format(timesRaw, format = "%H%M"))]
-SOPARCObservationWTime$periodBasedOnTimestamp <- periods[findInterval(format(dataCollectionTimes, format = "%H%M"), format(timesRaw, format = "%H%M"))]
+#assign observed times to scheduled periods. Use only the house (otherwise would attribute date.)
+SOPARCObservations$periodBasedOnBreakpoint <- breakpointAssignments
+
+#save for manual inspection
+write.csv(SOPARCObservations, "inspectTimestamps.csv")
+
 ```
 
 
+For each park, there should be 3 days of observation. We will detect this by extracting the date per park and putting observations in order of day "1" "2" "3"
+```{r  assign observation day}
+  for(park in unique(SOPARCObservations))
+```
 
-For each park, there are multible areas . Some Target Areas may have Sub Areas. 
+
+```{r prep for analysis QA}
+
+PreQADT <- copy(SOPARCObservations)
+
+
+#check if any time periods are in between assigned periods
+liminalTimes <- c("betweenML",
+                  "betweenLA",
+                  "betweeenAE")
+if(nrow(PreQADT[periodBasedOnBreakpoint %in% liminalTimes,]) >0){
+  propMissing <- round(nrow(PreQADT[periodBasedOnBreakpoint %in% liminalTimes,])/nrow(PreQADT) ,2)*100
+  warning(paste0("%", propMissing, " of observations are in liminal periods and need to be corrected for proper analysis,"))
+  warning("trimming data to only include observations with properly assigned observation periods. Do not use these results in final analysis.")
+  PreQADT <- PreQADT[!(periodBasedOnBreakpoint %in% liminalTimes)]
+} else {
+  message("OK status: All observations have been assigned to a time period")
+}
+
+#check if parks have all expected observations
+pass <- 1
+for(park in unique(PreQADT$park_name)) {
+  expectedAreas <- max(as.numeric(PreQADT[park_name %in% park, tar_area]))
+  #for(periods)...
+}
+
+
+```
+
 
