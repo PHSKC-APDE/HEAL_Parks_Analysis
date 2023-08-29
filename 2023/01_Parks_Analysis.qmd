@@ -22,6 +22,10 @@ Quarto enables you to weave together content and executable code into a finished
 
 # 1 Setting Up Environment
 
+```{r define constant}
+USEGOODDATA <- TRUE
+```
+
 ```{r load required packages}
 # we prefer to use pacman to manage cran packages. 
 # First check if pacman is installed. If not, install it.
@@ -113,9 +117,22 @@ SOPARCObservations <- SOPARCObservations[record_id >= 141,]
 
 #drop observations without a time, we cannot use these
 SOPARCObservations <- SOPARCObservations[start_time != "",]
+#drop observations with missing park names, we cannot use these
+SOPARCObservations <- SOPARCObservations[!(park_name %in% ""),]
 
 
 #convert countables to numeric
+
+#SOPARCObservations$tar_area <- as.numeric(SOPARCObservations$tar_area)
+```
+
+```{r temp create park and area reference table with quality checks}
+referenceDT <- SOPARCObservations[, .(areaCount = max(as.numeric(tar_area))), by = park_name]
+observationsPerPark <- SOPARCObservations[, .(observationCount = .N), by = park_name]
+parkStats <- merge(referenceDT, observationsPerPark)
+parkStats[, expectedObservationCount := areaCount*24]
+parkStats[, meetsExpected := ifelse(expectedObservationCount == observationCount, "PASS", "FAIL")]
+
 
 ```
 
@@ -128,16 +145,14 @@ Parks are observed multiple times. 8 times per day. These are in a morning, lunc
 Each park is divided into one or more areas. All areas should be observed during a single observation period. Some areas may be further divided into sub areas. In our data, each area is simply assigned a number.
 
 ```{r period assignment based on sequence}
-expectedTimeBreakpoints <- c("08:00", #start morning2
-                             "08:30", #between M2 and L1
-                             "12:30", #start L1
-                             "13:00", #start L2
-                             "13:30", # between L2 and A1
-                             "15:30", #start A1
-                             "16:00", #start A2
-                             "16:30", #between A2 and E1
-                             "18:30", #start E1
-                             "19:00") #start E2
+
+if(USEGOODDATA) {
+  SOPARCAnalysisSet <- copy(SOPARCObservations[park_name %in% parkStats[meetsExpected == "PASS"]$park_name]) #only use parks that have expected number of observation
+} else {
+  SOPARCAnalysisSet <- copy(SOPARCObservations) #use all parks
+}
+  
+
 
 expectedTimeBreakpoints <- c(0800, #start morning2
                              0830, #between M2 and L1
@@ -150,9 +165,6 @@ expectedTimeBreakpoints <- c(0800, #start morning2
                              1830, #start E1
                              1900) #start E2
 
-
-#format table to POSIX for use in analysis
-breakpointsRaw <- as.POSIXct(strptime(expectedTimeBreakpoints, "%H:%M"),"America/Los_Angeles" )
 
 breakPointLabels <- c("morning1",
              "morning2",
@@ -169,28 +181,69 @@ breakPointLabels <- c("morning1",
 
  
 #for remaining observations, create a list of their times, standardized to POSIX
-dataCollectionTimes <- as.POSIXct(strptime(SOPARCObservations$start_time, "%Y-%m-%d %H:%M"), "America/Los_Angeles") 
+dataCollectionTimes <- as.POSIXct(strptime(SOPARCAnalysisSet$start_time, "%Y-%m-%d %H:%M"), "America/Los_Angeles") 
 
 breakpointAssignments <- breakPointLabels[findInterval(format(dataCollectionTimes, format = "%H%M"), expectedTimeBreakpoints, left.open = T, all.inside = FALSE, rightmost.closed = FALSE)+1]
 
 #assign observed times to scheduled periods. Use only the house (otherwise would attribute date.)
-SOPARCObservations$periodBasedOnBreakpoint <- breakpointAssignments
+SOPARCAnalysisSet$periodBasedOnBreakpoint <- breakpointAssignments
 
+```
+
+
+A second approach to assigning time periods relies on the assumption that timestamps are in order (e.g. the first observation of park A area 1 is always "morning1", the second, "morning2" and so on.)
+```{r assign time periods based on sequence}
+
+sequenceLabels <- c("morning1",
+             "morning2",
+             "lunch1",
+             "lunch2",
+             "afternoon1",
+             "afternoon2",
+             "evening1",
+             "evening2")
+
+SOPARCAnalysisSet[order(park_scan_data_collection_timestamp, tar_area), periodBasedOnSequence := rep_len(sequenceLabels, .N), by = "park_name"]
+```
+
+
+At this point rudementary timestamps have been assigned based on the expected times of observation.
+Now we apply a series of heuristics to correct obvious errors.
+
+Currently, these heuristics assume that all expected observations have been collected, even if off schedule.
+
+
+```{r adjust timestamp assigments}
+
+```
+
+save these data to review timestamp assigments
+```{r}
 #save for manual inspection
-write.csv(SOPARCObservations, "inspectTimestamps.csv")
+write.csv(SOPARCAnalysisSet, "inspectTimestamps.csv")
 
 ```
 
 
 For each park, there should be 3 days of observation. We will detect this by extracting the date per park and putting observations in order of day "1" "2" "3"
 ```{r  assign observation day}
-  for(park in unique(SOPARCObservations))
+
+# #library(lubridate)
+#   for(park in unique(SOPARCObservations$park_name)) {
+#     daysOfYear <- yday(SOPARCObservations[park_name %in% park, start_time])
+#     dayOfYear <- unique(daysOfYear)
+#     if(length(dayOfYear) > 3) { warning("more than three days detected for:", park ,"\n") }
+#     if(length(dayOfYear) < 3) { warning("less than three days detected for:", park ,"\n") }
+#     for(dayCounter  in 1:length(dayOfYear)) {
+#       SOPARCObservations[park_name %in% park & yday(start_time) == dayOfYear[dayCounter], analysisDay := dayCounter]
+#     }
+#   }
 ```
 
 
 ```{r prep for analysis QA}
 
-PreQADT <- copy(SOPARCObservations)
+PreQADT <- copy(SOPARCAnalysisSet)
 
 
 #check if any time periods are in between assigned periods
