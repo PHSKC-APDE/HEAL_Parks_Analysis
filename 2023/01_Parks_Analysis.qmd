@@ -120,10 +120,20 @@ SOPARCObservations <- SOPARCObservations[start_time != "",]
 #drop observations with missing park names, we cannot use these
 SOPARCObservations <- SOPARCObservations[!(park_name %in% ""),]
 
+#convert time to time data type and save as seperate variable
+SOPARCObservations[, timestampPOSIX := as.POSIXct(strptime(start_time, "%Y-%m-%d %H:%M"), "America/Los_Angeles") ]
+
+#add day of the week
+SOPARCObservations[, day := weekdays(timestampPOSIX)]
+#add weekend indicator
+SOPARCObservations[, weekend := ifelse(day %in% c("Saturday", "Sunday"), 1, 0)]
 
 #convert countables to numeric
 
 #SOPARCObservations$tar_area <- as.numeric(SOPARCObservations$tar_area)
+#
+
+
 ```
 
 ```{r temp create park and area reference table with quality checks}
@@ -136,6 +146,14 @@ parkStats[, meetsExpected := ifelse(expectedObservationCount == observationCount
 
 ```
 
+```{r select analysis set to use}
+if(USEGOODDATA) {
+  SOPARCAnalysisSet <- copy(SOPARCObservations[park_name %in% parkStats[meetsExpected == "PASS"]$park_name]) #only use parks that have expected number of observation
+} else {
+  SOPARCAnalysisSet <- copy(SOPARCObservations) #use all parks
+}
+```
+
 
 
 # Parameterizing data
@@ -146,11 +164,7 @@ Each park is divided into one or more areas. All areas should be observed during
 
 ```{r period assignment based on sequence}
 
-if(USEGOODDATA) {
-  SOPARCAnalysisSet <- copy(SOPARCObservations[park_name %in% parkStats[meetsExpected == "PASS"]$park_name]) #only use parks that have expected number of observation
-} else {
-  SOPARCAnalysisSet <- copy(SOPARCObservations) #use all parks
-}
+
   
 
 
@@ -190,6 +204,14 @@ SOPARCAnalysisSet$periodBasedOnBreakpoint <- breakpointAssignments
 
 ```
 
+At this point rudementary timestamps have been assigned based on the expected times of observation.
+Now we apply a series of heuristics to correct obvious errors.
+
+
+```{r adjust timestamp assigments}
+
+```
+
 
 A second approach to assigning time periods relies on the assumption that timestamps are in order (e.g. the first observation of park A area 1 is always "morning1", the second, "morning2" and so on.)
 ```{r assign time periods based on sequence}
@@ -203,21 +225,15 @@ sequenceLabels <- c("morning1",
              "evening1",
              "evening2")
 
+
 SOPARCAnalysisSet[order(park_scan_data_collection_timestamp, tar_area), periodBasedOnSequence := rep_len(sequenceLabels, .N), by = "park_name"]
 ```
 
 
-At this point rudementary timestamps have been assigned based on the expected times of observation.
-Now we apply a series of heuristics to correct obvious errors.
-
-Currently, these heuristics assume that all expected observations have been collected, even if off schedule.
 
 
-```{r adjust timestamp assigments}
 
-```
-
-save these data to review timestamp assigments
+save these data to review timestamp assignments
 ```{r}
 #save for manual inspection
 write.csv(SOPARCAnalysisSet, "inspectTimestamps.csv")
@@ -245,28 +261,57 @@ For each park, there should be 3 days of observation. We will detect this by ext
 
 PreQADT <- copy(SOPARCAnalysisSet)
 
-
-#check if any time periods are in between assigned periods
-liminalTimes <- c("betweenML",
-                  "betweenLA",
-                  "betweeenAE")
-if(nrow(PreQADT[periodBasedOnBreakpoint %in% liminalTimes,]) >0){
-  propMissing <- round(nrow(PreQADT[periodBasedOnBreakpoint %in% liminalTimes,])/nrow(PreQADT) ,2)*100
-  warning(paste0("%", propMissing, " of observations are in liminal periods and need to be corrected for proper analysis,"))
-  warning("trimming data to only include observations with properly assigned observation periods. Do not use these results in final analysis.")
-  PreQADT <- PreQADT[!(periodBasedOnBreakpoint %in% liminalTimes)]
-} else {
-  message("OK status: All observations have been assigned to a time period")
-}
-
-#check if parks have all expected observations
-pass <- 1
+#check if all expected time periods exists and are assigned
 for(park in unique(PreQADT$park_name)) {
-  expectedAreas <- max(as.numeric(PreQADT[park_name %in% park, tar_area]))
-  #for(periods)...
+  multiple <- referenceDT[park_name %in% park,]$areaCount
+  #check sequence based times
+  for(period in sequenceLabels) {
+    if(nrow(PreQADT[park_name %in% park & periodBasedOnSequence %in% period, ]) != multiple*3) { 
+      PreQADT[park_name %in% park & periodBasedOnSequence %in% period, PeriodBasedOnSequencePass := 0]
+    } else {
+      PreQADT[park_name %in% park & periodBasedOnSequence %in% period, PeriodBasedOnSequencePass := 1]
+    }
+    PreQADT[park_name %in% park & periodBasedOnSequence %in% period, ]
+  }
+  
+  
 }
+
+# 
+# #check if any time periods are in between assigned periods
+# liminalTimes <- c("betweenML",
+#                   "betweenLA",
+#                   "betweeenAE")
+# if(nrow(PreQADT[periodBasedOnBreakpoint %in% liminalTimes,]) >0){
+#   propMissing <- round(nrow(PreQADT[periodBasedOnBreakpoint %in% liminalTimes,])/nrow(PreQADT) ,2)*100
+#   warning(paste0("%", propMissing, " of observations are in liminal periods and need to be corrected for proper analysis,"))
+#   warning("trimming data to only include observations with properly assigned observation periods. Do not use these results in final analysis.")
+#   PreQADT[, passQABP := ifelse(!(periodBasedOnBreakpoint %in% liminalTimes)]
+# } else {
+#   message("OK status: All observations have been assigned to a time period")
+# }
+# 
+# #check if parks have all expected observations
+# pass <- 1
+# for(park in unique(PreQADT$park_name)) {
+# 
+# }
+
+PostQADT <- copy(PreQADT)
+```
+
+
+```{r analysis functions}
 
 
 ```
 
+For all analyses, we do not want to distinguish between the first and second of a period (e.g. morning1 and morning2). This chunk attempts to aggregate these according to the following:
 
+
+```{r }
+SOPARCtoAggregate <- copy(PostQADT)
+
+
+
+```
