@@ -122,8 +122,42 @@ RawSOPARCObservations$num_senior_prim <- as.numeric(RawSOPARCObservations$num_se
 RawSOPARCObservations$num_senior_snd <- as.numeric(RawSOPARCObservations$num_senior_snd)
 RawSOPARCObservations$num_senior_spec <- as.numeric(RawSOPARCObservations$num_senior_spec)
 
-#convert time to time data type and save as separate variable
-RawSOPARCObservations[, timestampPOSIX := as.POSIXct(strptime(start_time, "%Y-%m-%d %H:%M"), "America/Los_Angeles") ]
+#convert time to time data type and save as separate variables
+RawSOPARCObservations[, timestampPOSIX := as.POSIXct(strptime(start_time, "%Y-%m-%d %H:%M"), "America/Los_Angeles") ] #a POSIX format of time
+RawSOPARCObservations[, itimeOfDay := IDateTime(timestampPOSIX)$itime] #a data.table integer format of second of the day
+RawSOPARCObservations[, idate := IDateTime(timestampPOSIX)$idate] #a data.table integer format of second of the day
+
+
+#some saved work
+                #accessible_check <- SOPARCObservations$accessible
+                # usable_check <- SOPARCObservations$usable
+                # lit_check <- SOPARCObservations$lit
+                # occupied_check <- SOPARCObservations$occupied
+                # supervised_check <- SOPARCObservations$supervised
+                # organized_check <- SOPARCObservations$organized
+                # equipped_check <- SOPARCObservations$equipped
+                # num_child_prim_check <- SOPARCObservations$num_child_prim
+                # num_child_snd_check <- SOPARCObservations$num_child_snd
+                # num_child_spec_check <- SOPARCObservations$num_child_spec
+                # num_teen_prim_check <- SOPARCObservations$num_teen_prim
+                # num_teen_snd_check <- SOPARCObservations$num_teen_snd
+                # num_teen_spec_check <- SOPARCObservations$num_teen_spec
+                # num_adult_prim_check <- SOPARCObservations$num_adult_prim
+                # num_adult_snd_check <- SOPARCObservations$num_adult_snd
+                # num_adult_spec_check <- SOPARCObservations$num_adult_spec
+                # num_senior_prim_check <- SOPARCObservations$num_senior_prim
+                # num_senior_snd_check <- SOPARCObservations$num_senior_snd
+                # num_senior_spec_check <- SOPARCObservations$num_senior_spec
+                # prim_act_name_check <- SOPARCObservations$prim_act_name
+                # prim_act_other_check <- SOPARCObservations$prim_act_other
+                # yesno_snd_check <- SOPARCObservations$yesno_snd
+                # snd_act_name_check <- SOPARCObservations$snd_act_name
+                # other_act_snd_check <- SOPARCObservations$other_act_snd
+                # yesno_spec_check <- SOPARCObservations$yesno_spec
+                # spec_act_name_check <- SOPARCObservations$spec_act_name
+                # other_act_spec_check <- SOPARCObservations$other_act_spec
+                # comments_check <- SOPARCObservations$comments
+                # 
 ```
 
 ```{r identify and drop incorrect observations}
@@ -159,20 +193,99 @@ for(park in unique(SOPARCObservations[,park_name])) {
   for(area in 1:max(SOPARCObservations[park_name == park, tar_area])) {
     #check if the expected number of observations exists for each area
     if(all(SOPARCObservations[park_name == park & tar_area == area, sub_area ] == "")) { #testing areas where all observations are without sub areas
-      if(!nrow(SOPARCObservations[park_name == park & tar_area == area,] ) == 24) {
-        #check that there are 3 days and 8 observations per day
-        if(length(unique(as.Date(SOPARCObservations[park_name == park & tar_area == area,]$timestampPOSIX, tz = "America/Los_Angeles"))) == 3){
-          #checks for those that have 3 days...
-          #confirm that there are 8 observations per day, and make corrections if not
-          for(day in unique(as.Date(SOPARCObservations[park_name == park & tar_area == area,]$timestampPOSIX, tz = "America/Los_Angeles"))) {
-            if(nrow(SOPARCObservations[park_name == park & tar_area == area & as.Date(timestampPOSIX, tz = "America/Los_Angeles") == day,]) > 8) {
+      if(!nrow(SOPARCObservations[park_name == park & tar_area == area,] ) == 24) { #checks that there are exactly 24 observations. Note, this skips any that have 24 to instead assert sequential observation order. That may be an awful asusmption
+        #check that there are 3 days and 8 observations per day for each target area of the park
+        if(length(unique(SOPARCObservations[park_name == park & tar_area == area,]$idate)) == 3){           #checks for those that have 3 days...
+
+          #confirm that each target area has 8 observations per day, and make corrections if not
+          for(day in unique(SOPARCObservations[park_name == park & tar_area == area,]$idate)) {
+            if(nrow(SOPARCObservations[park_name == park & tar_area == area & idate == day,]) > 8) {
+              numberToFix <- nrow(SOPARCObservations[park_name == park & tar_area == area & idate == day,]) - 8
               #things to do to resolve when there are extra observations in a day
-              print(paste("there are too many observations in", park, area, as.Date(day)))
+              print(paste("there are", numberToFix, "too many observations in", park, area, as.Date(day)))
               print("attempting to resolve by temporal proximity and data similarity")
               #where X is the number of excess observations, choose X_1 where X_1 is an entry that matches at least one other entry in all regards except timestamp and ID
               #if more than 2 identical items exists within a +/- 30m timespan of X_1, delete X_1
               #X-1, if X >0 repeat
+              duplicates <- SOPARCObservations[park_name == park & tar_area == area & as.Date(timestampPOSIX, tz = "America/Los_Angeles") == day,record_id][duplicated(SOPARCObservations[park_name == park & tar_area == area & as.Date(timestampPOSIX, tz = "America/Los_Angeles") == day, !c("record_id","start_time","timestampPOSIX", "itimeOfDay")],by = )]
+              duplicateseWithNearMatches <- NA
+              
+              #check sequentially if there are 3 items within 30 minutes of each other, and one is identical
+              for( id in duplicates) {
+                varsToMatchOn <- c("park_name",
+                                   "tar_area",
+                                   "sub_area",
+                                   "accessible",
+                                   "usable",
+                                   "lit",
+                                   "occupied",
+                                   "supervised",
+                                   "organized",
+                                   "equipped",
+                                   "num_child_prim",
+                                   "num_child_snd",
+                                   "num_child_spec",
+                                   "num_teen_prim",
+                                   "num_teen_snd",
+                                   "num_teen_spec",
+                                   "num_adult_prim",
+                                   "num_adult_snd",
+                                   "num_adult_spec",
+                                   "num_senior_prim",
+                                   "num_senior_snd",
+                                   "num_senior_spec",
+                                   "prim_act_name",
+                                   "prim_act_other",
+                                   "yesno_snd",
+                                   "snd_act_name",
+                                   "other_act_snd",
+                                   "yesno_spec",
+                                   "spec_act_name",
+                                   "other_act_spec",
+                                   "comments")
+                accessible_check <- SOPARCObservations[record_id == id]$accessible
+                usable_check <- SOPARCObservations[record_id == id]$usable
+                lit_check <- SOPARCObservations[record_id == id]$lit
+                occupied_check <- SOPARCObservations[record_id == id]$occupied
+                supervised_check <- SOPARCObservations[record_id == id]$supervised
+                organized_check <- SOPARCObservations[record_id == id]$organized
+                equipped_check <- SOPARCObservations[record_id == id]$equipped
+                num_child_prim_check <- SOPARCObservations[record_id == id]$num_child_prim
+                num_child_snd_check <- SOPARCObservations[record_id == id]$num_child_snd
+                num_child_spec_check <- SOPARCObservations[record_id == id]$num_child_spec
+                num_teen_prim_check <- SOPARCObservations[record_id == id]$num_teen_prim
+                num_teen_snd_check <- SOPARCObservations[record_id == id]$num_teen_snd
+                num_teen_spec_check <- SOPARCObservations[record_id == id]$num_teen_spec
+                num_adult_prim_check <- SOPARCObservations[record_id == id]$num_adult_prim
+                num_adult_snd_check <- SOPARCObservations[record_id == id]$num_adult_snd
+                num_adult_spec_check <- SOPARCObservations[record_id == id]$num_adult_spec
+                num_senior_prim_check <- SOPARCObservations[record_id == id]$num_senior_prim
+                num_senior_snd_check <- SOPARCObservations[record_id == id]$num_senior_snd
+                num_senior_spec_check <- SOPARCObservations[record_id == id]$num_senior_spec
+                prim_act_name_check <- SOPARCObservations[record_id == id]$prim_act_name
+                prim_act_other_check <- SOPARCObservations[record_id == id]$prim_act_other
+                yesno_snd_check <- SOPARCObservations[record_id == id]$yesno_snd
+                snd_act_name_check <- SOPARCObservations[record_id == id]$snd_act_name
+                other_act_snd_check <- SOPARCObservations[record_id == id]$other_act_snd
+                yesno_spec_check <- SOPARCObservations[record_id == id]$yesno_spec
+                spec_act_name_check <- SOPARCObservations[record_id == id]$spec_act_name
+                other_act_spec_check <- SOPARCObservations[record_id == id]$other_act_spec
+                comments_check <- SOPARCObservations[record_id == id]$comments
+                
+                temporalmid <- SOPARCObservations[record_id == id, itimeOfDay]
+                print(paste("searching for records within +/- 30m of record", id))
+                print(paste(SOPARCObservations[park_name == park & tar_area == area & idate == day & record_id != id & (itimeOfDay > temporalmid - 1800 & itimeOfDay < temporalmid + 1800),]$record_id, "was found"))
+                #duplicated(SOPARCObservations[park_name == park & tar_area == area & idate == day,],by =   varsToMatchOn)
 
+                #SOPARCObservations[park_name == park & tar_area == area & as.Date(timestampPOSIX, tz = "America/Los_Angeles") == day & (itimeOfDay > temporalmid - 1800 & itimeOfDay < temporalmid + 1800),]
+                
+              }
+
+              SOPARCObservations[park_name == park & tar_area == area,]
+
+              while(numberToFix > 0) {
+                
+              }
               
               
             }
