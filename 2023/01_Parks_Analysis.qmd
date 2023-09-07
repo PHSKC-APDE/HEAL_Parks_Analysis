@@ -106,6 +106,8 @@ result <- postForm(
 
 RawSOPARCObservations <- as.data.table(fromJSON(result), )
 
+#RawSOPARCObservations <- data.table(fromJSON(result), keep.rownames = FALSE, stringsAsFactors = FALSE)
+
 
 #convert countables to numeric
 RawSOPARCObservations$tar_area <- as.numeric(RawSOPARCObservations$tar_area)
@@ -122,11 +124,15 @@ RawSOPARCObservations$num_senior_prim <- as.numeric(RawSOPARCObservations$num_se
 RawSOPARCObservations$num_senior_snd <- as.numeric(RawSOPARCObservations$num_senior_snd)
 RawSOPARCObservations$num_senior_spec <- as.numeric(RawSOPARCObservations$num_senior_spec)
 
+#NOT NEEDED #properly type all text fields and turn "" to NA
+# chcols = names(RawSOPARCObservations)[sapply(RawSOPARCObservations, is.character)]
+# RawSOPARCObservations[, (chcols) := lapply(.SD, type.convert, as.is=TRUE), .SDcols=chcols]
+
+
 #convert time to time data type and save as separate variables
 RawSOPARCObservations[, timestampPOSIX := as.POSIXct(strptime(start_time, "%Y-%m-%d %H:%M"), "America/Los_Angeles") ] #a POSIX format of time
-RawSOPARCObservations[, itimeOfDay := IDateTime(timestampPOSIX)$itime] #a data.table integer format of second of the day
-RawSOPARCObservations[, idate := IDateTime(timestampPOSIX)$idate] #a data.table integer format of second of the day
-
+RawSOPARCObservations[, datePOSIX := as.Date(RawSOPARCObservations$timestampPOSIX, tz = "America/Los_Angeles")] #a data.table integer format of second of the day
+#RawSOPARCObservations[, idate := IDateTime(timestampPOSIX)$idate] #a data.table integer format of second of the day
 
 #some saved work
                 #accessible_check <- SOPARCObservations$accessible
@@ -164,9 +170,6 @@ RawSOPARCObservations[, idate := IDateTime(timestampPOSIX)$idate] #a data.table 
 
 SOPARCObservations <- copy(RawSOPARCObservations)
 
-#remove pre-study observation (test data)
-SOPARCObservations <- SOPARCObservations[record_id >= 141,]
-
 #remove duplicates
 SOPARCObservations <- SOPARCObservations[!duplicated(SOPARCObservations[, setdiff(names(SOPARCObservations), "record_id"), with = FALSE]),]
 
@@ -188,14 +191,141 @@ SOPARCObservations[park_name %in% c("Hazelnut Park",
                                     "Fort Dent Park - South",
                                     "Fort Dent Park - North") & sub_area == "0", sub_area := ""]
 
+#remove pre-study observation (test data)
+SOPARCObservations <- SOPARCObservations[record_id >= 141,]
+SOPARCObservations <- SOPARCObservations[datePOSIX >= "2023-07-01",]
+
+setorder(SOPARCObservations, cols = "timestampPOSIX")
+
+
+
+```
+
+For this analysis, we are not using sub areas. These can be collapsed into single areas.
+For each observation, sub areas will be collapsed using the following rules:
+    numerical observations will be added together
+    categorical become affirmative/existing if any of the subareas are affirmative/existing
+    timestamp of the earliest observation in the set will be used
+
+Sub areas of the same target area will be assumed to be of the same observation period based on the following logic:
+    for a sequence of sub areas observed in the same 50 hours period
+    apparantly missing sub-areas will be ignored (assumption: not all sub areas are necessary)
+
+If non unique sub area labels are identified:
+    check if the expected list of sub areas are in teh data set
+    if too many, attempt to identify redundancies and remove these
+    if too few, interpolate missing information
+
+
+
+```{r collapse sub areas into a single area}
+SOPARCObservationsSubAreas <- copy(SOPARCObservations[sub_area != "",])
+
+remove(SOPARCCollapsedSubAreas) #if this DT exist, remove it because we will recreate it in this chunk
+
+listToCollapse <- SOPARCObservationsSubAreas[ ,  .(sub_area = unique(sub_area)) , by = c("park_name", "tar_area")]
+listToCollapseStarts <- SOPARCObservationsSubAreas[, .(first_sub_area = first(sub_area)), by = c("park_name", "tar_area")]
+
+
+
+for(index in 1:nrow(listToCollapseStarts)) {
+  park <- listToCollapseStarts[index,]$park_name
+  target_area <- listToCollapseStarts[index,]$tar_area
+  first_sub_area_here <- listToCollapseStarts[index,]$first_sub_area
+  SubAreaStarts <- SOPARCObservationsSubAreas[park_name == park & tar_area == target_area & sub_area == first_sub_area_here,]
+  #first_sub_area_list <- SOPARCObservationsSubAreas[park_name == park & tar_area == target_area & sub_area == ]
+  for(collapseIndex in 1:nrow(SubAreaStarts)) {
+    date <- SubAreaStarts[collapseIndex, datePOSIX]
+    starttime <- SubAreaStarts[collapseIndex, timestampPOSIX]
+    
+    endtime <- SubAreaStarts[collapseIndex+1,timestampPOSIX-1]
+    if(is.na(endtime)) { endtime <- starttime + 450}
+    maxExpectedObservations <- length(unique(SOPARCObservationsSubAreas[park_name == park & tar_area == target_area & datePOSIX == date & (timestampPOSIX >= starttime & timestampPOSIX < endtime ), sub_area]))
+    if(nrow(SOPARCObservationsSubAreas[park_name == park & tar_area == target_area & datePOSIX == date & (timestampPOSIX >= starttime & timestampPOSIX < endtime ), ]) <= maxExpectedObservations ){
+    TempCollapseResult <- SOPARCObservationsSubAreas[park_name == park & tar_area == target_area & datePOSIX == date & (timestampPOSIX >= starttime & timestampPOSIX < endtime ), .(record_id = first(record_id), 
+                                                                                                                                                    redcap_survey_identifier = first(redcap_survey_identifier),
+                                                                                                                                                    park_scan_data_collection_timestamp = first(park_scan_data_collection_timestamp),
+                                                                                                                                                    obs_initial = first(obs_initial),
+                                                                                                                                                    start_time = first(start_time),
+                                                                                                                                                    park_name = first(park_name),
+                                                                                                                                                    tar_area = first(tar_area),
+                                                                                                                                                    sub_area = "X",
+                                                                                                                                                    accessible = ifelse(any(accessible %in% "Yes"), "Yes", "No"),
+                                                                                                                                                    usable = ifelse(any(usable %in% "Yes"), "Yes", "No"),
+                                                                                                                                                    lit = ifelse(any(lit %in% "Yes"), "Yes", "No"),
+                                                                                                                                                    occupied = ifelse(any(occupied %in% "Yes"), "Yes", "No"),
+                                                                                                                                                    supervised = ifelse(any(supervised %in% "Yes"), "Yes", "No"),
+                                                                                                                                                    organized = ifelse(any(organized %in% "Yes"), "Yes", "No"),
+                                                                                                                                                    equipped = ifelse(any(equipped %in% "Yes"), "Yes", "No"),
+                                                                                                                                                    num_child_prim = sum(num_child_prim, na.rm = TRUE),
+                                                                                                                                                    num_child_snd = sum(num_child_snd, na.rm = TRUE),
+                                                                                                                                                    num_child_spec = sum(num_child_spec, na.rm = TRUE),
+                                                                                                                                                    num_teen_prim = sum(num_teen_prim, na.rm = TRUE),
+                                                                                                                                                    num_teen_snd = sum(num_teen_snd, na.rm = TRUE),
+                                                                                                                                                    num_teen_spec = sum(num_teen_spec, na.rm = TRUE),
+                                                                                                                                                    num_adult_prim = sum(num_adult_prim, na.rm = TRUE),
+                                                                                                                                                    num_adult_snd = sum(num_adult_snd, na.rm = TRUE),
+                                                                                                                                                    num_adult_spec = sum(num_adult_spec, na.rm = TRUE),
+                                                                                                                                                    num_senior_prim = sum(num_senior_prim, na.rm = TRUE),
+                                                                                                                                                    num_senior_snd = sum(num_senior_snd, na.rm = TRUE),
+                                                                                                                                                    num_senior_spec = sum(num_senior_spec, na.rm = TRUE),
+                                                                                                                                                    prim_act_name = gsub("^(\\;)*|(?<=(\\;))(\\;)|(\\;)*$","",paste(unique(prim_act_name), collapse =  ";"), perl = TRUE),
+                                                                                                                                                    prim_act_other = gsub("^(\\;)*|(?<=(\\;))(\\;)|(\\;)*$","",paste(unique(prim_act_other), collapse =  ";"), perl = TRUE),
+                                                                                                                                                    yesno_snd = ifelse(any(yesno_snd %in% "Yes"), "Yes", "No"),
+                                                                                                                                                    snd_act_name = gsub("^(\\;)*|(?<=(\\;))(\\;)|(\\;)*$","",paste(unique(snd_act_name), collapse =  ";"), perl = TRUE),
+                                                                                                                                                    other_act_snd = gsub("^(\\;)*|(?<=(\\;))(\\;)|(\\;)*$","",paste(unique(other_act_snd), collapse =  ";"), perl = TRUE),
+                                                                                                                                                    yesno_spec = ifelse(any(yesno_spec %in% "Yes"), "Yes", "No"),
+                                                                                                                                                    spec_act_name = gsub("^(\\;)*|(?<=(\\;))(\\;)|(\\;)*$","",paste(unique(spec_act_name), collapse =  ";"), perl = TRUE),
+                                                                                                                                                    other_act_spec = gsub("^(\\;)*|(?<=(\\;))(\\;)|(\\;)*$","",paste(unique(other_act_spec), collapse =  ";"), perl = TRUE),
+                                                                                                                                                    comments = gsub("^(\\;)*|(?<=(\\;))(\\;)|(\\;)*$","",paste(unique(comments), collapse =  ";"), perl = TRUE),
+                                                                                                                                                    park_scan_data_collection_complete = last(park_scan_data_collection_complete),
+                                                                                                                                                    timestampPOSIX = first(timestampPOSIX),
+                                                                                                                                                    datePOSIX = first(datePOSIX)), ]
+    if(nrow(TempCollapseResult) > 1 ) {
+      stop(paste("Failed to compress observations, check result of", park, target_area, date, "between", starttime, "and", endtime))
+    } else if(!exists("SOPARCCollapsedSubAreas")) {
+      SOPARCCollapsedSubAreas <- TempCollapseResult
+    } else {
+      SOPARCCollapsedSubAreas <-  rbind(SOPARCCollapsedSubAreas, TempCollapseResult)
+    }
+    
+    } else {
+      stop("there are too many sub areas in scope. Need to resolve for proper assignment")
+    }
+  }
+}
+
+
+#combine observations without sub areas, and our newly collapsed sub areas, into a single DT
+SOPARCObservations <- rbind(SOPARCObservations[sub_area == "",], SOPARCCollapsedSubAreas)
+
+```
+
+
+```{r check if expected number of observations exist per park}
+
+
+referenceDT <- SOPARCObservations[, .(areaCount = max(as.numeric(tar_area))), by = park_name]
+observationsPerPark <- SOPARCObservations[, .(observationCount = .N), by = park_name]
+parkStats <- merge(referenceDT, observationsPerPark)
+parkStats[, expectedObservationCount := areaCount*24]
+parkStats[, meetsExpected := ifelse(expectedObservationCount == observationCount, "PASS", "FAIL")]
+
+
+```
+
+```{r correcting errors in data}
+
+
+
 #resolve redundant observations
 for(park in unique(SOPARCObservations[,park_name])) {
   for(area in 1:max(SOPARCObservations[park_name == park, tar_area])) {
     #check if the expected number of observations exists for each area
     if(all(SOPARCObservations[park_name == park & tar_area == area, sub_area ] == "")) { #testing areas where all observations are without sub areas
-      if(!nrow(SOPARCObservations[park_name == park & tar_area == area,] ) == 24) { #checks that there are exactly 24 observations. Note, this skips any that have 24 to instead assert sequential observation order. That may be an awful asusmption
+      if(!nrow(SOPARCObservations[park_name == park & tar_area == area,] ) == 24) { #checks that there are exactly 24 observations. Note, this skips any that have 24 to instead assert sequential observation order. That may be an awful assumption
         #check that there are 3 days and 8 observations per day for each target area of the park
-        if(length(unique(SOPARCObservations[park_name == park & tar_area == area,]$idate)) == 3){           #checks for those that have 3 days...
+        if(length(unique(SOPARCObservations[park_name == park & tar_area == area,]$datePOSIX)) == 3){           #checks for those that have 3 days...
 
           #confirm that each target area has 8 observations per day, and make corrections if not
           for(day in unique(SOPARCObservations[park_name == park & tar_area == area,]$idate)) {
@@ -329,6 +459,8 @@ SOPARCObservations[, weekend := ifelse(day %in% c("Saturday", "Sunday"), 1, 0)]
 
 
 ```{r temp create park and area reference table with quality checks}
+
+
 referenceDT <- SOPARCObservations[, .(areaCount = max(as.numeric(tar_area))), by = park_name]
 observationsPerPark <- SOPARCObservations[, .(observationCount = .N), by = park_name]
 parkStats <- merge(referenceDT, observationsPerPark)
