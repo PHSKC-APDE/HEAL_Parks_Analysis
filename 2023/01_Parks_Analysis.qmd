@@ -133,6 +133,10 @@ RawSOPARCObservations$num_senior_spec <- as.numeric(RawSOPARCObservations$num_se
 RawSOPARCObservations[, timestampPOSIX := as.POSIXct(strptime(start_time, "%Y-%m-%d %H:%M"), "America/Los_Angeles") ] #a POSIX format of time
 RawSOPARCObservations[, datePOSIX := as.Date(RawSOPARCObservations$timestampPOSIX, tz = "America/Los_Angeles")] #a data.table integer format of second of the day
 #RawSOPARCObservations[, idate := IDateTime(timestampPOSIX)$idate] #a data.table integer format of second of the day
+#add day of the week
+RawSOPARCObservations[, day := weekdays(timestampPOSIX)]
+#add weekend indicator
+RawSOPARCObservations[, weekend := ifelse(day %in% c("Saturday", "Sunday"), 1, 0)]
 
 #some saved work
                 #accessible_check <- SOPARCObservations$accessible
@@ -280,7 +284,9 @@ for(index in 1:nrow(listToCollapseStarts)) {
                                                                                                                                                     comments = gsub("^(\\;)*|(?<=(\\;))(\\;)|(\\;)*$","",paste(unique(comments), collapse =  ";"), perl = TRUE),
                                                                                                                                                     park_scan_data_collection_complete = last(park_scan_data_collection_complete),
                                                                                                                                                     timestampPOSIX = first(timestampPOSIX),
-                                                                                                                                                    datePOSIX = first(datePOSIX)), ]
+                                                                                                                                                    datePOSIX = first(datePOSIX),
+                                                                                                                                                    day = first(day),
+                                                                                                                                                    weekend = first(weekend)), ]
     if(nrow(TempCollapseResult) > 1 ) {
       stop(paste("Failed to compress observations, check result of", park, target_area, date, "between", starttime, "and", endtime))
     } else if(!exists("SOPARCCollapsedSubAreas")) {
@@ -305,19 +311,71 @@ SOPARCObservations <- rbind(SOPARCObservations[sub_area == "",], SOPARCCollapsed
 ```{r check if expected number of observations exist per park}
 
 
-referenceDT <- SOPARCObservations[, .(areaCount = max(as.numeric(tar_area))), by = park_name]
-observationsPerPark <- SOPARCObservations[, .(observationCount = .N), by = park_name]
-parkStats <- merge(referenceDT, observationsPerPark)
-parkStats[, expectedObservationCount := areaCount*24]
-parkStats[, meetsExpected := ifelse(expectedObservationCount == observationCount, "PASS", "FAIL")]
 
 
 ```
 
 ```{r correcting errors in data}
 
+referenceDT <- SOPARCObservations[, .(areaCount = max(as.numeric(tar_area))), by = park_name]
+observationsPerPark <- SOPARCObservations[, .(observationCount = .N), by = park_name]
+parkStats <- merge(referenceDT, observationsPerPark)
+parkStats[, expectedObservationCount := areaCount*24]
+parkStats[, meetsExpected := ifelse(expectedObservationCount == observationCount, "PASS", "FAIL")]
+
+SOPARCObservationsOK <- SOPARCObservations[park_name %in% parkStats[meetsExpected %in% "PASS", park_name],]
 
 
+#start first pass
+
+
+#for each day of observation with too many observations per day, try to resolve to 24xtarget area
+parkStats$strateg1exec <- TRUE
+parkStats$numberDaysOver <- 0
+parkStats$numberDaysUnder <- 0
+parkStats$numberDaysObserved <- 3
+parkStats$numberDaysComplete <- 3
+
+
+#testing sets
+park <- "Arbor Lake"
+
+
+for(park in parkStats[meetsExpected == "FAIL",]$park_name) {
+  SOPARCSingle <- SOPARCObservations[park_name == park,]
+  areasExpects <- parkStats[park_name == park,areaCount]
+  observationsExpected <- parkStats[park_name == park,areaCount] * 8
+  days <- unique(SOPARCSingle[,datePOSIX])
+  #if only 3 days have 24*numberofarea +/- x observations, drop the other days and execute strategy 1 on remaining 3 days
+  x <- 5
+  stratResult <- SOPARCSingle[, .("N" = .N,"exact" = .N == observationsExpected ,"inRange" = (.N >= observationsExpected - x) & (.N <= observationsExpected +x), "under" = (.N < observationsExpected), "over" = (.N > observationsExpected)),by = datePOSIX]
+  parkStats[park_name == park,]$numberDaysComplete <- sum(stratResult$exact)
+  parkStats[park_name == park,]$numberDaysOver <- sum(stratResult$over)
+  parkStats[park_name == park,]$numberDaysUnder <-sum(stratResult$under)
+  parkStats[park_name == park,]$numberDaysObserved <- nrow(stratResult)
+  if(parkStats[park_name == park,]$numberDaysObserved == 3 & parkStats[park_name == park,]$numberDaysComplete == 2) { #what to do if there are the correct number of days and only one day is not exact
+    dateToFix <- stratResult[exact == "FALSE",]$datePOSIX
+    #if no target area has more than the expected, walk through the day in order, and insert missing observations
+    if(all(SOPARCSingle[ datePOSIX == dateToFix, .N <= 8 , by = tar_area]$V1)) {
+      areaScanner <- 1
+      for(rowCounter in 1:nrow(SOPARCSingle)) {
+        expectedTargetArea <- areaScanner
+      }
+    }
+    test <- SOPARCSingle[ datePOSIX == dateToFix, ]
+    
+    
+  } else {
+    parkStats[park_name == park,]$strateg1exec <- FALSE
+
+  }
+}
+SOPARCSingle[datePOSIX == "2023-08-16",]
+
+```
+
+
+```{r}
 #resolve redundant observations
 for(park in unique(SOPARCObservations[,park_name])) {
   for(area in 1:max(SOPARCObservations[park_name == park, tar_area])) {
