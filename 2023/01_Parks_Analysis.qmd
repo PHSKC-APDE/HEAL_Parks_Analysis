@@ -7,10 +7,18 @@ format:
   pdf:
     toc: true
     number-sections: true
+    df-print: kable
+execute: 
+  echo: false
+  warning: false
+  output: false
 ---
 
 # Front Matter
 
+This document outlines procedures and tehcnical considerations for the 2023 analysis of data from the HEAL Parks Study.
+
+For general information about the project please review the git (make into link) or contact Seth Schromen-Wawrin (email link)
 
 ## ITHS REDCap
 
@@ -20,8 +28,9 @@ Data are currently stored in ITHS REDCap. This is currently managed by the progr
 
 Quarto enables you to weave together documentation and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
 
+Data, and so resulting tables, are automatically generated when the document is compiled.
 
-# 1 Setting Up Environment
+# Setting Up Environment
 
 ```{r define constant and environment variables}
 USEGOODDATA <- TRUE
@@ -46,7 +55,6 @@ In order to pull data directly from REDCap, API information must be provided. Yo
 
 Note, that the .gitignore for this project is configured to exclude your secrets.txt file, so, by default, it will not upload to github, and you will not be able to see other users' secrets.txt. They are only stored on your machine.
 
-
 # 2 Load Data
 
 ```{r import data}
@@ -54,6 +62,9 @@ library(RCurl)
 library(jsonlite)
 library(here)
 library(data.table)
+library(kableExtra)
+options(knitr.table.format = "latex") 
+
 if (file.exists(here("2023/secrets.txt"))) {
   source(here("2023/secrets.txt"))
 } else {
@@ -205,22 +216,11 @@ setorder(SOPARCObservations, cols = "timestampPOSIX")
 
 ```
 
-For this analysis, we are not using sub areas. These can be collapsed into single areas.
-For each observation, sub areas will be collapsed using the following rules:
-    numerical observations will be added together
-    categorical become affirmative/existing if any of the subareas are affirmative/existing
-    timestamp of the earliest observation in the set will be used
+For this analysis, we are not using sub areas. These can be collapsed into single areas. For each observation, sub areas will be collapsed using the following rules: numerical observations will be added together categorical become affirmative/existing if any of the subareas are affirmative/existing timestamp of the earliest observation in the set will be used
 
-Sub areas of the same target area will be assumed to be of the same observation period based on the following logic:
-    for a sequence of sub areas observed in the same 50 hours period
-    apparantly missing sub-areas will be ignored (assumption: not all sub areas are necessary)
+Sub areas of the same target area will be assumed to be of the same observation period based on the following logic: for a sequence of sub areas observed in the same 50 hours period apparantly missing sub-areas will be ignored (assumption: not all sub areas are necessary)
 
-If non unique sub area labels are identified:
-    check if the expected list of sub areas are in teh data set
-    if too many, attempt to identify redundancies and remove these
-    if too few, interpolate missing information
-
-
+If non unique sub area labels are identified: check if the expected list of sub areas are in teh data set if too many, attempt to identify redundancies and remove these if too few, interpolate missing information
 
 ```{r collapse sub areas into a single area}
 SOPARCObservationsSubAreas <- copy(SOPARCObservations[sub_area != "",])
@@ -307,7 +307,6 @@ SOPARCObservations <- rbind(SOPARCObservations[sub_area == "",], SOPARCCollapsed
 
 ```
 
-
 ```{r check if expected number of observations exist per park}
 
 referenceDT <- SOPARCObservations[, .(areaCount = max(as.numeric(tar_area))), by = park_name]
@@ -333,12 +332,11 @@ parkStats[,`:=`(strateg1exec = FALSE,
 
 ```
 
-
 We will take several passes in correcting data.
 
 ## Strategy 1: correct missingness where observations are only missing but correct number of days
-This strategy looks at the number of days of data observed, and, if only 3 days are observed, then checks to confirm that, for each target area, 8 or fewer observations are made.
-If both of these conditions are met, this strategy attempts to insert the missing observations as blank entries in the part of the day that appeaer to be missing them. It identifies part of day by looking at each data colleciton period and inserting observations into the underweighted period(s) until 8 exists for each target area.
+
+This strategy looks at the number of days of data observed, and, if only 3 days are observed, then checks to confirm that, for each target area, 8 or fewer observations are made. If both of these conditions are met, this strategy attempts to insert the missing observations as blank entries in the part of the day that appeaer to be missing them. It identifies part of day by looking at each data colleciton period and inserting observations into the underweighted period(s) until 8 exists for each target area.
 
 ```{r any days with missing and only missing}
 
@@ -506,6 +504,401 @@ SOPARCObservationsToFix <- copy(SOPARCObservationsToFix[park_name %in% parkStats
 
 
 
+```{r select analysis set to use}
+if(USEGOODDATA) {
+  SOPARCAnalysisSet <- copy(SOPARCObservationsOK) #only use parks that have expected number of observation
+} else {
+  SOPARCAnalysisSet <- copy(rbind(SOPARCObservationsOK, SOPARCObservationsToFix)) #use all parks
+}
+```
+
+# Parameterizing data
+
+Parks are observed multiple times. 8 times per day. These are in a morning, lunch, afternoon, and evening period (two data collections per period). This process is repeated for 3 days (24 sets of observations per park).
+
+Each park is divided into one or more areas. All areas should be observed during a single observation period. Some areas may be further divided into sub areas. In our data, each area is simply assigned a number.
+
+```{r period assignment based on sequence}
+
+
+  
+
+
+expectedTimeBreakpoints <- c(0800, #start morning2
+                             0830, #between M2 and L1
+                             1230, #start L1
+                             1300, #start L2
+                             1330, # between L2 and A1
+                             1530, #start A1
+                             1600, #start A2
+                             1630, #between A2 and E1
+                             1830, #start E1
+                             1900) #start E2
+
+
+breakPointLabels <- c("morning1",
+             "morning2",
+             "betweenML",
+             "lunch1",
+             "lunch2",
+             "betweenLA",
+             "afternoon1",
+             "afternoon2",
+             "betweeenAE",
+             "evening1",
+             "evening2")
+
+
+ 
+#for remaining observations, create a list of their times, standardized to POSIX
+dataCollectionTimes <- as.POSIXct(strptime(SOPARCAnalysisSet$start_time, "%Y-%m-%d %H:%M"), "America/Los_Angeles") 
+
+breakpointAssignments <- breakPointLabels[findInterval(format(dataCollectionTimes, format = "%H%M"), expectedTimeBreakpoints, left.open = T, all.inside = FALSE, rightmost.closed = FALSE)+1]
+
+#assign observed times to scheduled periods. Use only the house (otherwise would attribute date.)
+SOPARCAnalysisSet$periodBasedOnBreakpoint <- breakpointAssignments
+
+```
+
+At this point rudementary timestamps have been assigned based on the expected times of observation. Now we apply a series of heuristics to correct obvious errors.
+
+```{r adjust timestamp assigments}
+
+```
+
+A second approach to assigning time periods relies on the assumption that timestamps are in order (e.g. the first observation of park A area 1 is always "morning1", the second, "morning2" and so on.)
+
+In turn, with this approach, we assign the sequence of the day such that the first morning1 is day 1, the second is day2, and so on.
+
+For both of the above approaches, we assume that there are the correct number of observation periods such that 1 can be assigned to each period, and 8 to each day.
+
+```{r assign time periods based on sequence}
+
+sequenceLabels <- c("morning1",
+             "morning2",
+             "lunch1",
+             "lunch2",
+             "afternoon1",
+             "afternoon2",
+             "evening1",
+             "evening2")
+
+
+#apply observation period labels based on the order that a park's target area was observed
+SOPARCAnalysisSet[order(timestampPOSIX, tar_area), periodBasedOnSequence := rep_len(sequenceLabels, .N), by = .(park_name)]
+
+
+#apply day sequence labels based on the order of a park's observation period
+SOPARCAnalysisSet[order(datePOSIX), dayNumberBasedOnSequence := as.numeric(factor(datePOSIX)), by = .(park_name)]
+
+
+```
+
+save these data to review timestamp assignments
+
+```{r}
+#save for manual inspection
+write.csv(SOPARCAnalysisSet, "inspectTimestamps.csv")
+
+```
+
+For each park, there should be 3 days of observation. We will detect this by extracting the date per park and putting observations in order of day "1" "2" "3"
+
+```{r  assign observation day}
+
+# #library(lubridate)
+#   for(park in unique(SOPARCObservations$park_name)) {
+#     daysOfYear <- yday(SOPARCObservations[park_name %in% park, start_time])
+#     dayOfYear <- unique(daysOfYear)
+#     if(length(dayOfYear) > 3) { warning("more than three days detected for:", park ,"\n") }
+#     if(length(dayOfYear) < 3) { warning("less than three days detected for:", park ,"\n") }
+#     for(dayCounter  in 1:length(dayOfYear)) {
+#       SOPARCObservations[park_name %in% park & yday(start_time) == dayOfYear[dayCounter], analysisDay := dayCounter]
+#     }
+#   }
+```
+
+```{r prep for analysis QA}
+
+PreQADT <- copy(SOPARCAnalysisSet)
+
+#check if all expected time periods exists and are assigned
+for(park in unique(PreQADT$park_name)) {
+  multiple <- referenceDT[park_name %in% park,]$areaCount
+  #check sequence based times
+  for(period in sequenceLabels) {
+    if(nrow(PreQADT[park_name %in% park & periodBasedOnSequence %in% period, ]) != multiple*3) { 
+      PreQADT[park_name %in% park & periodBasedOnSequence %in% period, PeriodBasedOnSequencePass := 0]
+    } else {
+      PreQADT[park_name %in% park & periodBasedOnSequence %in% period, PeriodBasedOnSequencePass := 1]
+    }
+    
+  }
+  for(daycount in 1:3){
+    #we will perform 2 checks here
+    #1 review if the correct number of observations are assigned to each day
+    if(nrow(PreQADT[park_name %in% park & dayNumberBasedOnSequence %in% daycount, ]) != multiple*8) { 
+      PreQADT[park_name %in% park & dayNumberBasedOnSequence %in% daycount, DayCountBasedOnSequencePass := 0]
+    } else {
+      PreQADT[park_name %in% park & dayNumberBasedOnSequence %in% daycount, DayCountBasedOnSequencePass := 1]
+    }
+    #2 confirm that the observations assigned to the same day are flagged with the same day of the week
+    if(length(unique(PreQADT[park_name %in% park & dayNumberBasedOnSequence %in% daycount, day])) != 1) { 
+      PreQADT[park_name %in% park & dayNumberBasedOnSequence %in% daycount, DayAssignmentBasedOnSequencePass := 0]
+    } else {
+      PreQADT[park_name %in% park & dayNumberBasedOnSequence %in% daycount, DayAssignmentBasedOnSequencePass := 1]
+    }
+  }
+  
+}
+
+# 
+# #check if any time periods are in between assigned periods
+# liminalTimes <- c("betweenML",
+#                   "betweenLA",
+#                   "betweeenAE")
+# if(nrow(PreQADT[periodBasedOnBreakpoint %in% liminalTimes,]) >0){
+#   propMissing <- round(nrow(PreQADT[periodBasedOnBreakpoint %in% liminalTimes,])/nrow(PreQADT) ,2)*100
+#   warning(paste0("%", propMissing, " of observations are in liminal periods and need to be corrected for proper analysis,"))
+#   warning("trimming data to only include observations with properly assigned observation periods. Do not use these results in final analysis.")
+#   PreQADT[, passQABP := ifelse(!(periodBasedOnBreakpoint %in% liminalTimes)]
+# } else {
+#   message("OK status: All observations have been assigned to a time period")
+# }
+# 
+# #check if parks have all expected observations
+# pass <- 1
+# for(park in unique(PreQADT$park_name)) {
+# 
+# }
+
+QAVarList <- c("PeriodBasedOnSequencePass",
+               "DayCountBasedOnSequencePass",
+               "DayAssignmentBasedOnSequencePass")
+
+QAVarList <- quote(list(PeriodBasedOnSequencePass,
+               DayCountBasedOnSequencePass,
+               DayAssignmentBasedOnSequencePass))
+
+PostQADT <- copy(PreQADT)
+```
+
+## Data Quality
+
+After cleaning and QA, data are saved to a csv file for review titled, "QA_manual_review.csv".
+
+A separate table of QA checks is saved as well. This includes information about all parks, incldued or not. Note that if the USEGOODDATA flag is set, only parks that pass QA are included in analysis. titled "QA_metadata.csv".
+
+```{r save data to review QA output}
+#save for manual inspection
+write.csv(PostQADT, "QA_manual_review.csv")
+write.csv(parkStats, "QA_metadata.csv")
+```
+
+```{r analysis functions}
+
+
+```
+
+
+
+# Results
+
+For all analyses, we do not want to distinguish between the first and second of a period (e.g. morning1 and morning2). This chunk attempts to aggregate these according to the following:
+
+| positive indicaters | aggregate to |
+|---------------------|--------------|
+| accessible          | Yes          |
+| usable              | Yes          |
+| lit                 | Yes          |
+| occupied            | Yes          |
+| supervised          | Yes          |
+| organized           | Yes          |
+| equipped            | Yes          |
+
+| counts of       | are aggregated as |
+|-----------------|-------------------|
+| num_child_prim  | ceiling of mean   |
+| num_child_snd   | ceiling of mean   |
+| num_child_spec  | ceiling of mean   |
+| num_teen_prim   | ceiling of mean   |
+| num_teen_snd    | ceiling of mean   |
+| num_teen_spec   | ceiling of mean   |
+| num_adult_prim  | ceiling of mean   |
+| num_adult_snd   | ceiling of mean   |
+| num_adult_spec  | ceiling of mean   |
+| num_senior_prim | ceiling of mean   |
+| num_senior_snd  | ceiling of mean   |
+| num_senior_spec | ceiling of mean   |
+
+| open text field of | aggregate to     |
+|--------------------|------------------|
+| prim_act_name      | concantinate ";" |
+| prim_act_other     | concantinate ";" |
+| snd_act_name       | concantinate ";" |
+| other_act_snd      | concantinate ";" |
+| spec_act_name      | concantinate ";" |
+| other_act_spec     | concantinate ";" |
+| comments           | concantinate ";" |
+
+```{r period aggregation}
+
+if(USEGOODDATA) {
+  #check is all QA checks are 1, if any are not one, do not include that park
+  invalidParks <- unique(PostQADT[apply(PostQADT[,eval(QAVarList)], 1, mean) != 1, park_name])
+  SOPARCtoAggregate <- copy(PostQADT[!(park_name %in% invalidParks),])
+} else {
+  SOPARCtoAggregate <- copy(PostQADT)
+}
+
+#create single periodname for aggregating first and second of each period using sequence periods
+SOPARCtoAggregate[periodBasedOnSequence %in% c("morning1","morning2"), period := "morning"]
+SOPARCtoAggregate[periodBasedOnSequence %in% c("lunch1","lunch2"), period := "lunch"]
+SOPARCtoAggregate[periodBasedOnSequence %in% c("afternoon1","afternoon2"), period := "afternoon"]
+SOPARCtoAggregate[periodBasedOnSequence %in% c("evening1","evening2"), period := "evening"]
+
+SOPARCAggregated <- SOPARCtoAggregate[,
+                                      .("accessible" = ifelse(any(accessible %in% "Yes"), "Yes", "No"),
+                                        "usable" = ifelse(any(usable %in% "Yes"), "Yes", "No"),
+                                        "lit" = ifelse(any(lit %in% "Yes"), "Yes", "No"),
+                                        "occupied" = ifelse(any(occupied %in% "Yes"), "Yes", "No"),
+                                        "supervised" = ifelse(any(supervised %in% "Yes"), "Yes", "No"),
+                                        "organized" = ifelse(any(organized %in% "Yes"), "Yes", "No"),
+                                        "equipped" = ifelse(any(organized %in% "Yes"), "Yes", "No"),
+                                        "num_child_prim" = ceiling(mean(num_child_prim, na.rm = T)),
+                                        "num_child_snd" = ceiling(mean(num_child_snd, na.rm = T)),
+                                        "num_child_spec" = ceiling(mean(num_child_spec, na.rm = T)),
+                                        "num_teen_prim"= ceiling(mean(num_teen_prim, na.rm = T)),
+                                        "num_teen_snd" = ceiling(mean(num_teen_snd, na.rm = T)),
+                                        "num_teen_spec" = ceiling(mean(num_teen_spec, na.rm = T)),
+                                        "num_adult_prim" = ceiling(mean(num_adult_prim, na.rm = T)),
+                                        "num_adult_snd" = ceiling(mean(num_adult_snd, na.rm = T)),
+                                        "num_adult_spec" = ceiling(mean(num_adult_spec, na.rm = T)),
+                                        "num_senior_prim" = ceiling(mean(num_senior_prim, na.rm = T)),
+                                        "num_senior_snd" = ceiling(mean(num_senior_snd, na.rm = T)),
+                                        "num_senior_spec" = ceiling(mean(num_senior_spec, na.rm = T))), 
+                                      by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]
+
+#SOPARCAggregated$accessible <- SOPARCtoAggregate[, ifelse(any(accessible %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+#SOPARCAggregated$usable <- SOPARCtoAggregate[, ifelse(any(usable %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+# SOPARCAggregated$lit <- SOPARCtoAggregate[, ifelse(any(lit %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+# SOPARCAggregated$occupied <- SOPARCtoAggregate[, ifelse(any(occupied %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+# SOPARCAggregated$supervised <- SOPARCtoAggregate[, ifelse(any(supervised %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+# SOPARCAggregated$organized <- SOPARCtoAggregate[, ifelse(any(organized %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+# SOPARCAggregated$equipped <- SOPARCtoAggregate[, ifelse(any(equipped %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+
+
+# SOPARCAggregated$num_child_prim <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_child_prim))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+# SOPARCAggregated$num_child_snd <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_child_snd))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+# SOPARCAggregated$num_child_spec <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_child_spec))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+# SOPARCAggregated$num_teen_prim <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_teen_prim))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+# SOPARCAggregated$num_teen_snd <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_teen_snd))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+# SOPARCAggregated$num_teen_spec <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_teen_spec))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+# # SOPARCAggregated$num_adult_prim <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_adult_prim))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+# # SOPARCAggregated$num_adult_snd <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_adult_snd))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+# SOPARCAggregated$num_adult_spec <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_adult_spec))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+# SOPARCAggregated$num_senior_prim <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_senior_prim))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+# SOPARCAggregated$num_senior_snd <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_senior_snd))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+# SOPARCAggregated$num_senior_spec <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_senior_spec))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+# 
+# 
+
+
+
+```
+
+```{r report included parks}
+kbl(SOPARCAggregated[order(park_name), .("Park Name" = unique(park_name))], caption = "Parks Included In Analysis")
+
+```
+
+## Park Attendance
+
+```{r number of attendees chart}
+#|output: true
+# kbl(SOPARCtoAggregate[order(park_name),.("Number of Attendees" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name)], 
+#       caption =  "Total Number of Attendees",
+#     booktabs = T) %>% kable_styling(latex_options = "striped")
+
+kbl(SOPARCAggregated[order(park_name),.("Number of Attendees" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name)], 
+      caption =  "Total Number of Attendees",
+    booktabs = T) %>% kable_styling(latex_options = "striped")
+
+```
+
+
+
+```{r Average Park Visitors by time}
+#| output: true
+kbl(SOPARCtoAggregate[order(park_name),.("Attendees" = round(sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/6 ,0)), by = .("Park Name" = park_name, "Time Period" = period)],
+    caption = "Daily Average Number of Attendees Per Time Period",
+    booktabs = T) %>% kable_styling(latex_options = "striped")
+```
+
+```{r Rate of Park Use By Time}
+#| output: true
+kbl(SOPARCtoAggregate[order(park_name), sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/6 , by = .(park_name, period)][,.("Time Period" = period, "Proportion of Use" = paste0(round((V1/ sum(V1))*100,1), "%")), by = .("Park Name" = park_name) ],
+    caption = "Rate of Park Use By Time Period",
+    booktabs = T) %>% kable_styling(latex_options = "striped")
+
+kbl(SOPARCAggregated[order(park_name), sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3 , by = .(park_name, period)][,.("Time Period" = period, "Proportion of Use" = paste0(round((V1/ sum(V1))*100,1), "%")), by = .("Park Name" = park_name) ],
+    caption = "Rate of Park Use By Time Period",
+    booktabs = T) %>% kable_styling(latex_options = "striped")
+```
+Notes: Rate is within-park (each park totals to 100%).
+
+## Visitor Characteristics/Demography
+
+```{r Distribution of attendee ages}
+#|output: true
+kbl(SOPARCtoAggregate[order(park_name), .( "Age Group" = rep(c("child","teen","adult","senior")), 
+                                           "Average Number of People" = round(c(sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)/6,
+                      sum(num_teen_prim, num_teen_snd, num_teen_spec, na.rm = TRUE)/6,
+                      sum(num_adult_prim, num_adult_snd, num_adult_spec, na.rm = TRUE)/6,
+                      sum(num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/6))), by = .("Park Name" = park_name)],
+    caption = "Daily Average Number of Attendees by Age Group",
+    booktabs = T)  %>% kable_styling(latex_options = "striped")
+
+```
+
+```{r rate of park use by age}
+#|output: true
+kbl(SOPARCtoAggregate[order(park_name), .("Age Group" = rep(c("child","teen","adult","senior")), 
+                      "Percent Use" = paste0(round(c(sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
+                      sum(num_teen_prim, num_teen_snd, num_teen_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
+                      sum(num_adult_prim, num_adult_snd, num_adult_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
+                      sum(num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE))*100), "%")), by = .("Park Name" = park_name)],
+    caption = "Rate of Park Use by Age Group",
+    booktabs = T) %>% kable_styling(latex_options = "striped")
+
+```
+Notes: Rate is within-park (each park totals to 100%).
+
+
+Park Occupancy: percentage of the 24 observation periods where the park had any occupancy Doing this by target areas has problem because the content of target areas is not stable.
+
+```{r analysis of occupancy}
+
+SOPARCtoAggregate[order(park_name), ifelse(any(occupied %in% "Yes"), 1, 0), by = .(park_name, periodBasedOnSequence,dayNumberBasedOnSequence)][, .("Percent of time Occupied" =round((sum(V1)/24 )*100,0)),by=park_name]
+
+```
+
+Number of people doing an activity in a park
+
+```{r}
+rbind(SOPARCtoAggregate[,sum(num_child_prim, num_teen_prim, num_adult_prim, num_senior_prim, na.rm = T) , by = .(park_name,activity = prim_act_name)][V1 > 0,],
+SOPARCtoAggregate[,sum(num_child_snd, num_teen_snd, num_adult_snd, num_senior_snd, na.rm = T) , by = .(park_name,activity = snd_act_name)][V1 > 0,],
+SOPARCtoAggregate[,sum(num_child_spec, num_teen_spec, num_adult_spec, num_senior_spec, na.rm = T) , by = .(park_name,activity = spec_act_name)][V1 > 0,])[,sum(V1), by = .(park_name,activity)]
+```
+
+Frequency of Activities: Counts of how often at least 1 person was doing which of the activities. Time as proportion of the 24 observation periods
+
+```{r}
+rbind(SOPARCtoAggregate[,sum(num_child_prim, num_teen_prim, num_adult_prim, num_senior_prim, na.rm = T) , by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity = prim_act_name)][V1 > 0,],
+SOPARCtoAggregate[,sum(num_child_snd, num_teen_snd, num_adult_snd, num_senior_snd, na.rm = T) , by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity = prim_act_name)][V1 > 0,],
+SOPARCtoAggregate[,sum(num_child_spec, num_teen_spec, num_adult_spec, num_senior_spec, na.rm = T) , by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity = prim_act_name)][V1 > 0,])[,sum(V1), by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity)][,.N / 24, by = .(park_name, activity)]
+```
+
 ```{r}
 #|eval: false
 #|echo: false  
@@ -630,360 +1023,3 @@ for(park in unique(SOPARCObservations[,park_name])) {
   }
 }
 ```
-
-
-
-
-```{r select analysis set to use}
-if(USEGOODDATA) {
-  SOPARCAnalysisSet <- copy(SOPARCObservations[park_name %in% parkStats[meetsExpected == "PASS"]$park_name]) #only use parks that have expected number of observation
-} else {
-  SOPARCAnalysisSet <- copy(SOPARCObservations) #use all parks
-}
-```
-
-
-
-# Parameterizing data
-
-Parks are observed multiple times. 8 times per day. These are in a morning, lunch, afternoon, and evening period (two data collections per period). This process is repeated for 3 days (24 sets of observations per park).
-
-Each park is divided into one or more areas. All areas should be observed during a single observation period. Some areas may be further divided into sub areas. In our data, each area is simply assigned a number.
-
-```{r period assignment based on sequence}
-
-
-  
-
-
-expectedTimeBreakpoints <- c(0800, #start morning2
-                             0830, #between M2 and L1
-                             1230, #start L1
-                             1300, #start L2
-                             1330, # between L2 and A1
-                             1530, #start A1
-                             1600, #start A2
-                             1630, #between A2 and E1
-                             1830, #start E1
-                             1900) #start E2
-
-
-breakPointLabels <- c("morning1",
-             "morning2",
-             "betweenML",
-             "lunch1",
-             "lunch2",
-             "betweenLA",
-             "afternoon1",
-             "afternoon2",
-             "betweeenAE",
-             "evening1",
-             "evening2")
-
-
- 
-#for remaining observations, create a list of their times, standardized to POSIX
-dataCollectionTimes <- as.POSIXct(strptime(SOPARCAnalysisSet$start_time, "%Y-%m-%d %H:%M"), "America/Los_Angeles") 
-
-breakpointAssignments <- breakPointLabels[findInterval(format(dataCollectionTimes, format = "%H%M"), expectedTimeBreakpoints, left.open = T, all.inside = FALSE, rightmost.closed = FALSE)+1]
-
-#assign observed times to scheduled periods. Use only the house (otherwise would attribute date.)
-SOPARCAnalysisSet$periodBasedOnBreakpoint <- breakpointAssignments
-
-```
-
-At this point rudementary timestamps have been assigned based on the expected times of observation.
-Now we apply a series of heuristics to correct obvious errors.
-
-
-```{r adjust timestamp assigments}
-
-```
-
-
-A second approach to assigning time periods relies on the assumption that timestamps are in order (e.g. the first observation of park A area 1 is always "morning1", the second, "morning2" and so on.)
-
-In turn, with this approach, we assign the sequence of the day such that the first morning1 is day 1, the second is day2, and so on. 
-
-For both of the above approaches, we assume that there are the correct number of observation periods such that 1 can be assigned to each period, and 8 to each day.
-```{r assign time periods based on sequence}
-
-sequenceLabels <- c("morning1",
-             "morning2",
-             "lunch1",
-             "lunch2",
-             "afternoon1",
-             "afternoon2",
-             "evening1",
-             "evening2")
-
-
-#apply observation period labels based on the order that a park's target area was observed
-SOPARCAnalysisSet[order(park_scan_data_collection_timestamp, tar_area), periodBasedOnSequence := rep_len(sequenceLabels, .N), by = "park_name"]
-
-
-#apply day sequence labels based on the order of a park's observation period
-SOPARCAnalysisSet[order(park_scan_data_collection_timestamp, tar_area, periodBasedOnSequence), dayNumberBasedOnSequence := rep_len(1:3, .N), by = "park_name",]
-
-
-```
-
-
-
-
-
-save these data to review timestamp assignments
-```{r}
-#save for manual inspection
-write.csv(SOPARCAnalysisSet, "inspectTimestamps.csv")
-
-```
-
-
-For each park, there should be 3 days of observation. We will detect this by extracting the date per park and putting observations in order of day "1" "2" "3"
-```{r  assign observation day}
-
-# #library(lubridate)
-#   for(park in unique(SOPARCObservations$park_name)) {
-#     daysOfYear <- yday(SOPARCObservations[park_name %in% park, start_time])
-#     dayOfYear <- unique(daysOfYear)
-#     if(length(dayOfYear) > 3) { warning("more than three days detected for:", park ,"\n") }
-#     if(length(dayOfYear) < 3) { warning("less than three days detected for:", park ,"\n") }
-#     for(dayCounter  in 1:length(dayOfYear)) {
-#       SOPARCObservations[park_name %in% park & yday(start_time) == dayOfYear[dayCounter], analysisDay := dayCounter]
-#     }
-#   }
-```
-
-
-```{r prep for analysis QA}
-
-PreQADT <- copy(SOPARCAnalysisSet)
-
-#check if all expected time periods exists and are assigned
-for(park in unique(PreQADT$park_name)) {
-  multiple <- referenceDT[park_name %in% park,]$areaCount
-  #check sequence based times
-  for(period in sequenceLabels) {
-    if(nrow(PreQADT[park_name %in% park & periodBasedOnSequence %in% period, ]) != multiple*3) { 
-      PreQADT[park_name %in% park & periodBasedOnSequence %in% period, PeriodBasedOnSequencePass := 0]
-    } else {
-      PreQADT[park_name %in% park & periodBasedOnSequence %in% period, PeriodBasedOnSequencePass := 1]
-    }
-    
-  }
-  for(daycount in 1:3){
-    #we will perform 2 check here
-    #1 review if the correct number of observations are assigned to each day
-    if(nrow(PreQADT[park_name %in% park & dayNumberBasedOnSequence %in% daycount, ]) != multiple*8) { 
-      PreQADT[park_name %in% park & dayNumberBasedOnSequence %in% daycount, DayCountBasedOnSequencePass := 0]
-    } else {
-      PreQADT[park_name %in% park & dayNumberBasedOnSequence %in% daycount, DayCountBasedOnSequencePass := 1]
-    }
-    #2 confirm that the observations assigned to the same day are flagged with the same day of the week
-    if(length(unique(PreQADT[park_name %in% park & dayNumberBasedOnSequence %in% daycount, day])) != 1) { 
-      PreQADT[park_name %in% park & dayNumberBasedOnSequence %in% daycount, DayAssignmentBasedOnSequencePass := 0]
-    } else {
-      PreQADT[park_name %in% park & dayNumberBasedOnSequence %in% daycount, DayAssignmentBasedOnSequencePass := 1]
-    }
-  }
-  
-}
-
-# 
-# #check if any time periods are in between assigned periods
-# liminalTimes <- c("betweenML",
-#                   "betweenLA",
-#                   "betweeenAE")
-# if(nrow(PreQADT[periodBasedOnBreakpoint %in% liminalTimes,]) >0){
-#   propMissing <- round(nrow(PreQADT[periodBasedOnBreakpoint %in% liminalTimes,])/nrow(PreQADT) ,2)*100
-#   warning(paste0("%", propMissing, " of observations are in liminal periods and need to be corrected for proper analysis,"))
-#   warning("trimming data to only include observations with properly assigned observation periods. Do not use these results in final analysis.")
-#   PreQADT[, passQABP := ifelse(!(periodBasedOnBreakpoint %in% liminalTimes)]
-# } else {
-#   message("OK status: All observations have been assigned to a time period")
-# }
-# 
-# #check if parks have all expected observations
-# pass <- 1
-# for(park in unique(PreQADT$park_name)) {
-# 
-# }
-
-QAVarList <- c("PeriodBasedOnSequencePass",
-               "DayCountBasedOnSequencePass",
-               "DayAssignmentBasedOnSequencePass")
-
-QAVarList <- quote(list(PeriodBasedOnSequencePass,
-               DayCountBasedOnSequencePass,
-               DayAssignmentBasedOnSequencePass))
-
-PostQADT <- copy(PreQADT)
-```
-
-
-save these data to review QA output
-```{r}
-#save for manual inspection
-write.csv(PostQADT, "inspectQA.csv")
-
-```
-
-
-```{r analysis functions}
-
-
-```
-
-
-For all analyses, we do not want to distinguish between the first and second of a period (e.g. morning1 and morning2). This chunk attempts to aggregate these according to the following:
-
-
-positive indicaters | aggregate to
---------------------|----------------------
-accessible          | Yes
-usable              | Yes
-lit                 | Yes
-occupied            | Yes
-supervised          | Yes
-organized           | Yes
-equipped            | Yes
-
-counts of           | are aggregated as
---------------------|-----------------------
-num_child_prim      | sum
-num_child_snd       | sum
-num_child_spec      | sum
-num_teen_prim       | sum
-num_teen_snd        | sum
-num_teen_spec       | sum
-num_adult_prim      | sum
-num_adult_snd       | sum
-num_adult_spec      | sum
-num_senior_prim     | sum
-num_senior_snd      | sum
-num_senior_spec     | sum
-
-open text field of  | aggregate to
---------------------|--------------------------
-prim_act_name       | concantinate ";"
-prim_act_other      | concantinate ";"
-snd_act_name        | concantinate ";"
-other_act_snd       | concantinate ";"
-spec_act_name       |
-other_act_spec      |
-comments            |
-
-
-## sub aeras
-
-
-
-```{r period aggregation}
-
-if(USEGOODDATA) {
-  #check is all QA checks are 1, if any are not one, do not include that park
-  invalidParks <- unique(PostQADT[apply(PostQADT[,eval(QAVarList)], 1, mean) != 1, park_name])
-  SOPARCtoAggregate <- copy(PostQADT[!(park_name %in% invalidParks),])
-} else {
-  SOPARCtoAggregate <- copy(PostQADT)
-}
-
-#create single periodname for aggregating first and second of each period using sequence periods
-SOPARCtoAggregate[periodBasedOnSequence %in% c("morning1","morning2"), period := "morning"]
-SOPARCtoAggregate[periodBasedOnSequence %in% c("lunch1","lunch2"), period := "lunch"]
-SOPARCtoAggregate[periodBasedOnSequence %in% c("afternoon1","afternoon2"), period := "afternoon"]
-SOPARCtoAggregate[periodBasedOnSequence %in% c("evening1","evening2"), period := "evening"]
-
-SOPARCAggregated <- unique.data.frame(SOPARCtoAggregate[, .(park_name, tar_area, dayNumberBasedOnSequence, period)])
-  
-SOPARCAggregated$accessible <- SOPARCtoAggregate[, ifelse(any(accessible %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-SOPARCAggregated$usable <- SOPARCtoAggregate[, ifelse(any(usable %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-SOPARCAggregated$lit <- SOPARCtoAggregate[, ifelse(any(lit %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-SOPARCAggregated$occupied <- SOPARCtoAggregate[, ifelse(any(occupied %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-SOPARCAggregated$supervised <- SOPARCtoAggregate[, ifelse(any(supervised %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-SOPARCAggregated$organized <- SOPARCtoAggregate[, ifelse(any(organized %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-SOPARCAggregated$equipped <- SOPARCtoAggregate[, ifelse(any(equipped %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-
-
-SOPARCAggregated$num_child_prim <- SOPARCtoAggregate[, sum(as.numeric(num_child_prim)), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-SOPARCAggregated$num_child_snd <- SOPARCtoAggregate[, sum(as.numeric(num_child_snd)), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-SOPARCAggregated$num_child_spec <- SOPARCtoAggregate[, sum(as.numeric(num_child_spec)), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-SOPARCAggregated$num_teen_prim <- SOPARCtoAggregate[, sum(as.numeric(num_teen_prim)), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-SOPARCAggregated$num_teen_snd <- SOPARCtoAggregate[, sum(as.numeric(num_teen_snd)), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-SOPARCAggregated$num_teen_spec <- SOPARCtoAggregate[, sum(as.numeric(num_teen_spec)), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-SOPARCAggregated$num_adult_prim <- SOPARCtoAggregate[, sum(as.numeric(num_adult_prim)), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-SOPARCAggregated$num_adult_snd <- SOPARCtoAggregate[, sum(as.numeric(num_adult_snd)), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-SOPARCAggregated$num_adult_spec <- SOPARCtoAggregate[, sum(as.numeric(num_adult_spec)), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-SOPARCAggregated$num_senior_prim <- SOPARCtoAggregate[, sum(as.numeric(num_senior_prim)), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-SOPARCAggregated$num_senior_snd <- SOPARCtoAggregate[, sum(as.numeric(num_senior_snd)), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-SOPARCAggregated$num_senior_spec <- SOPARCtoAggregate[, sum(as.numeric(num_senior_spec)), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-
-
-
-
-
-```
-
-
-
-How many people use a park
-```{r}
-SOPARCtoAggregate[, sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE), by = park_name]
-
-```
-
-Proportion of park visitors by time 
-```{r}
-
-SOPARCtoAggregate[, sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE) , by = .(park_name, period)]
-
-SOPARCtoAggregate[, sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE) , by = .(park_name, period)][,.(V1/ sum(V1),period), by = park_name ]
-
-```
-
-
-Distribution of age group
-Proportion of park attendees each age
-```{r}
-SOPARCtoAggregate[, .(c(sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE),
-                      sum(num_teen_prim, num_teen_snd, num_teen_spec, na.rm = TRUE),
-                      sum(num_adult_prim, num_adult_snd, num_adult_spec, na.rm = TRUE),
-                      sum(num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), rep(c("child","teen","adult","senior"))), by = park_name]
-
-SOPARCtoAggregate[, .(c(sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
-                      sum(num_teen_prim, num_teen_snd, num_teen_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
-                      sum(num_adult_prim, num_adult_snd, num_adult_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
-                      sum(num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)),rep(c("child","teen","adult","senior"))), by = park_name]
-```
-
-
-Park Occupancy:
-percentage of the 24 observation periods where the park had any occupancy
-Doing this by target areas has problem because the content of target areas is not stable.
-```{r analysis of occupancy}
-
-SOPARCtoAggregate[, ifelse(any(occupied %in% "Yes"), 1, 0), by = .(park_name, periodBasedOnSequence,dayNumberBasedOnSequence)][, round((sum(V1)/24 )*100,0),by=park_name]
-
-```
-
-
-
-
-Number of people doing an activity in a park
-```{r}
-rbind(SOPARCtoAggregate[,sum(num_child_prim, num_teen_prim, num_adult_prim, num_senior_prim, na.rm = T) , by = .(park_name,activity = prim_act_name)][V1 > 0,],
-SOPARCtoAggregate[,sum(num_child_snd, num_teen_snd, num_adult_snd, num_senior_snd, na.rm = T) , by = .(park_name,activity = snd_act_name)][V1 > 0,],
-SOPARCtoAggregate[,sum(num_child_spec, num_teen_spec, num_adult_spec, num_senior_spec, na.rm = T) , by = .(park_name,activity = spec_act_name)][V1 > 0,])[,sum(V1), by = .(park_name,activity)]
-```
-
-
-Frequency of Activities:
-Counts of how often at least 1 person was doing which of the activities. Time as proportion of the 24 observation periods
-```{r}
-rbind(SOPARCtoAggregate[,sum(num_child_prim, num_teen_prim, num_adult_prim, num_senior_prim, na.rm = T) , by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity = prim_act_name)][V1 > 0,],
-SOPARCtoAggregate[,sum(num_child_snd, num_teen_snd, num_adult_snd, num_senior_snd, na.rm = T) , by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity = prim_act_name)][V1 > 0,],
-SOPARCtoAggregate[,sum(num_child_spec, num_teen_spec, num_adult_spec, num_senior_spec, na.rm = T) , by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity = prim_act_name)][V1 > 0,])[,sum(V1), by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity)][,.N / 24, by = .(park_name, activity)]
-```
-
-
