@@ -8,6 +8,8 @@ format:
     toc: true
     number-sections: true
     df-print: kable
+    fig-height: 12
+    fig-width: 16
 execute: 
   echo: false
   warning: false
@@ -44,11 +46,14 @@ if(!"pacman" %in% installed.packages()) {
 
 # load and install packages using pacman. 
 # Pacman will install and load missing packages.
-pacman::p_load(here,  #used to simplify calls to local directory
+pacman::p_load(openxlsx2, #read xlsx files
+               ggplot2, #used to create pretty charts
+               here,  #used to simplify calls to local directory
                RCurl, #used to prepare and parse json/API querries
                jsonlite, #used to parse json results
                data.table, #data structure and analytics framework used throughout
                kableExtra) #kable extension used to generate pretty output
+
 
 #configure any package specific options here
 options(knitr.table.format = "latex") 
@@ -63,7 +68,7 @@ Note, that the .gitignore for this project is configured to exclude your secrets
 
 # Data Preperation
 
-# Extraction
+## Extraction
 
 Data are currently stored in ITHS REDCap (link). The project name is: <name>. In order for this script to operate correctly, you should request access to the project and then create an API key. This information goes into your secrets document.
 
@@ -191,8 +196,8 @@ Description | Details
 Drop pre-study data | Study start date is 7/1/23 with the first park being Garfield Playfield. Observations prior to this date or the first observation of Garfield are dropped
 Drop incomplete entries | observations where the REDCap status is not "Complete", that are missing a timestamp, or missing a park name are dropped
 Drop duplicates | duplicate entries (exclusive of redcapID) are dropped. Note that where this creates incomplete days, this is corrected in later QA
-Drop innacureate subareas | Some parks were identified as having having sub area data input without having multiple sub areas (and so shouldn't be processed as sub areas). The subarea entry for these parks is removed. 
-
+Drop inacurate subareas | Some parks were identified as having having sub area data input without having multiple sub areas (and so shouldn't be processed as sub areas). The subarea entry for these parks is removed. 
+Drop observations identified by human review | Some observations were identified through review of base data by program managers. These  are identified in the file "Records-to-Remove.xlsx"
 
 
 ```{r identify and drop incorrect observations}
@@ -224,6 +229,11 @@ SOPARCObservations[park_name %in% c("Hazelnut Park",
 SOPARCObservations <- SOPARCObservations[record_id >= 141,]
 SOPARCObservations <- SOPARCObservations[datePOSIX >= "2023-07-01",]
 
+#remove identified records
+RemoveMe <- openxlsx2::read_xlsx("Records-to-Remove.xlsx")
+SOPARCObservations <- SOPARCObservations[!(record_id %in% RemoveMe$record_id),]
+
+#reorder given new data
 setorder(SOPARCObservations, cols = "timestampPOSIX")
 
 
@@ -792,6 +802,9 @@ SOPARCtoAggregate[periodBasedOnSequence %in% c("lunch1","lunch2"), period := "lu
 SOPARCtoAggregate[periodBasedOnSequence %in% c("afternoon1","afternoon2"), period := "afternoon"]
 SOPARCtoAggregate[periodBasedOnSequence %in% c("evening1","evening2"), period := "evening"]
 
+SOPARCtoAggregate$period <-  factor(SOPARCtoAggregate$period, level = c("morning","lunch","afternoon","evening"))
+
+
 SOPARCAggregated <- SOPARCtoAggregate[,
                                       .("accessible" = ifelse(any(accessible %in% "Yes"), "Yes", "No"),
                                         "usable" = ifelse(any(usable %in% "Yes"), "Yes", "No"),
@@ -844,7 +857,13 @@ write.csv(SOPARCAggregated, "SOPARCDataPreparedAggregated.csv")
 
 # Results
 
+Results are saved in two locations, an excel workbook that contains a separate page for each table of analysis results, and this document which contains a human readable report format. Note that the charts in the excel book are much large and more appropriate for reproduction
 
+```{r create excel workbook data structure for export}
+WB <- openxlsx2::wb_workbook()
+```
+
+## Included Parks
 
 ```{r report included parks}
 #| output: true
@@ -856,59 +875,116 @@ kbl(SOPARCAggregated[order(park_name), .("Park Name" = unique(park_name))],
 
 ```
 
-## Park Attendance
+## Attendance
+
+### Number of Attendees
+
+Not reported. See note.
 
 ```{r number of attendees chart}
-#| output: true
+#| output: false
 
 # kbl(SOPARCtoAggregate[order(park_name),.("Number of Attendees" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name)], 
 #       caption =  "Total Number of Attendees",
 #     booktabs = T) %>% kable_styling(latex_options = "striped")
+DT <- SOPARCAggregated[order(park_name),.("Number of Attendees" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name)]
 
-kbl(SOPARCAggregated[order(park_name),.("Number of Attendees" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name)], 
+kbl(DT, 
       caption =  "Total Number of Attendees",
     booktabs = TRUE,
     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 
+
+
 ```
 
+Notes:
+
+- number of attendees is likely to contain duplicate counts because of the way to people were counted within an observation. For example, if 2 people are in a target area at observation T_1, and then 3 in T_2, there is no reliable way to identify if these were 5 different people, or 3 different people.
+
+### Average Park Visitors by Time
 
 
-```{r Average Park Visitors by time}
+Notes:
+
+```{r average park visitors by time, fig.cap = "Average Park Visitors by Time"}
 #| output: true
+
+
 # kbl(SOPARCtoAggregate[order(park_name),.("Attendees" = round(sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/6 ,0)), by = .("Park Name" = park_name, "Time Period" = period)],
 #     caption = "Daily Average Number of Attendees Per Time Period",
 #     booktabs = TRUE,
 #     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+DT <- SOPARCAggregated[order(park_name),.("Attendees" = round(sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3 ,0)), by = .("Park Name" = park_name, "Time Period" = period)]
 
-kbl(SOPARCAggregated[order(park_name),.("Attendees" = round(sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3 ,0)), by = .("Park Name" = park_name, "Time Period" = period)],
+WB$add_worksheet("Avg Visitors x Time Data")
+WB$add_data(sheet = "Avg Visitors x Time Data", DT)
+
+
+
+PT <- ggplot(DT, (aes(x = `Time Period`, y = Attendees))) +
+  geom_col() +
+  facet_wrap(vars(DT$"Park Name"), scales = "free")
+   #theme(axis.text.x = element_text(angle = 0, vjust = 0, hjust=0))
+
+# WB$add_worksheet("Avg Visitors x Time Plot")
+print(PT)
+# WB$add_plot(sheet = "Avg Visitors x Time Plot", width = 20, height = 20)
+# 
+# 
+#
+#
+
+kbl(DT,
     caption = "Daily Average Number of Attendees Per Time Period",
     booktabs = TRUE,
     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
-
 ```
 
-```{r Rate of Park Use By Time}
+
+
+### Rate of Park Use By Time
+
+Notes: 
+
+- Rate is within-park (each park totals to 100%).
+
+```{r Rate of Park Use By Time, fig.cap="Rate of Park Use By Time"}
 #| output: true
 
-# kbl(SOPARCtoAggregate[order(park_name), sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/6 , by = .(park_name, period)][,.("Time Period" = period, "Proportion of Use" = paste0(round((V1/ sum(V1))*100,1), "%")), by = .("Park Name" = park_name) ],
-#     caption = "Rate of Park Use By Time Period",
-#     booktabs = TRUE,
-#     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 
-kbl(SOPARCAggregated[order(park_name), sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3 , by = .(park_name, period)][,.("Time Period" = period, "Proportion of Use" = paste0(round((V1/ sum(V1))*100,1), "%")), by = .("Park Name" = park_name) ],
+DT <- SOPARCAggregated[order(park_name), sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3 , by = .(park_name, period)][,.("Time Period" = period, "Proportion of Use" = round((V1/ sum(V1))*100,1)), by = .("Park Name" = park_name) ]
+
+WB$add_worksheet("Rate Use x Time Data")
+WB$add_data(sheet = "Rate Use x Time Data", DT)
+
+PT <- ggplot(DT, (aes(x = `Time Period`, y = `Proportion of Use`))) +
+  geom_col() +
+  facet_wrap(vars(`Park Name`), scales = "free") +
+  scale_y_continuous(limits=c(0,100)) +
+   theme(axis.text.x = element_text(angle = 0, vjust = 0, hjust=0))
+
+# WB$add_worksheet("Avg Visitors x Time Plot")
+print(PT)
+# WB$add_plot(sheet = "Avg Visitors x Time Plot", width = 20, height = 20)
+
+kbl(DT,
     caption = "Daily Rate of Park Use By Time Period",
     booktabs = TRUE,
     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+
 ```
-Notes: Rate is within-park (each park totals to 100%).
 
-## Visitor Characteristics/Demography
 
-```{r Distribution of attendee ages}
+### Distribution of Attendee Ages
+
+Notes:
+
+
+```{r distribution of attendee ages, fig.cap="Distribution of Attendee Ages"}
 #| output: true
 
-kbl(SOPARCAggregated[order(park_name), .( "Age Group" = rep(c("child","teen","adult","senior")), 
+DT <- SOPARCAggregated[order(park_name), .( "Age Group" = rep(c("child","teen","adult","senior")), 
                                            "Daily Average Number of People" = round(c(sum(num_child_prim, 
                                                                                     num_child_snd,
                                                                                     num_child_spec, 
@@ -924,54 +1000,85 @@ kbl(SOPARCAggregated[order(park_name), .( "Age Group" = rep(c("child","teen","ad
                                                                                 sum(num_senior_prim, 
                                                                                     num_senior_snd, 
                                                                                     num_senior_spec, 
-                                                                                    na.rm = TRUE)/3))), by = .("Park Name" = park_name)],
+                                                                                    na.rm = TRUE)/3))), by = .("Park Name" = park_name)]
+
+
+WB$add_worksheet("Avg Attend x Age")
+WB$add_data(sheet = "Avg Attend x Age", DT)
+
+PT <- ggplot(DT, (aes(x = `Age Group`, y = `Daily Average Number of People`))) +
+  geom_col() +
+  facet_wrap(vars(`Park Name`), scales = "free") +
+   theme(axis.text.x = element_text(angle = 0, vjust = 0, hjust=0))
+
+# WB$add_worksheet("Avg Visitors x Time Plot")
+print(PT)
+# WB$add_plot(sheet = "Avg Visitors x Time Plot", width = 20, height = 20)
+
+kbl(DT,
     caption = "Daily Average Number of Attendees by Age Group",
     booktabs = TRUE,
     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 
 ```
+### Rate of Park Use By Age
 
-```{r rate of park use by age}
+Notes:
+
+- Rate is within-park (each park totals to 100%).
+
+```{r rate of park use by age, fig.cap="Rate of Park Use By Age"}
 #| output: true
-# 
-# kbl(SOPARCtoAggregate[order(park_name), .("Age Group" = rep(c("child","teen","adult","senior")), 
-#                       "Percent Use" = paste0(round(c(sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
-#                       sum(num_teen_prim, num_teen_snd, num_teen_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
-#                       sum(num_adult_prim, num_adult_snd, num_adult_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
-#                       sum(num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE))*100), "%")), by = .("Park Name" = park_name)],
-#     caption = "Rate of Park Use by Age Group",
-#     booktabs = TRUE,
-#     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 
-kbl(SOPARCAggregated[order(park_name), .("Age Group" = rep(c("child","teen","adult","senior")),
-                                         "Percent Use" = paste0(
+
+DT <- SOPARCAggregated[order(park_name), .("Age Group" = rep(c("child","teen","adult","senior")),
+                                         "Percent Use" = 
                                            round(c(
                                              sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
                                              sum(num_teen_prim, num_teen_snd, num_teen_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
                                              sum(num_adult_prim, num_adult_snd, num_adult_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
-                                             sum(num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE))*100), "%")), by = .("Park Name" = park_name)],
+                                             sum(num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE))*100)), by = .("Park Name" = park_name)]
+
+
+WB$add_worksheet("Rate Use x Age")
+WB$add_data(sheet = "Rate Use x Age", DT)
+
+PT <- ggplot(DT, (aes(x = factor(`Age Group`, levels = c("child","teen","adult","senior")), y = `Percent Use`))) +
+  xlab("Age Group") +
+  geom_col() +
+  facet_wrap(vars(`Park Name`)) +
+   theme(axis.text.x = element_text(angle = 0, vjust = 0, hjust=0))
+
+# WB$add_worksheet("Avg Visitors x Time Plot")
+print(PT)
+# WB$add_plot(sheet = "Avg Visitors x Time Plot", width = 20, height = 20)
+
+kbl(DT,
     caption = "Rate of Park Use by Age Group",
     booktabs = TRUE,
     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 
 ```
-Notes: Rate is within-park (each park totals to 100%).
 
+## Occupancy
+
+NOTES: 
+
+- percentage of the 24 observation periods where the park had any occupancy Doing this by target areas has problem because the content of target areas is not stable.
+- this metric needs to be QA'd
 
 ```{r analysis of occupancy rate}
 #| output: true
 
-kbl(SOPARCtoAggregate[order(park_name), ifelse(any(occupied %in% "Yes"), 1, 0), by = .(park_name, periodBasedOnSequence,dayNumberBasedOnSequence)][, .("Percent of time Occupied" =round((sum(V1)/24 )*100,0)),by=park_name],
+kbl(SOPARCtoAggregate[order(park_name), ifelse(any(occupied %in% "Yes"), 1, 0), by = .(park_name, periodBasedOnSequence,dayNumberBasedOnSequence)][, .( "Percent of time Occupied" =round((sum(V1)/24 )*100,0)),by=.("Park Name" = park_name)],
     caption = "Occupancy Rate",
     booktabs = TRUE,
     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 
 ```
-NOTES: 
-* percentage of the 24 observation periods where the park had any occupancy Doing this by target areas has problem because the content of target areas is not stable.
-* this metric needs to be QA'd
 
-# Activities per park
+
+## Utility
 
 NOTES:
 * activities are currently not properly handled for sub areas. Need to improve parsing for this to pass QA
@@ -994,13 +1101,26 @@ SOPARCtoAggregate[,sum(num_child_spec, num_teen_spec, num_adult_spec, num_senior
 ```{r Frequency of Activities Per Park}
 #| output: true
 
-kbl(rbind(SOPARCtoAggregate[,sum(num_child_prim, num_teen_prim, num_adult_prim, num_senior_prim, na.rm = T) , by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity = prim_act_name)][V1 > 0,],
+DT <- rbind(SOPARCtoAggregate[,sum(num_child_prim, num_teen_prim, num_adult_prim, num_senior_prim, na.rm = T) , by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity = prim_act_name)][V1 > 0,],
 SOPARCtoAggregate[,sum(num_child_snd, num_teen_snd, num_adult_snd, num_senior_snd, na.rm = T) , by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity = prim_act_name)][V1 > 0,],
-SOPARCtoAggregate[,sum(num_child_spec, num_teen_spec, num_adult_spec, num_senior_spec, na.rm = T) , by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity = prim_act_name)][V1 > 0,])[,sum(V1), by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity)][order(park_name) ,.("Rate" = paste0(round((.N / 24) *100),"%")), by = .("Park Name" = park_name,"Activity" = activity)],
+SOPARCtoAggregate[,sum(num_child_spec, num_teen_spec, num_adult_spec, num_senior_spec, na.rm = T) , by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity = prim_act_name)][V1 > 0,])[,sum(V1), by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity)][order(park_name) ,.("Rate" = paste0(round((.N / 24) *100),"%")), by = .("Park Name" = park_name,"Activity" = activity)]
+
+
+kbl(DT,
     caption = "Rate of Activities Observed Per Park",
     booktabs = TRUE,
-    longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+    longtable = TRUE) %>%collapse_rows(1:3, row_group_label_position = "stack") %>% 
+  kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 ```
+
+
+
+
+```{r save workbook}
+
+WB$save("test.xlsx", overwrite = TRUE)
+```
+
 
 ```{r}
 #| eval: false
