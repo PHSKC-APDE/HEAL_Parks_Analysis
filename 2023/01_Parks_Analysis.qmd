@@ -205,7 +205,7 @@ Drop observations identified by human review | Some observations were identified
 SOPARCObservations <- copy(RawSOPARCObservations)
 
 #remove duplicates
-SOPARCObservations <- SOPARCObservations[!duplicated(SOPARCObservations[, setdiff(names(SOPARCObservations), "record_id"), with = FALSE]),]
+#SOPARCObservations <- SOPARCObservations[!duplicated(SOPARCObservations[, setdiff(names(SOPARCObservations), "record_id"), with = FALSE]),]
 
 ####TESTING####
 #remove data with incomplete entry status
@@ -881,6 +881,10 @@ kbl(SOPARCAggregated[order(park_name), .("Park Name" = unique(park_name))],
 
 Not reported. See note.
 
+Notes:
+
+- number of attendees is likely to contain duplicate counts because of the way to people were counted within an observation. For example, if 2 people are in a target area at observation T_1, and then 3 in T_2, there is no reliable way to identify if these were 5 different people, or 3 different people.
+
 ```{r number of attendees chart}
 #| output: false
 
@@ -898,9 +902,7 @@ kbl(DT,
 
 ```
 
-Notes:
 
-- number of attendees is likely to contain duplicate counts because of the way to people were counted within an observation. For example, if 2 people are in a target area at observation T_1, and then 3 in T_2, there is no reliable way to identify if these were 5 different people, or 3 different people.
 
 ### Average Park Visitors by Time
 
@@ -1070,17 +1072,25 @@ NOTES:
 ```{r analysis of occupancy rate}
 #| output: true
 
-kbl(SOPARCtoAggregate[order(park_name), ifelse(any(occupied %in% "Yes"), 1, 0), by = .(park_name, periodBasedOnSequence,dayNumberBasedOnSequence)][, .( "Percent of time Occupied" =round((sum(V1)/24 )*100,0)),by=.("Park Name" = park_name)],
+DT <- SOPARCtoAggregate[order(park_name), ifelse(any(occupied %in% "Yes"), 1, 0), by = .(park_name, periodBasedOnSequence,dayNumberBasedOnSequence)][, .( "Percent of time Occupied" =round((sum(V1)/24 )*100,0)),by=.("Park Name" = park_name)]
+
+WB$add_worksheet("Rate Occupied")
+WB$add_data(sheet = "Rate Occupied", DT)
+
+
+kbl(DT,
     caption = "Occupancy Rate",
     booktabs = TRUE,
     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+
+
 
 ```
 
 
 ## Utility
 
-NOTES:
+Notes:
 * activities are currently not properly handled for sub areas. Need to improve parsing for this to pass QA
 * counts of people doing activities are unreliable as there may be double counting of individuals
 
@@ -1088,9 +1098,13 @@ NOTES:
 #| output: false
 
 #this metric doesn't make sense given double counting of target areas
-kbl(rbind(SOPARCtoAggregate[,sum(num_child_prim, num_teen_prim, num_adult_prim, num_senior_prim, na.rm = T) , by = .(park_name,activity = prim_act_name)][V1 > 0,],
+DT <- rbind(SOPARCtoAggregate[,sum(num_child_prim, num_teen_prim, num_adult_prim, num_senior_prim, na.rm = T) , by = .(park_name,activity = prim_act_name)][V1 > 0,],
 SOPARCtoAggregate[,sum(num_child_snd, num_teen_snd, num_adult_snd, num_senior_snd, na.rm = T) , by = .(park_name,activity = snd_act_name)][V1 > 0,],
-SOPARCtoAggregate[,sum(num_child_spec, num_teen_spec, num_adult_spec, num_senior_spec, na.rm = T) , by = .(park_name,activity = spec_act_name)][V1 > 0,])[,.("Number of People" = sum(V1)), by = .("Park Name" = park_name,"Activity" = activity)],
+SOPARCtoAggregate[,sum(num_child_spec, num_teen_spec, num_adult_spec, num_senior_spec, na.rm = T) , by = .(park_name,activity = spec_act_name)][V1 > 0,])[,.("Number of People" = sum(V1)), by = .("Park Name" = park_name,"Activity" = activity)]
+
+
+
+kbl(DT[order(`Park Name`)],
     caption = "Rate of Park Use by Age Group",
     booktabs = TRUE,
     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
@@ -1105,11 +1119,13 @@ DT <- rbind(SOPARCtoAggregate[,sum(num_child_prim, num_teen_prim, num_adult_prim
 SOPARCtoAggregate[,sum(num_child_snd, num_teen_snd, num_adult_snd, num_senior_snd, na.rm = T) , by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity = prim_act_name)][V1 > 0,],
 SOPARCtoAggregate[,sum(num_child_spec, num_teen_spec, num_adult_spec, num_senior_spec, na.rm = T) , by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity = prim_act_name)][V1 > 0,])[,sum(V1), by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity)][order(park_name) ,.("Rate" = paste0(round((.N / 24) *100),"%")), by = .("Park Name" = park_name,"Activity" = activity)]
 
+WB$add_worksheet("Activity Rate")
+WB$add_data(sheet = "Activity Rate", DT)
 
 kbl(DT,
     caption = "Rate of Activities Observed Per Park",
     booktabs = TRUE,
-    longtable = TRUE) %>%collapse_rows(1:3, row_group_label_position = "stack") %>% 
+    longtable = TRUE) %>% 
   kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 ```
 
@@ -1118,7 +1134,7 @@ kbl(DT,
 
 ```{r save workbook}
 
-WB$save("test.xlsx", overwrite = TRUE)
+WB$save("analysis_data.xlsx", overwrite = TRUE)
 ```
 
 
