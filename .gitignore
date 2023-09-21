@@ -55,3 +55,9 @@ secrets.txt
 
 # data
 *.csv
+*.xlsx
+
+
+
+# final deliverables
+*/outputs/*
