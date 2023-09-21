@@ -1,0 +1,33 @@
+---
+title: "HEAL Parks 2022 ETL"
+author: "Ronald Buie"
+date-modified: "`r Sys.Date()`"
+
+format: 
+  pdf:
+    toc: true
+    number-sections: true
+    df-print: kable
+    fig-height: 12
+    fig-width: 16
+execute: 
+  echo: false
+  warning: false
+  output: false
+---
+
+# Front Matter
+
+This document outlines procedures and technical details for the integration of data from 2022 HEAL Parks studies to their own REDCap project. The code contained in this script reads prepared data and reformats it to the 2023 standard (year of this preperation.) 
+
+For general information about the project please review the git (make into link) or contact Seth Schromen-Wawrin (email link)
+
+## This is a Quarto Document
+
+Quarto enables you to weave together documentation and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+Data, and so resulting tables, are automatically generated when the document is compiled.
+
+# Setup & Environment
+
+Work conducted in `r version$version.string`
