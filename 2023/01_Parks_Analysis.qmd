@@ -137,6 +137,8 @@ result <- httr::content(response)
 #print(result)
 ```
 
+ADD NOTE FOR DATA EXTRACTION METHOD
+
 ```{r convert object and set data types}
 result <- postForm(
     api_url,
