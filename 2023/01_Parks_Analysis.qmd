@@ -18,38 +18,57 @@ execute:
 
 # Front Matter
 
-This document outlines procedures and technical considerations for the 2023 analysis of data from the HEAL Parks Study.
+This document outlines procedures, technical considerations, and analytic results for the 2023 analysis of data from the HEAL Parks Study. The primary purpose of this PDF is technical review by analyst and project managers to confirm the process and data quality. 
 
 For general information about the project please review the git (make into link) or contact Seth Schromen-Wawrin (email link)
 
-## This is a Quarto Document
+## Major Inputs
 
-Quarto enables you to weave together documentation and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+Inputs to this script are contained at ./inputs/*.* and include
 
-Data, and so resulting tables, are automatically generated when the document is compiled.
+* Access to the ITHS REDCap(link) project: "Public Health - Seattle & King County Park Observations"
+ + or data extracted from that project
+* file of park meta data, including address, zip, city, neighborhood, official name, and REDCap name for each park
+* (optional) file containing record ids to redact
+
+## Major Outputs
+
+Outputs to this script are sent to ./outputs/<output-type>/*.*
+
+Types include
+
+* data-metadata - tables of analyzable line item data from different stages of preparation leading up to analysis, generally in csv format
+* tables - tabular outputs of analysis, generally in xlsx format
+* charts - chart outputs of analysis, generally in pdf and/or png format
+
+```{r create target directories}
+
+dir.create("./outputs/charts", recursive = TRUE, showWarnings = FALSE)
+dir.create("./outputs/tables", recursive = TRUE, showWarnings = FALSE)
+dir.create("./outputs/data-metadata", recursive = TRUE, showWarnings = FALSE)
+```
+
+## This is a Quarto Generated Document
+
+By rendering/knitting the qmd file, the analysis is re-executed, this document rebuilt, and new outputs are generated. To learn more about Quarto see <https://quarto.org>.
 
 # Setup & Environment
 
-Work conducted in `r version$version.string`
+This script was last executed using `r version$version.string`.
 
 ```{r define constant and environment variables}
+SECRETS_LOCALE <- "./2023/inputs/secrets.txt" #REDCap project API access information goes here
+DATA_LOCALE <- "2023/inputs/data.csv" #use this if REDCap is not accessable
+
 USEGOODDATA <- TRUE #flag to only use data that passess QA in the report
 OBSINDAYTOLERANCE <- 3 #a data improvement parameter...
-CHARTFILEFORMAT <- "pdf" #choose a file format for the exported files to use. Note, "png" for portability, or "pdf" for vectorized image are recommended
 CHARTWIDTH <- 3.5 #width for charts to generate for reproduciton
 CHARTHEIGHT <- 2.3 #height of charts to generate for reproduction
 ```
 
-
-```{r create target directories}
-dir.create("./charts")
-
-
-```
-
+## Packages used
 
 ```{r load required packages}
-# we prefer to use pacman to manage cran packages. 
 # First check if pacman is installed. If not, install it.
 if(!"pacman" %in% installed.packages()) {
   install.packages("pacman")
@@ -71,6 +90,8 @@ options(knitr.table.format = "latex")
 
 ```
 
+`r installed.packages()[names(sessionInfo()$otherPkgs), "Version"]`
+
 ## Secrets and tokens
 
 In order to pull data directly from REDCap, API information must be provided. You should create a file called "secrets.txt" in this directory. This file should contain the following information:
@@ -81,15 +102,13 @@ Note, that the .gitignore for this project is configured to exclude your secrets
 
 ## Extraction
 
-Data are currently stored in ITHS REDCap (link). The project name is: <name>. In order for this script to operate correctly, you should request access to the project and then create an API key. This information goes into your secrets document.
-
 ```{r import data}
 
-if (file.exists(here("2023/secrets.txt"))) {
-  source(here("2023/secrets.txt"))
+if (file.exists(here(SECRETS_LOCALE))) {
+  source(here("2023/inputs/secrets.txt"))
 } else {
   warning("secrets not found. checking for data.csv")
-  if(!file.exists(here("2023/data.csv"))){
+  if(!file.exists(here(DATA_LOCALE))){
     stop("data not found")
   }
 }
@@ -200,16 +219,16 @@ RawSOPARCObservations[, weekend := ifelse(day %in% c("Saturday", "Sunday"), 1, 0
                 # comments_check <- SOPARCObservations$comments
                 # 
 ```
+
 ## Cleaning
 
-Description | Details
-------------|---------
-Drop pre-study data | Study start date is 7/1/23 with the first park being Garfield Playfield. Observations prior to this date or the first observation of Garfield are dropped
-Drop incomplete entries | observations where the REDCap status is not "Complete", that are missing a timestamp, or missing a park name are dropped
-Drop duplicates | duplicate entries (exclusive of redcapID) are dropped. Note that where this creates incomplete days, this is corrected in later QA
-Drop inacurate subareas | Some parks were identified as having having sub area data input without having multiple sub areas (and so shouldn't be processed as sub areas). The subarea entry for these parks is removed. 
-Drop observations identified by human review | Some observations were identified through review of base data by program managers. These  are identified in the file "Records-to-Remove.xlsx"
-
+| Description                                  | Details                                                                                                                                                                                       |
+|-----------------------------------------|-------------------------------|
+| Drop pre-study data                          | Study start date is 7/1/23 with the first park being Garfield Playfield. Observations prior to this date or the first observation of Garfield are dropped                                     |
+| Drop incomplete entries                      | observations where the REDCap status is not "Complete", that are missing a timestamp, or missing a park name are dropped                                                                      |
+| Drop duplicates                              | duplicate entries (exclusive of redcapID) are dropped. Note that where this creates incomplete days, this is corrected in later QA                                                            |
+| Drop inacurate subareas                      | Some parks were identified as having having sub area data input without having multiple sub areas (and so shouldn't be processed as sub areas). The subarea entry for these parks is removed. |
+| Drop observations identified by human review | Some observations were identified through review of base data by program managers. These are identified in the file "Records-to-Remove.xlsx"                                                  |
 
 ```{r identify and drop incorrect observations}
 
@@ -253,16 +272,11 @@ setorder(SOPARCObservations, cols = "timestampPOSIX")
 
 ## Collapse sub areas
 
-For this analysis, we are not using sub areas. These can be collapsed into single areas. For each observation, sub areas will be collapsed using the following rules: 
-* numerical observations will be added together 
-* categorical observations become affirmative/existing if any of the subareas are affirmative/existing 
-* timestamp of the earliest observation in the set will be used
+For this analysis, we are not using sub areas. These can be collapsed into single areas. For each observation, sub areas will be collapsed using the following rules: \* numerical observations will be added together \* categorical observations become affirmative/existing if any of the subareas are affirmative/existing \* timestamp of the earliest observation in the set will be used
 
-Sub areas of the same target area will be assumed to be of the same observation period based on the following logic: 
-* for a sequence of sub areas observed in the same 50 hours period apparently missing sub-areas will be ignored (assumption: not all sub areas are necessary)
+Sub areas of the same target area will be assumed to be of the same observation period based on the following logic: \* for a sequence of sub areas observed in the same 50 hours period apparently missing sub-areas will be ignored (assumption: not all sub areas are necessary)
 
-If non unique sub area labels are identified: 
-* check if the expected list of sub areas are in teh data set if too many, attempt to identify redundancies and remove these if too few, interpolate missing information
+If non unique sub area labels are identified: \* check if the expected list of sub areas are in teh data set if too many, attempt to identify redundancies and remove these if too few, interpolate missing information
 
 ```{r collapse sub areas into a single area}
 SOPARCObservationsSubAreas <- copy(SOPARCObservations[sub_area != "",])
@@ -617,8 +631,6 @@ if(USEGOODDATA) {
 
 For each observation we need to assign a time period to that observation. Because time stamps and the actual time of data collection may not align, the assignment of the time period requires some assumptions and may effect results.
 
-
-
 ```{r period assignment based on timestamp}
 #|eval: false
 
@@ -661,7 +673,6 @@ SOPARCAnalysisSet$periodBasedOnBreakpoint <- breakpointAssignments
 
 ```
 
-
 ```{r adjust timestamp assigments}
 
 ```
@@ -697,12 +708,7 @@ SOPARCAnalysisSet[order(datePOSIX), dayNumberBasedOnSequence := as.numeric(facto
 
 ```
 
-
-Finally, we cross check each day and period assignment to confirm that:
-* all all parks have the expected number of period observations (e.g. if a park has 4 target areas, it should have 12 morning1 observations).
-* all observations assigned to a particular day-count (e.g. "1") actually are on the same date (this assumption may need to be relaxed or data corrected before all data pass QA).
-* that each day has the expected number of observations.
-
+Finally, we cross check each day and period assignment to confirm that: \* all all parks have the expected number of period observations (e.g. if a park has 4 target areas, it should have 12 morning1 observations). \* all observations assigned to a particular day-count (e.g. "1") actually are on the same date (this assumption may need to be relaxed or data corrected before all data pass QA). \* that each day has the expected number of observations.
 
 ```{r test day assignments}
 
@@ -876,8 +882,6 @@ WB <- openxlsx2::wb_workbook()
 
 ```
 
-
-
 ## Included Parks
 
 ```{r report included parks}
@@ -898,7 +902,7 @@ Not reported. See note.
 
 Notes:
 
-- number of attendees is likely to contain duplicate counts because of the way to people were counted within an observation. For example, if 2 people are in a target area at observation T_1, and then 3 in T_2, there is no reliable way to identify if these were 5 different people, or 3 different people.
+-   number of attendees is likely to contain duplicate counts because of the way to people were counted within an observation. For example, if 2 people are in a target area at observation T_1, and then 3 in T_2, there is no reliable way to identify if these were 5 different people, or 3 different people.
 
 ```{r number of attendees chart}
 #| output: false
@@ -917,10 +921,7 @@ kbl(DT,
 
 ```
 
-
-
 ### Average Park Visitors by Time
-
 
 Notes:
 
@@ -991,13 +992,11 @@ kbl(DT,
     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 ```
 
-
-
 ### Rate of Park Use By Time
 
-Notes: 
+Notes:
 
-- Rate is within-park (each park totals to 100%).
+-   Rate is within-park (each park totals to 100%).
 
 ```{r Rate of Park Use By Time, fig.cap="Rate Of Park Use By Time"}
 #| output: true
@@ -1048,11 +1047,9 @@ kbl(DT,
 
 ```
 
-
 ### Distribution of Attendee Ages
 
 Notes:
-
 
 ```{r distribution of attendee ages, fig.cap="Distribution of Attendee Ages"}
 #| output: true
@@ -1094,11 +1091,12 @@ kbl(DT,
     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 
 ```
+
 ### Rate of Park Use By Age
 
 Notes:
 
-- Rate is within-park (each park totals to 100%).
+-   Rate is within-park (each park totals to 100%).
 
 ```{r rate of park use by age, fig.cap="Rate of Park Use By Age"}
 #| output: true
@@ -1135,10 +1133,10 @@ kbl(DT,
 
 ## Occupancy
 
-NOTES: 
+NOTES:
 
-- percentage of the 24 observation periods where the park had any occupancy Doing this by target areas has problem because the content of target areas is not stable.
-- this metric needs to be QA'd
+-   percentage of the 24 observation periods where the park had any occupancy Doing this by target areas has problem because the content of target areas is not stable.
+-   this metric needs to be QA'd
 
 ```{r analysis of occupancy rate}
 #| output: true
@@ -1158,12 +1156,9 @@ kbl(DT,
 
 ```
 
-
 ## Utility
 
-Notes:
-* activities are currently not properly handled for sub areas. Need to improve parsing for this to pass QA
-* counts of people doing activities are unreliable as there may be double counting of individuals
+Notes: \* activities are currently not properly handled for sub areas. Need to improve parsing for this to pass QA \* counts of people doing activities are unreliable as there may be double counting of individuals
 
 ```{r Number of people doing an activity in a park}
 #| output: false
@@ -1180,8 +1175,6 @@ kbl(DT[order(`Park Name`)],
     booktabs = TRUE,
     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 ```
-
-
 
 ```{r Frequency of Activities Per Park}
 #| output: true
@@ -1200,14 +1193,10 @@ kbl(DT,
   kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 ```
 
-
-
-
 ```{r save workbook}
 
 WB$save("analysis_data.xlsx", overwrite = TRUE)
 ```
-
 
 ```{r}
 #| eval: false
