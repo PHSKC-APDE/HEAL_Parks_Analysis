@@ -114,32 +114,6 @@ if (file.exists(here(SECRETS_LOCALE))) {
 }
 
 
-#!/usr/bin/env Rscript
-token <- "FBB8FA4EA7136C81F88BEA9D15254338"
-url <- "https://redcap.iths.org/api/"
-
-formData <- list("token"=token,
-    content='record',
-    action='export',
-    format='json',
-    type='flat',
-    csvDelimiter='',
-    rawOrLabel='label',
-    rawOrLabelHeaders='label',
-    exportCheckboxLabel='true',
-    exportSurveyFields='true',
-    exportDataAccessGroups='false',
-    returnFormat='json',
-    dateRangeBegin='2023-07-01 01:01:01'
-)
-response <- httr::POST(url, body = formData, encode = "form")
-result <- httr::content(response)
-#print(result)
-```
-
-ADD NOTE FOR DATA EXTRACTION METHOD
-
-```{r convert object and set data types}
 result <- postForm(
     api_url,
     token=api_token,
@@ -158,7 +132,14 @@ result <- postForm(
 
 RawSOPARCObservations <- as.data.table(fromJSON(result), )
 
-#RawSOPARCObservations <- data.table(fromJSON(result), keep.rownames = FALSE, stringsAsFactors = FALSE)
+write.csv2(RawSOPARCObservations,here("2023/outputs/data-metadata/REDCapSOPARCObservations.csv"), row.names = FALSE)
+
+```
+
+
+## Transformation
+
+```{r convert object and set data types}
 
 
 #convert countables to numeric
@@ -181,14 +162,7 @@ RawSOPARCObservations$num_senior_spec <- as.numeric(RawSOPARCObservations$num_se
 # RawSOPARCObservations[, (chcols) := lapply(.SD, type.convert, as.is=TRUE), .SDcols=chcols]
 
 
-#convert time to time data type and save as separate variables
-RawSOPARCObservations[, timestampPOSIX := as.POSIXct(strptime(start_time, "%Y-%m-%d %H:%M"), "America/Los_Angeles") ] #a POSIX format of time
-RawSOPARCObservations[, datePOSIX := as.Date(RawSOPARCObservations$timestampPOSIX, tz = "America/Los_Angeles")] #a data.table integer format of second of the day
-#RawSOPARCObservations[, idate := IDateTime(timestampPOSIX)$idate] #a data.table integer format of second of the day
-#add day of the week
-RawSOPARCObservations[, day := weekdays(timestampPOSIX)]
-#add weekend indicator
-RawSOPARCObservations[, weekend := ifelse(day %in% c("Saturday", "Sunday"), 1, 0)]
+
 
 #some saved work
                 #accessible_check <- SOPARCObservations$accessible
@@ -219,8 +193,29 @@ RawSOPARCObservations[, weekend := ifelse(day %in% c("Saturday", "Sunday"), 1, 0
                 # spec_act_name_check <- SOPARCObservations$spec_act_name
                 # other_act_spec_check <- SOPARCObservations$other_act_spec
                 # comments_check <- SOPARCObservations$comments
-                # 
+
+
 ```
+
+
+
+
+```{r add timestamp information and metadata}
+#convert time to time data type and save as separate variables
+RawSOPARCObservations[, timestampPOSIX := as.POSIXct(strptime(start_time, "%Y-%m-%d %H:%M"), "America/Los_Angeles") ] #a POSIX format of time
+RawSOPARCObservations[, datePOSIX := as.Date(RawSOPARCObservations$timestampPOSIX, tz = "America/Los_Angeles")] #a data.table integer format of second of the day
+#RawSOPARCObservations[, idate := IDateTime(timestampPOSIX)$idate] #a data.table integer format of second of the day
+#add day of the week
+RawSOPARCObservations[, day := weekdays(timestampPOSIX)]
+#add month indicator
+RawSOPARCObservations[, month := months(timestampPOSIX)]
+#add weekend indicator
+RawSOPARCObservations[, weekend := ifelse(day %in% c("Saturday", "Sunday"), 1, 0)]
+
+```
+
+
+
 
 ## Cleaning
 
@@ -261,8 +256,16 @@ SOPARCObservations[park_name %in% c("Hazelnut Park",
 SOPARCObservations <- SOPARCObservations[record_id >= 141,]
 SOPARCObservations <- SOPARCObservations[datePOSIX >= "2023-07-01",]
 
+#remove extra day from Manhattan park
+#Manhattan Park has one too many days collected. We drop an extra day here. 
+# unique(SOPARCObservations[park_name %in% "Manhattan Park" , datePOSIX]) #check dates collected to ocnfirm where they are in the calendar
+# unique(SOPARCObservations[park_name %in% "Manhattan Park" & day == "Friday", datePOSIX]) #check days of the week of each: two are friday
+# unique(SOPARCObservations[park_name %in% "Manhattan Park" , .(.N,first(obs_initial)),by =datePOSIX]) #double check that all days are complete/identical in number of observations
+#after review, we will drop friday 18/08/2023 because it is furthers from the other dates. 
+SOPARCObservations <- SOPARCObservations[!(park_name %in% "Manhattan Park" & datePOSIX == "2023-08-18"),]
+
 #remove identified records
-RemoveMe <- openxlsx2::read_xlsx("Records-to-Remove.xlsx")
+RemoveMe <- openxlsx2::read_xlsx(here("2023/inputs/Records-to-Remove.xlsx"))
 SOPARCObservations <- SOPARCObservations[!(record_id %in% RemoveMe$record_id),]
 
 #reorder given new data
@@ -344,6 +347,7 @@ for(index in 1:nrow(listToCollapseStarts)) {
                                                                                                                                                     timestampPOSIX = first(timestampPOSIX),
                                                                                                                                                     datePOSIX = first(datePOSIX),
                                                                                                                                                     day = first(day),
+                                                                                                                                                    month = first(month),
                                                                                                                                                     weekend = first(weekend)), ]
     if(nrow(TempCollapseResult) > 1 ) {
       stop(paste("Failed to compress observations, check result of", park, target_area, date, "between", starttime, "and", endtime))
@@ -363,13 +367,21 @@ for(index in 1:nrow(listToCollapseStarts)) {
 #combine observations without sub areas, and our newly collapsed sub areas, into a single DT
 SOPARCObservations <- rbind(SOPARCObservations[sub_area == "",], SOPARCCollapsedSubAreas)
 
+
+
+
+```
+
+```{r save pre QA observations}
+write.csv2(SOPARCObservations,here("2023/outputs/data-metadata/PrepForQASOPARCObservations.csv"), row.names = FALSE)
+
 ```
 
 ## Quality Checks
 
 The QA process attempts to identify and correct errors. The process initially performs a series of checks on all park data and reports results. For each park that fails QA, various strategies are executed to attempt to cure that park's data. The final results, including which strategies were executed, and the final QA status are saved in a csv file for review.
 
-```{r generate initial QA report}
+```{r generate initial QC report}
 
 referenceDT <- SOPARCObservations[, .(areaCount = max(as.numeric(tar_area))), by = park_name]
 observationsPerPark <- SOPARCObservations[, .(observationCount = .N), by = park_name]
@@ -425,11 +437,13 @@ parkStats[, passQA := ifelse(meetsExpected &
 # parkStats$numberDaysComplete <- 3
 
 #save QA results to file for review
-write.csv(parkStats, "QA_report.csv")
+write.csv2(parkStats, here("2023/outputs/data-metadata/QA_report.csv"), row.names = F)
 
 
 SOPARCObservationsOK <- SOPARCObservations[park_name %in% parkStats[passQA %in% TRUE, park_name],]
 SOPARCObservationsToFix <- SOPARCObservations[park_name %in% parkStats[passQA %in% FALSE, park_name],]
+write.csv2(SOPARCObservationsOK, here("2023/outputs/data-metadata/QAPassSOPARCObservations.csv"), row.names = F)
+write.csv2(SOPARCObservationsToFix, here("2023/outputs/data-metadata/QAFailSOPARCObservations.csv"), row.names = F)
 
 
 
@@ -528,6 +542,7 @@ for(park in unique(SOPARCObservationsToFix$park_name)) {
                                      timestampPOSIX = as.POSIXct(strptime(timestampToInterpolate, "%Y-%m-%d %H:%M"), "America/Los_Angeles"),
                                      datePOSIX = as.Date(as.POSIXct(strptime(timestampToInterpolate, "%Y-%m-%d %H:%M"), "America/Los_Angeles"), tz = "America/Los_Angeles"),
                                      day = weekdays(as.POSIXct(strptime(timestampToInterpolate, "%Y-%m-%d %H:%M"), "America/Los_Angeles")),
+                                     month = months(as.POSIXct(strptime(timestampToInterpolate, "%Y-%m-%d %H:%M"), "America/Los_Angeles")),
                                      weekend = ifelse(weekdays(as.POSIXct(strptime(timestampToInterpolate, "%Y-%m-%d %H:%M"), "America/Los_Angeles")) %in% c("Saturday", "Sunday"), 1, 0))
                   return(tempObs)
             }
@@ -606,18 +621,19 @@ for(park in parkStatscheck$park_name) {
 }
 
 #write updated QA results
-write.csv(parkStats, "QA_report.csv")
+write.csv2(parkStats, here("2023/outputs/data-metadata/QA_report.csv"), row.names = F)
 
 SOPARCObservationsCorrected <- copy(SOPARCObservationsToFix[park_name %in% parkStats[passQA == TRUE, park_name],])
 
 SOPARCObservationsOK <- rbind(SOPARCObservationsOK, SOPARCObservationsCorrected)
 SOPARCObservationsToFix <- copy(SOPARCObservationsToFix[park_name %in% parkStats[passQA == FALSE, park_name],])
-
+write.csv2(SOPARCObservationsOK, here("2023/outputs/data-metadata/QAPassSOPARCObservations.csv"), row.names = F)
+write.csv2(SOPARCObservationsToFix, here("2023/outputs/data-metadata/QAFailSOPARCObservations.csv"), row.names = F)
 
 
 ```
 
-When executing this script, the use may choose to use all data, or only data that have passed QA. It is generally suggested to only use data that have passed QA.
+When executing this script, the user may choose to use all data, or only data that have passed QA. It is generally suggested to only use data that have passed QA.
 
 ```{r select analysis set to use}
 if(USEGOODDATA) {
@@ -627,7 +643,55 @@ if(USEGOODDATA) {
 }
 ```
 
-# Parameterizing data
+
+## Parks Metadata
+
+Metadata are provided for each park by Seth. The formal name, address, city, zip, neighborhood, tract, equity score, image status, planned park change notes, and general notes for each park will be appended to the analysis table.
+
+```{r load parkwide metadata}
+ParksMetaData <- as.data.table(read_xlsx(here("2023/inputs/Parks_MASTER.xlsx"), sheet = "Sheet1"))
+
+
+
+
+
+```
+
+### structure
+
+`r summary(ParksMetadata)`
+
+## Study Tracker
+
+For the 2023 analysis we advised created a study tracker. For each time a park is studied, a new entry is created. Each entry should includ the park name, the date the study staretd, and a brief description of the study. We generate and save a study tracker that covers 2022 and 2023 studies.
+
+In a later step we will use this table to append a study count to our parks
+
+```{r create park study tracker}
+
+#generate a list of full park names for 2023
+parks2023 <- merge(parkStats, ParksMetaData, by.x = "park_name", by.y = "REDCap Name", all.x = T)$"Park Name"
+
+#generate a list of full park names for 2022
+lastYearParks <- c("Brighton Playfield",
+                     "Cascade View Community Park",
+                     "Marra Desimone Park",
+                     "Midway Park",
+                     "Moshier Memorial Park",
+                     "Puget Sound Park",
+                     "Roxhill Park",
+                     "Steel Lake Park",
+                     "Steve Cox Playfield",
+                     "Tukwila Community Center")
+
+ParksStudyRecord <- data.table("parkName" = lastYearParks, "studyStartDate" = "2022-06-25", "studyDescription" = "2022 annual study round 1")
+ParksStudyRecord <- rbind(ParksStudyRecord, data.table("parkName" = lastYearParks, "studyStartDate" = "2022-07-21", "studyDescription" = "2022 annual study round 2"))
+ParksStudyRecord <- rbind(ParksStudyRecord, data.table("parkName" = parks2023, "studyStartDate" = "2023-07-01", "studyDescription" = "2023 annual study"))
+
+write.csv2(ParksStudyRecord, here("2023/outputs/data-metadata/RecordOfParkStudies.csv"), row.names = F)
+```
+
+# Parameterizing Data For Analysis
 
 ## Time of day
 
@@ -675,10 +739,6 @@ SOPARCAnalysisSet$periodBasedOnBreakpoint <- breakpointAssignments
 
 ```
 
-```{r adjust timestamp assigments}
-
-```
-
 ### Assigning time periods based on sequence
 
 Our primary approach to assigning time periods relies on the assumption that timestamps are in order for each target area (e.g. the first observation of park A area 1 is always "morning1", the second, "morning2" and so on.)
@@ -712,7 +772,7 @@ SOPARCAnalysisSet[order(datePOSIX), dayNumberBasedOnSequence := as.numeric(facto
 
 Finally, we cross check each day and period assignment to confirm that: \* all all parks have the expected number of period observations (e.g. if a park has 4 target areas, it should have 12 morning1 observations). \* all observations assigned to a particular day-count (e.g. "1") actually are on the same date (this assumption may need to be relaxed or data corrected before all data pass QA). \* that each day has the expected number of observations.
 
-```{r test day assignments}
+```{r QA day assignments}
 
 PreQADT <- copy(SOPARCAnalysisSet)
 
@@ -753,18 +813,15 @@ QAVarList <- quote(list(PeriodBasedOnSequencePass,
                         DayCountBasedOnSequencePass,
                         DayAssignmentBasedOnSequencePass))
 
-
-#invalidParks <- unique(PostQADT[apply(PostQADT[,eval(QAVarList)], 1, mean) != 1, park_name])
+#check that observation periods have been properly applied
 passPeriodQA <- unique(PostQADT[apply(PostQADT[,eval(QAVarList)], 1, mean) == 1, park_name])
 
-parkStats$analysisReady <- FALSE
-parkStats[park_name %in% passPeriodQA, analysisReady := TRUE]
+#update QA tracker
 
-#save for manual inspection and update QA report
-write.csv(PostQADT, "temp_PreAnalysis_manual_review.csv")
-write.csv(parkStats, "QA_report.csv")
-write.csv(SOPARCAnalysisSet, "SOPARCDataPrepared.csv")
+parkStats[,`:=`(periodsApplied = ifelse(park_name %in% passPeriodQA,TRUE,FALSE),
+             analysisReady = ifelse(park_name %in% passPeriodQA & passQA,TRUE,FALSE))]
 
+write.csv2(ParksStudyRecord, here("2023/outputs/data-metadata/QA_report.csv"), row.names = F)
 
 ```
 
@@ -869,8 +926,43 @@ SOPARCAggregated <- SOPARCtoAggregate[,
 # SOPARCAggregated$num_senior_spec <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_senior_spec))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
 # 
 # 
+```
 
-write.csv(SOPARCAggregated, "SOPARCDataPreparedAggregated.csv")
+```{r add metadata and save analysis sets}
+
+
+# add provided metadata to aggregated and non aggregated analysis ready sets
+SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParksMetaData[,.(`REDCap Name`,
+                                                  "park_name_full" = `Park Name`, 
+                                                  `Park Address`,
+                                                  City,
+                                                  Zip,
+                                                  Neighborhood,
+                                                  Images,
+                                                  Tract,
+                                                  `Equity Score Priority `,
+                                                  `Planned park changes?`,
+                                                  Notes)], by.x = "park_name", by.y = "REDCap Name", all.x = T)
+
+SOPARCAggregated <- merge(SOPARCAggregated, ParksMetaData[,.(`REDCap Name`,
+                                                  "park_name_full" = `Park Name`, 
+                                                  `Park Address`,
+                                                  City,
+                                                  Zip,
+                                                  Neighborhood,
+                                                  Images,
+                                                  Tract,
+                                                  `Equity Score Priority `,
+                                                  `Planned park changes?`,
+                                                  Notes)], by.x = "park_name", by.y = "REDCap Name", all.x = T)
+
+#generate study count and append this to aggregated and non aggregated analysis ready sets
+SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParksStudyRecord[,.("study_count" = .N) , by = parkName], by.x = "park_name_full", by.y = "parkName", all.x = T)
+SOPARCAggregated <- merge(SOPARCAggregated, ParksStudyRecord[,.("study_count" = .N) , by = parkName], by.x = "park_name_full", by.y = "parkName", all.x = T)
+
+#save results
+write.csv2(SOPARCtoAggregate, here("2023/outputs/data-metadata/SOPARCAnalysisSet.csv"), row.names = FALSE)
+write.csv2(SOPARCAggregated, here("2023/outputs/data-metadata/SOPARCAnalysisSetAggregatedPeriods.csv"), row.names = FALSE)
 
 ```
 
