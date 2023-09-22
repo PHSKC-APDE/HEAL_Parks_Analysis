@@ -132,7 +132,7 @@ result <- postForm(
 
 RawSOPARCObservations <- as.data.table(fromJSON(result), )
 
-write.csv2(RawSOPARCObservations,here("2023/outputs/data-metadata/REDCapSOPARCObservations.csv"), row.names = FALSE)
+write.csv(RawSOPARCObservations,here("2023/outputs/data-metadata/REDCapSOPARCObservations.csv"), row.names = FALSE)
 
 ```
 
@@ -373,7 +373,7 @@ SOPARCObservations <- rbind(SOPARCObservations[sub_area == "",], SOPARCCollapsed
 ```
 
 ```{r save pre QA observations}
-write.csv2(SOPARCObservations,here("2023/outputs/data-metadata/PrepForQASOPARCObservations.csv"), row.names = FALSE)
+write.csv(SOPARCObservations,here("2023/outputs/data-metadata/PrepForQASOPARCObservations.csv"), row.names = FALSE)
 
 ```
 
@@ -437,13 +437,13 @@ parkStats[, passQA := ifelse(meetsExpected &
 # parkStats$numberDaysComplete <- 3
 
 #save QA results to file for review
-write.csv2(parkStats, here("2023/outputs/data-metadata/QA_report.csv"), row.names = F)
+write.csv(parkStats, here("2023/outputs/data-metadata/QA_report.csv"), row.names = F)
 
 
 SOPARCObservationsOK <- SOPARCObservations[park_name %in% parkStats[passQA %in% TRUE, park_name],]
 SOPARCObservationsToFix <- SOPARCObservations[park_name %in% parkStats[passQA %in% FALSE, park_name],]
-write.csv2(SOPARCObservationsOK, here("2023/outputs/data-metadata/QAPassSOPARCObservations.csv"), row.names = F)
-write.csv2(SOPARCObservationsToFix, here("2023/outputs/data-metadata/QAFailSOPARCObservations.csv"), row.names = F)
+write.csv(SOPARCObservationsOK, here("2023/outputs/data-metadata/QAPassSOPARCObservations.csv"), row.names = F)
+write.csv(SOPARCObservationsToFix, here("2023/outputs/data-metadata/QAFailSOPARCObservations.csv"), row.names = F)
 
 
 
@@ -621,14 +621,14 @@ for(park in parkStatscheck$park_name) {
 }
 
 #write updated QA results
-write.csv2(parkStats, here("2023/outputs/data-metadata/QA_report.csv"), row.names = F)
+write.csv(parkStats, here("2023/outputs/data-metadata/QA_report.csv"), row.names = F)
 
 SOPARCObservationsCorrected <- copy(SOPARCObservationsToFix[park_name %in% parkStats[passQA == TRUE, park_name],])
 
 SOPARCObservationsOK <- rbind(SOPARCObservationsOK, SOPARCObservationsCorrected)
 SOPARCObservationsToFix <- copy(SOPARCObservationsToFix[park_name %in% parkStats[passQA == FALSE, park_name],])
-write.csv2(SOPARCObservationsOK, here("2023/outputs/data-metadata/QAPassSOPARCObservations.csv"), row.names = F)
-write.csv2(SOPARCObservationsToFix, here("2023/outputs/data-metadata/QAFailSOPARCObservations.csv"), row.names = F)
+write.csv(SOPARCObservationsOK, here("2023/outputs/data-metadata/QAPassSOPARCObservations.csv"), row.names = F)
+write.csv(SOPARCObservationsToFix, here("2023/outputs/data-metadata/QAFailSOPARCObservations.csv"), row.names = F)
 
 
 ```
@@ -659,7 +659,7 @@ ParksMetaData <- as.data.table(read_xlsx(here("2023/inputs/Parks_MASTER.xlsx"), 
 
 ### structure
 
-`r summary(ParksMetadata)`
+`r summary(ParksMetaData)`
 
 ## Study Tracker
 
@@ -688,7 +688,7 @@ ParksStudyRecord <- data.table("parkName" = lastYearParks, "studyStartDate" = "2
 ParksStudyRecord <- rbind(ParksStudyRecord, data.table("parkName" = lastYearParks, "studyStartDate" = "2022-07-21", "studyDescription" = "2022 annual study round 2"))
 ParksStudyRecord <- rbind(ParksStudyRecord, data.table("parkName" = parks2023, "studyStartDate" = "2023-07-01", "studyDescription" = "2023 annual study"))
 
-write.csv2(ParksStudyRecord, here("2023/outputs/data-metadata/RecordOfParkStudies.csv"), row.names = F)
+write.csv(ParksStudyRecord, here("2023/outputs/data-metadata/RecordOfParkStudies.csv"), row.names = F)
 ```
 
 # Parameterizing Data For Analysis
@@ -698,10 +698,7 @@ write.csv2(ParksStudyRecord, here("2023/outputs/data-metadata/RecordOfParkStudie
 For each observation we need to assign a time period to that observation. Because time stamps and the actual time of data collection may not align, the assignment of the time period requires some assumptions and may effect results.
 
 ```{r period assignment based on timestamp}
-#|eval: false
-
-
-
+#| eval: false
 
 expectedTimeBreakpoints <- c(0800, #start morning2
                              0830, #between M2 and L1
@@ -821,7 +818,7 @@ passPeriodQA <- unique(PostQADT[apply(PostQADT[,eval(QAVarList)], 1, mean) == 1,
 parkStats[,`:=`(periodsApplied = ifelse(park_name %in% passPeriodQA,TRUE,FALSE),
              analysisReady = ifelse(park_name %in% passPeriodQA & passQA,TRUE,FALSE))]
 
-write.csv2(ParksStudyRecord, here("2023/outputs/data-metadata/QA_report.csv"), row.names = F)
+write.csv(ParksStudyRecord, here("2023/outputs/data-metadata/QA_report.csv"), row.names = F)
 
 ```
 
@@ -889,7 +886,7 @@ SOPARCAggregated <- SOPARCtoAggregate[,
                                         "supervised" = ifelse(any(supervised %in% "Yes"), "Yes", "No"),
                                         "organized" = ifelse(any(organized %in% "Yes"), "Yes", "No"),
                                         "equipped" = ifelse(any(organized %in% "Yes"), "Yes", "No"),
-                                        "num_child_prim" = ceiling(mean(num_child_prim, na.rm = T)),
+                                        "num_child_prim" = ceiling(mean(num_child_prim, na.rm = T, )),
                                         "num_child_snd" = ceiling(mean(num_child_snd, na.rm = T)),
                                         "num_child_spec" = ceiling(mean(num_child_spec, na.rm = T)),
                                         "num_teen_prim"= ceiling(mean(num_teen_prim, na.rm = T)),
@@ -901,31 +898,12 @@ SOPARCAggregated <- SOPARCtoAggregate[,
                                         "num_senior_prim" = ceiling(mean(num_senior_prim, na.rm = T)),
                                         "num_senior_snd" = ceiling(mean(num_senior_snd, na.rm = T)),
                                         "num_senior_spec" = ceiling(mean(num_senior_spec, na.rm = T))), 
-                                      by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]
+                                      by = .(park_name, tar_area, dayNumberBasedOnSequence, period, datePOSIX, day, month, weekend )]
 
-#SOPARCAggregated$accessible <- SOPARCtoAggregate[, ifelse(any(accessible %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-#SOPARCAggregated$usable <- SOPARCtoAggregate[, ifelse(any(usable %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-# SOPARCAggregated$lit <- SOPARCtoAggregate[, ifelse(any(lit %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-# SOPARCAggregated$occupied <- SOPARCtoAggregate[, ifelse(any(occupied %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-# SOPARCAggregated$supervised <- SOPARCtoAggregate[, ifelse(any(supervised %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-# SOPARCAggregated$organized <- SOPARCtoAggregate[, ifelse(any(organized %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-# SOPARCAggregated$equipped <- SOPARCtoAggregate[, ifelse(any(equipped %in% "Yes"), "Yes", "No"),by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
+#add columns for each activity
 
 
-# SOPARCAggregated$num_child_prim <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_child_prim))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-# SOPARCAggregated$num_child_snd <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_child_snd))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-# SOPARCAggregated$num_child_spec <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_child_spec))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-# SOPARCAggregated$num_teen_prim <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_teen_prim))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-# SOPARCAggregated$num_teen_snd <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_teen_snd))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-# SOPARCAggregated$num_teen_spec <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_teen_spec))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-# # SOPARCAggregated$num_adult_prim <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_adult_prim))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-# # SOPARCAggregated$num_adult_snd <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_adult_snd))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-# SOPARCAggregated$num_adult_spec <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_adult_spec))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-# SOPARCAggregated$num_senior_prim <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_senior_prim))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-# SOPARCAggregated$num_senior_snd <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_senior_snd))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-# SOPARCAggregated$num_senior_spec <- SOPARCtoAggregate[, ceiling(mean(as.numeric(num_senior_spec))), by = .(park_name, tar_area, dayNumberBasedOnSequence, period)]$V1
-# 
-# 
+
 ```
 
 ```{r add metadata and save analysis sets}
@@ -961,8 +939,13 @@ SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParksStudyRecord[,.("study_count" 
 SOPARCAggregated <- merge(SOPARCAggregated, ParksStudyRecord[,.("study_count" = .N) , by = parkName], by.x = "park_name_full", by.y = "parkName", all.x = T)
 
 #save results
-write.csv2(SOPARCtoAggregate, here("2023/outputs/data-metadata/SOPARCAnalysisSet.csv"), row.names = FALSE)
-write.csv2(SOPARCAggregated, here("2023/outputs/data-metadata/SOPARCAnalysisSetAggregatedPeriods.csv"), row.names = FALSE)
+write.csv(SOPARCtoAggregate, here("2023/outputs/data-metadata/SOPARCAnalysisSet.csv"), row.names = FALSE)
+write.csv(SOPARCAggregated, here("2023/outputs/data-metadata/SOPARCAnalysisSetAggregatedPeriods.csv"), row.names = FALSE)
+
+
+#would like to save as xlsx, but NAn ot handled gracefully
+#write_xlsx(SOPARCtoAggregate, here("2023/outputs/data-metadata/SOPARCAnalysisSet.xlsx"), row.names = FALSE, showNA = FALSE)
+#write_xlsx(SOPARCAggregated, here("2023/outputs/data-metadata/SOPARCAnalysisSetAggregatedPeriods.xlsx"), row.names = FALSE)
 
 ```
 
@@ -1045,10 +1028,10 @@ print(PT)
 
 #save charts as individual files
 #cleanup old images of this chart
-if(file.exists(here("./2023/charts/avg_visitors_x_time/"))) {
-  unlink(here("./2023/charts/avg_visitors_x_time/"), recursive = T)
+if(file.exists(here("./2023/outputs/charts/avg_visitors_x_time/"))) {
+  unlink(here("./2023/outputs/charts/avg_visitors_x_time/"), recursive = T)
 }
-dir.create(here("./2023/charts/avg_visitors_x_time"))
+dir.create(here("./2023/outputs/charts/avg_visitors_x_time"), recursive = T)
 
 maxCategory <- (1)
 
@@ -1076,7 +1059,8 @@ for(park in unique(SOPARCAggregated$park_name)) {
         plot.subtitle = element_text(size = 12,),
         axis.title.x = element_text(size = 12))
   
-  ggsave(paste0(park,"_avg_visitors_x_time.", CHARTFILEFORMAT), plot = PTExport, path = paste0("./charts/avg_visitors_x_time"),width = CHARTWIDTH, height = CHARTHEIGHT)
+  ggsave(paste0(park,"_avg_visitors_x_time.pdf"), plot = PTExport, path = paste0("./outputs/charts/avg_visitors_x_time"),width = CHARTWIDTH, height = CHARTHEIGHT)
+  ggsave(paste0(park,"_avg_visitors_x_time.png"), plot = PTExport, path = paste0("./outputs/charts/avg_visitors_x_time"),width = CHARTWIDTH, height = CHARTHEIGHT)
 }
 
 
@@ -1115,10 +1099,10 @@ print(PT)
 
 #save charts as individual files
 #cleanup old images of this chart
-if(file.exists(here("./2023/charts/rate_visitors_x_time/"))) {
-  unlink(here("./2023/charts/rate_visitors_x_time/"), recursive = T)
+if(file.exists(here("./2023/outputs/charts/rate_visitors_x_time/"))) {
+  unlink(here("./2023/outputs/charts/rate_visitors_x_time/"), recursive = T)
 }
-dir.create(here("./2023/charts/rate_visitors_x_time"))
+dir.create(here("./2023/outputs/charts/rate_visitors_x_time"), recursive = T)
 
 for(park in unique(SOPARCAggregated$park_name)) {
   PTExport <- ggplot(DT[`Park Name` %in% park], (aes(x = `Time Period`, y = `Proportion of Use`))) +
@@ -1129,7 +1113,8 @@ for(park in unique(SOPARCAggregated$park_name)) {
         plot.subtitle = element_text(size = 12,),
         axis.title.x = element_text(size = 12))
   
-  ggsave(paste0(park,"_rate_visitors_x_time.", CHARTFILEFORMAT), plot = PTExport, path = paste0("./charts/rate_visitors_x_time"),width = CHARTWIDTH, height = CHARTHEIGHT)
+  ggsave(paste0(park,"_rate_visitors_x_time.pdf"), plot = PTExport, path = paste0("./outputs/charts/rate_visitors_x_time"),width = CHARTWIDTH, height = CHARTHEIGHT)
+  ggsave(paste0(park,"_rate_visitors_x_time.png"), plot = PTExport, path = paste0("./outputs/charts/rate_visitors_x_time"),width = CHARTWIDTH, height = CHARTHEIGHT)
 }
 
 kbl(DT,
@@ -1289,7 +1274,7 @@ kbl(DT,
 
 ```{r save workbook}
 
-WB$save("analysis_data.xlsx", overwrite = TRUE)
+WB$save("./outputs/tables/analysis_data.xlsx", overwrite = TRUE)
 ```
 
 ```{r}
