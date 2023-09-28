@@ -75,10 +75,20 @@ CHARTHEIGHT <- 2.3 #height of charts to generate for reproduction
 if(!"pacman" %in% installed.packages()) {
   install.packages("pacman")
 }
+if(!"spatagg" %in% installed.packages()) {
+  remotes::install_github('https://github.com/PHSKC-APDE/spatagg')
+}
+if(!"kcparcelpop" %in% installed.packages()) {
+  remotes::install_github('https://github.com/PHSKC-APDE/kcparcelpop/')
+}
 
 # load and install packages using pacman. 
 # Pacman will install and load missing packages.
-pacman::p_load(flextable, #generate pretty tables in word
+pacman::p_load(sf, #create spatial objects around long and lat
+               kcparcelpop,
+               rads, #access apde data
+               spatagg, #geospatial maping for populations
+               flextable, #generate pretty tables in word
                officer, #generate word docs
                openxlsx2, #read xlsx files
                ggplot2, #create pretty charts
@@ -924,6 +934,8 @@ SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParksMetaData[,.(`REDCap Name`,
                                                   Neighborhood,
                                                   Images,
                                                   Tract,
+                                                  Latitude,
+                                                  Longitude,
                                                   `Equity Score Priority `,
                                                   `Planned park changes?`,
                                                   Notes)], by.x = "park_name", by.y = "REDCap Name", all.x = T)
@@ -936,6 +948,8 @@ SOPARCAggregated <- merge(SOPARCAggregated, ParksMetaData[,.(`REDCap Name`,
                                                   Neighborhood,
                                                   Images,
                                                   Tract,
+                                                  Latitude,
+                                                  Longitude,
                                                   `Equity Score Priority `,
                                                   `Planned park changes?`,
                                                   Notes)], by.x = "park_name", by.y = "REDCap Name", all.x = T)
@@ -955,6 +969,57 @@ write.csv(SOPARCAggregated, here("2023/outputs/data-metadata/SOPARCAnalysisSetAg
 
 ```
 
+## Assigning population counts
+
+For each park we estimate the number of people within 1 mile. This relies on access to APDE population data and use of the RADS library.
+
+words from Daniel
+you take the XY and you buffer (`st_buffer`) it a mile
+
+so now you have a polygon (in this case, a circle)
+
+
+you then relate it to census blocks via spatagg::create_xwalk (you might have to do some data cleaning in between)
+
+and then you use spatagg::crosswalk to convert get_population results at the block level to the buffered XY
+
+and that'll give you an estimate/approximation of the population in the radii
+
+```{r create population estimates}
+#library(crsuggest)
+library(units)
+
+ParkGeos <- ParksMetaData[,.("park" = `Park Name`, "long" = Longitude, "lat" = Latitude)] #create a prototype data frame for holding our geometry. This has the raw lat long data
+ParkGeos <- st_as_sf(x = ParkGeos,coords = c("long","lat"), crs = "EPSG:4326") #turn teh raw data into a geometry using crs 2926 (this is one recomended for WA)
+ParkGeos <- st_buffer(ParkGeos, units::set_units(1, mile)) # units::set_units is intelligent about types of units so you can specify "mile". st_buffer will create a perimeter of the provided units.
+#confirm that tihs peremeter defaults to a circle for points
+plot(ParkGeos)
+
+
+blk_shapes <- st_read("//dphcifs/APDE-CDIP/Shapefiles/Census_2020/block/kc_block.shp") 
+blk_shapes <- st_transform(blk_shapes, st_crs("EPSG:4326")) #conform to same crs
+
+plot(blk_shapes)
+
+Park_blk_intersection <- st_intersection(ParkGeos, blk_shapes) #this take a looooong time. save and load in future
+
+plot(Park_blk_intersection[2])
+
+blk_pops <- get_population( ,geo_type = "blk")
+
+
+st_point(unlist(ParkGeos[1,.(lon,lat)]))
+ParkGeos <- st_as_sf(x = ParkGeos,coords = c("lon","lat"), dim = "XY")
+
+st_sfc(ParkGeos, crs = 2926)
+st_sfc(ParkGeos, crs = 2926)
+st_transform(ParkGeos, 2926)
+
+
+st_buffer(ParkGeos, units::set_units(1, mile))
+?st_buffer
+```
+
 # Results
 
 Results are saved in two locations, an excel workbook that contains a separate page for each table of analysis results, and this document which contains a human readable report format. Note that the charts in the excel book are much large and more appropriate for reproduction
@@ -970,7 +1035,7 @@ WB <- openxlsx2::wb_workbook()
 ```{r report included parks}
 #| output: true
 
-kbl(SOPARCAggregated[order(park_name), .("Park Name" = unique(park_name))], 
+kbl(SOPARCAggregated[order(park_name), .("Park Name" = unique(park_name_full))], 
     caption = "Parks Included In Analysis",
     booktabs = TRUE,
     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
@@ -989,7 +1054,7 @@ The following metrics rely on counts of people observed. The underlying data are
 # kbl(SOPARCtoAggregate[order(park_name),.("Number of Attendees" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name)], 
 #       caption =  "Total Number of Attendees",
 #     booktabs = T) %>% kable_styling(latex_options = "striped")
-DT <- SOPARCAggregated[order(park_name),.("Number of Attendees" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name)]
+DT <- SOPARCAggregated[order(park_name_full),.("Number of Attendees" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name_full)]
 
 kbl(DT, 
       caption =  "Total Number of Attendees",
@@ -1016,10 +1081,9 @@ $$
 $$
 
 ```{r average park users by period, fig.cap = "Average Park Users By Period"}
-#| eval: false
-#| output: false
+#| output: true
 
-DT <- SOPARCAggregated[order(park_name),.("Users" = round(sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3 ,0)), by = .("Park Name" = park_name, "Time Period" = period)]
+DT <- SOPARCAggregated[order(park_name_full),.("Users" = round(sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3 ,0)), by = .("Park Name" = park_name_full, "Time Period" = period)]
 
 WB$add_worksheet("Avg Users x Period")
 WB$add_data(sheet = "Avg Users x Period", DT)
@@ -1029,7 +1093,7 @@ if(!SUPPRESS_CHARTS) {
 PT <- ggplot(DT, (aes(x = `Time Period`, y = Users))) +
   geom_col() +
   facet_wrap(vars(DT$"Park Name"), scales = "free")
-
+  
 
   print(PT)
 }
@@ -1041,7 +1105,7 @@ if(file.exists(here("./2023/outputs/charts/avg_users_x_period/"))) {
 }
 dir.create(here("./2023/outputs/charts/avg_users_x_period"), recursive = T)
 
-for(park in unique(SOPARCAggregated$park_name)) {
+for(park in unique(SOPARCAggregated$park_name_full)) {
   if(max(DT[`Park Name` %in% park]$Users) < 11) {
     topOfY <- 10
   } else if(max(DT[`Park Name` %in% park]$Users) < 26){
@@ -1060,21 +1124,22 @@ for(park in unique(SOPARCAggregated$park_name)) {
     topOfY <- max(DT[`Park Name` %in% park]$Users)
   }
   
-  cityName <- first(SOPARCAggregated[park_name == park, City])
+  cityName <- first(SOPARCAggregated[park_name_full == park, City])
   
   PTExport <- ggplot(DT[`Park Name` %in% park], (aes(x = `Time Period`, y = `Users`))) +
   geom_col()  +
   labs(title = paste0(park,"\n", cityName,"\n", "2023"), subtitle = paste("Average Users Per Period")) +
+  geom_text(aes(label = `Users`, colour = "#FFFFFF"), vjust = 01.50, ) +
+  scale_color_manual(values=c("#FFFFFF")) +
   scale_y_continuous(limits=c(0,topOfY),) +
   theme(plot.title = element_text(size = 12),
         plot.subtitle = element_text(size = 14,),
         #axis.title.x = element_text(size = 12))
         axis.title.x = element_blank())
-  
+
   ggsave(paste0(park,"_avg_users_x_period.pdf"), plot = PTExport, path = paste0("./outputs/charts/avg_users_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
   ggsave(paste0(park,"_avg_users_x_period.png"), plot = PTExport, path = paste0("./outputs/charts/avg_users_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
   
-  PTExport
 }
 
 if(!SUPPRESS_TABLES){
@@ -1114,7 +1179,7 @@ The total number of people in a day, $\text{People}_d$, is defined as the sum of
 #| output: true
 
 
-DT <- SOPARCAggregated[order(park_name), sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3 , by = .(park_name, period)][,.("Time Period" = period, "Rate of Use" = (V1/ sum(V1))), by = .("Park Name" = park_name) ]
+DT <- SOPARCAggregated[order(park_name_full), sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3 , by = .(park_name_full, period)][,.("Time Period" = period, "Rate of Use" = (V1/ sum(V1))), by = .("Park Name" = park_name_full) ]
 
 WB$add_worksheet("Rate Use x Period")
 WB$add_data(sheet = "Rate Use x Period", DT)
@@ -1137,8 +1202,9 @@ if(file.exists(here("./2023/outputs/charts/rate_use_x_period/"))) {
 }
 dir.create(here("./2023/outputs/charts/rate_use_x_period"), recursive = T)
 
-for(park in unique(SOPARCAggregated$park_name)) {
-  cityName <- first(SOPARCAggregated[park_name == park, City])
+for(park in unique(SOPARCAggregated$park_name_full)) {
+  
+  cityName <- first(SOPARCAggregated[park_name_full == park, City])
   
   PTExport <- ggplot(DT[`Park Name` %in% park], (aes(label = paste0(`Time Period`," \n \n",round(`Rate of Use`*100),"%"), area = `Rate of Use`))) +
   geom_treemap()  +
@@ -1169,15 +1235,15 @@ Notes:
 - Rate is within-park (each park totals to 100%).
 
 
-### Distribution of Attendee Ages (not reported)
+### Distribution Of Park Users By Ages (not reported)
 
 
-```{r distribution of attendee ages, fig.cap="Distribution of Attendee Ages"}
-#| eval: false
+
+```{r average park users by age, fig.cap="Average Park Users By Age"}
 #| output: true
 
-DT <- SOPARCAggregated[order(park_name), .( "Age Group" = rep(c("child","teen","adult","senior")), 
-                                           "Daily Average Number of People" = round(c(sum(num_child_prim, 
+DT <- SOPARCAggregated[order(park_name_full), .( "Age Group" = rep(c("child","teen","adult","senior")), 
+                                           "Users" = round(c(sum(num_child_prim, 
                                                                                     num_child_snd,
                                                                                     num_child_spec, 
                                                                                     na.rm = TRUE)/3,
@@ -1192,25 +1258,75 @@ DT <- SOPARCAggregated[order(park_name), .( "Age Group" = rep(c("child","teen","
                                                                                 sum(num_senior_prim, 
                                                                                     num_senior_snd, 
                                                                                     num_senior_spec, 
-                                                                                    na.rm = TRUE)/3))), by = .("Park Name" = park_name)]
+                                                                                    na.rm = TRUE)/3))), by = .("Park Name" = park_name_full)]
 
+WB$add_worksheet("Avg Users x Age")
+WB$add_data(sheet = "Avg Users x Age", DT)
 
-WB$add_worksheet("Avg Attend x Age")
-WB$add_data(sheet = "Avg Attend x Age", DT)
-
-PT <- ggplot(DT, (aes(x = `Age Group`, y = `Daily Average Number of People`))) +
+if(!SUPPRESS_CHARTS) {
+PT <- ggplot(DT, (aes(x = `Age Group`, y = `Users`))) +
   geom_col() +
   facet_wrap(vars(`Park Name`), scales = "free") +
    theme(axis.text.x = element_text(angle = 0, vjust = 0, hjust=0))
+  
 
-# WB$add_worksheet("Avg Visitors x Time Plot")
-print(PT)
-# WB$add_plot(sheet = "Avg Visitors x Time Plot", width = 20, height = 20)
+  print(PT)
+}
 
-kbl(DT,
-    caption = "Daily Average Number of Attendees by Age Group",
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2023/outputs/charts/avg_users_x_age/"))) {
+  unlink(here("./2023/outputs/charts/avg_users_x_age/"), recursive = T)
+}
+dir.create(here("./2023/outputs/charts/avg_users_x_age"), recursive = T)
+
+for(park in unique(SOPARCAggregated$park_name_full)) {
+  if(max(DT[`Park Name` %in% park]$Users) < 11) {
+    topOfY <- 10
+  } else if(max(DT[`Park Name` %in% park]$Users) < 26){
+    topOfY <- 25
+  } else if(max(DT[`Park Name` %in% park]$Users) < 51){
+    topOfY <- 50
+  } else if(max(DT[`Park Name` %in% park]$Users) < 101){
+    topOfY <- 100
+  } else if(max(DT[`Park Name` %in% park]$Users) < 251){
+    topOfY <- 250
+  } else if(max(DT[`Park Name` %in% park]$Users) < 501){
+    topOfY <- 500
+  } else if(max(DT[`Park Name` %in% park]$Users) < 1001) {
+    topOfY <- 1000
+  } else {
+    topOfY <- max(DT[`Park Name` %in% park]$Users)
+  }
+  
+  cityName <- first(SOPARCAggregated[park_name_full == park, City])
+  
+  PTExport <- ggplot(DT[`Park Name` %in% park,], (aes(x = `Age Group`, y = `Users`))) +
+  geom_col()  +
+  labs(title = paste0(park,"\n", cityName,"\n", "2023"), subtitle = paste("Average Users Per Age")) +
+  geom_text(aes(label = `Users`, colour = "#FFFFFF"), vjust = 01.50, ) +
+  scale_color_manual(values=c("#FFFFFF")) +
+  scale_y_continuous(limits=c(0,topOfY),) +
+  theme(plot.title = element_text(size = 12),
+        plot.subtitle = element_text(size = 14,),
+        #axis.title.x = element_text(size = 12))
+        axis.title.x = element_blank(),
+        legend.position = "none")
+PTExport
+  ggsave(paste0(park,"_avg_users_x_age.pdf"), plot = PTExport, path = paste0("./outputs/charts/avg_users_x_age"),width = CHARTWIDTH, height = CHARTHEIGHT)
+  ggsave(paste0(park,"_avg_users_x_age.png"), plot = PTExport, path = paste0("./outputs/charts/avg_users_x_age"),width = CHARTWIDTH, height = CHARTHEIGHT)
+  
+}
+
+
+
+if(!SUPPRESS_TABLES){
+  kbl(DT,
+    caption = "Daily Average Number of Users Per Age Group",
     booktabs = TRUE,
     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+
+}
 
 ```
 
@@ -1220,27 +1336,25 @@ kbl(DT,
 ```{r rate of park use by age, fig.cap="Rate of Park Use By Age"}
 #| output: true
 
-DT <- SOPARCAggregated[order(park_name), .("Age Group" = rep(c("child","teen","adult","senior")),
+DT <- SOPARCAggregated[order(park_name_full), .("Age Group" = rep(c("child","teen","adult","senior")),
                                          "Rate of Use" = 
                                            c(
                                              sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
                                              sum(num_teen_prim, num_teen_snd, num_teen_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
                                              sum(num_adult_prim, num_adult_snd, num_adult_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
-                                             sum(num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE))), by = .("Park Name" = park_name)]
+                                             sum(num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE))), by = .("Park Name" = park_name_full)]
 
 
 WB$add_worksheet("Rate Use x Age")
 WB$add_data(sheet = "Rate Use x Age", DT)
 
 
-
-PT <- ggplot(DT, (aes(x = factor(`Age Group`, levels = c("child","teen","adult","senior")), y = `Rate of Use`))) +
-  xlab("Age Group") +
-  geom_col() +
-  facet_wrap(vars(`Park Name`)) +
-   theme(axis.text.x = element_text(angle = 0, vjust = 0, hjust=0))
-
 if(!SUPPRESS_CHARTS) {
+  PT <- ggplot(DT, (aes(x = factor(`Age Group`, levels = c("child","teen","adult","senior")), y = `Rate of Use`))) +
+    xlab("Age Group") +
+    geom_col() +
+    facet_wrap(vars(`Park Name`)) +
+     theme(axis.text.x = element_text(angle = 0, vjust = 0, hjust=0))
   print(PT)
 }
 
@@ -1251,8 +1365,8 @@ if(file.exists(here("./2023/outputs/charts/rate_use_x_age/"))) {
 }
 dir.create(here("./2023/outputs/charts/rate_use_x_age"), recursive = T)
 
-for(park in unique(SOPARCAggregated$park_name)) {
-  cityName <- first(SOPARCAggregated[park_name == park, City])
+for(park in unique(SOPARCAggregated$park_name_full)) {
+  cityName <- first(SOPARCAggregated[park_name_full == park, City])
   PTExport <- ggplot(DT[`Park Name` %in% park], (aes(label = paste0(factor(`Age Group`, levels = c("child","teen","adult","senior"))," \n",round(`Rate of Use`*100),"%"), area = `Rate of Use`))) +
   geom_treemap()  +
   geom_treemap_text(color = "white",
@@ -1371,9 +1485,9 @@ for(park in unique(SOPARCtoAggregate$park_name)) {
       caption = "Rate of Activities Observed Per Park",
       booktabs = TRUE,
       longtable = TRUE) %>%
-    kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+    kable_styling(latex_options = c("striped", "repeat_header"))
 
-    save_kable(x = KBObject, here(paste0("./2023/outputs/tables/rate_activity/",park,"rate_activity.pdf")))
+    save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_activity/",park,"rate_activity.pdf")))
   
   FT <- DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)] %>% regulartable() %>% autofit()
 
