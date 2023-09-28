@@ -60,6 +60,9 @@ This script was last executed using `r version$version.string`.
 SECRETS_LOCALE <- "./2023/inputs/secrets.txt" #REDCap project API access information goes here
 DATA_LOCALE <- "2023/inputs/data.csv" #use this if REDCap is not accessable
 
+REBUILDACTIVITYTABLE <- FALSE
+RECALCULATEPOPULATIONS <- FALSE
+
 SUPPRESS_TABLES <- TRUE #do not print tables in report. 
 SUPPRESS_CHARTS <- TRUE #do not show charts in report
 
@@ -250,10 +253,8 @@ SOPARCObservations <- copy(RawSOPARCObservations)
 #remove duplicates
 #SOPARCObservations <- SOPARCObservations[!duplicated(SOPARCObservations[, setdiff(names(SOPARCObservations), "record_id"), with = FALSE]),]
 
-####TESTING####
 #remove data with incomplete entry status
 SOPARCObservations <- SOPARCObservations[park_scan_data_collection_complete %in% "Complete",]
-###############
 
 #drop observations without a time, we cannot use these
 SOPARCObservations <- SOPARCObservations[start_time != "",]
@@ -286,13 +287,47 @@ SOPARCObservations <- SOPARCObservations[!(record_id %in% RemoveMe$record_id),]
 
 #reorder given new data
 setorder(SOPARCObservations, cols = "timestampPOSIX")
+```
 
-unique(SOPARCObservations[park_name == "Crystal Springs Park", datePOSIX])
+## Create table of activities including sub areas
 
-unique(SOPARCObservations[park_name == "Puget Sound Park", datePOSIX])
+```{r create seperate activity table}
 
-unique(SOPARCObservations[park_name == "Mathison", datePOSIX])
+if(!(file.exists("2023/outputs/data-metadata/Park Activities.csv")) & REBUILDACTIVITYTABLE){
+SOPARCActivities <- data.table("record_id" = SOPARCObservations[prim_act_name != "",]$record_id, 
+                               "record_id_aggregated" = SOPARCObservations[prim_act_name != "",]$record_id, 
+                               "activity" = "", 
+                               "children" = 0, 
+                               "teen" = 0, 
+                               "adult" = 0, 
+                               "senior" = 0)
+for(id in SOPARCActivities$record_id) {
 
+    SOPARCActivities[record_id == id, `:=`(activity = ifelse(SOPARCObservations[record_id == id, ]$prim_act_name == "Other", SOPARCObservations[record_id == id, ]$prim_act_other, SOPARCObservations[record_id == id, ]$prim_act_name),
+                                           children = SOPARCObservations[record_id == id, ]$num_child_prim, 
+                                           teen = SOPARCObservations[record_id == id, ]$num_teen_prim, 
+                                           adult = SOPARCObservations[record_id == id, ]$num_adult_prim, 
+                                           senior = SOPARCObservations[record_id == id, ]$num_senior_prim)] 
+  if(SOPARCObservations[record_id == id,]$yesno_snd == "Yes") {
+    SOPARCActivities[record_id == id, `:=`(activity = ifelse(SOPARCObservations[record_id == id, ]$snd_act_name == "Other", SOPARCObservations[record_id == id, ]$other_act_snd, SOPARCObservations[record_id == id, ]$snd_act_name),
+                                           children = SOPARCObservations[record_id == id, ]$num_child_snd, 
+                                           teen = SOPARCObservations[record_id == id, ]$num_teen_snd, 
+                                           adult = SOPARCObservations[record_id == id, ]$num_adult_snd, 
+                                           senior = SOPARCObservations[record_id == id, ]$num_senior_snd)] 
+  }
+  if(SOPARCObservations[record_id == id,]$yesno_spec == "Yes") {
+    SOPARCActivities[record_id == id, `:=`(activity = ifelse(SOPARCObservations[record_id == id, ]$spec_act_name == "Other", SOPARCObservations[record_id == id, ]$other_act_spec, SOPARCObservations[record_id == id, ]$spec_act_name),
+                                           children = SOPARCObservations[record_id == id, ]$num_child_spec, 
+                                           teen = SOPARCObservations[record_id == id, ]$num_teen_spec, 
+                                           adult = SOPARCObservations[record_id == id, ]$num_adult_spec, 
+                                           senior = SOPARCObservations[record_id == id, ]$num_senior_spec)] 
+  }
+}
+
+write.csv(SOPARCActivities, here("2023/outputs/data-metadata/Park Activities.csv"), row.names = FALSE)
+} else {
+  SOPARCActivities <-  fread(here("2023/outputs/data-metadata/Park Activities.csv"))
+}
 ```
 
 ## Collapse sub areas
@@ -302,6 +337,8 @@ For this analysis, we are not using sub areas. These can be collapsed into singl
 Sub areas of the same target area will be assumed to be of the same observation period based on the following logic: \* for a sequence of sub areas observed in the same 50 hours period apparently missing sub-areas will be ignored (assumption: not all sub areas are necessary)
 
 If non unique sub area labels are identified: \* check if the expected list of sub areas are in teh data set if too many, attempt to identify redundancies and remove these if too few, interpolate missing information
+
+In this step we also append changed record_ids to our activity table and save the updated activity table
 
 ```{r collapse sub areas into a single area}
 SOPARCObservationsSubAreas <- copy(SOPARCObservations[sub_area != "",])
@@ -318,7 +355,7 @@ for(index in 1:nrow(listToCollapseStarts)) {
   target_area <- listToCollapseStarts[index,]$tar_area
   first_sub_area_here <- listToCollapseStarts[index,]$first_sub_area
   SubAreaStarts <- SOPARCObservationsSubAreas[park_name == park & tar_area == target_area & sub_area == first_sub_area_here,]
-  #first_sub_area_list <- SOPARCObservationsSubAreas[park_name == park & tar_area == target_area & sub_area == ]
+
   for(collapseIndex in 1:nrow(SubAreaStarts)) {
     date <- SubAreaStarts[collapseIndex, datePOSIX]
     starttime <- SubAreaStarts[collapseIndex, timestampPOSIX]
@@ -369,6 +406,12 @@ for(index in 1:nrow(listToCollapseStarts)) {
                                                                                                                                                     day = first(day),
                                                                                                                                                     month = first(month),
                                                                                                                                                     weekend = first(weekend)), ]
+    #modify activity record_id to match
+    newID <- first(SOPARCObservationsSubAreas[park_name == park & tar_area == target_area & datePOSIX == date & (timestampPOSIX >= starttime & timestampPOSIX < endtime ),record_id])
+    idToChange <- SOPARCObservationsSubAreas[park_name == park & tar_area == target_area & datePOSIX == date & (timestampPOSIX >= starttime & timestampPOSIX < endtime ) & !(record_id %in% newID),record_id]
+    SOPARCActivities[record_id %in% idToChange,]$record_id_aggregated <- newID
+                               
+                               
     if(nrow(TempCollapseResult) > 1 ) {
       stop(paste("Failed to compress observations, check result of", park, target_area, date, "between", starttime, "and", endtime))
     } else if(!exists("SOPARCCollapsedSubAreas")) {
@@ -384,10 +427,14 @@ for(index in 1:nrow(listToCollapseStarts)) {
 }
 
 
+
 #combine observations without sub areas, and our newly collapsed sub areas, into a single DT
 SOPARCObservations <- rbind(SOPARCObservations[sub_area == "",], SOPARCCollapsedSubAreas)
 
+#save newly udpated activity table
 
+
+write.csv(SOPARCActivities, here("2023/outputs/data-metadata/Park Activities.csv"), row.names = F)
 
 
 ```
@@ -670,16 +717,72 @@ Metadata are provided for each park by Seth. The formal name, address, city, zip
 
 ```{r load parkwide metadata}
 ParksMetaData <- as.data.table(read_xlsx(here("2023/inputs/Parks_MASTER.xlsx"), sheet = "Sheet1"))
+```
 
+## Assign population within half-mile radius
 
+https://10minutewalk.org/
 
+For each park we estimate the number of people within a half-mile. This is based on the generally accepted threshold of a 10-minute walk to a park as a metric goal (https://10minutewalk.org/). 
+This relies on access to APDE population data and use of the RADS library.
 
+Depends on park longitudes and latitudes provided in the meta data.
 
+```{r create population estimates}
+#this chunk is very slow, so if the data already exists, do not rerun.
+skip <- FALSE
+if(file.exists(here("2023/outputs/data-metadata/Park Populations.csv"))) {
+  ParkPopulationTable <- fread(here("2023/outputs/data-metadata/Park Populations.csv"))
+  if("populationHalfMile" %in% names(ParkPopulationTable) &
+     all(ParksMetaData$`Park Name` %in% ParkPopulationTable[censusYear == 2022,]$parkNameFull)) 
+    skip <- TRUE #yay no need to calculate
+}
+if(!skip | RECALCULATEPOPULATIONS) {
+  
+  
+  
+  crsString <- "EPSG:2926" #preferred coordinate reference system for WA
+  
+  ParkGeos <- ParksMetaData[,.("park" = `Park Name`, "long" = Longitude, "lat" = Latitude)] #create a prototype data frame for holding our geometry. This has the raw lat long data
+  
+  ParkGeos <- st_as_sf(x = ParkGeos,coords = c("long","lat"), crs = "EPSG:4326") #turn teh raw data into a geometry using crs 2926 (this is one recomended for WA)
+  ParkGeos <- st_transform(ParkGeos, st_crs(crsString))
+  ParkGeos <- st_buffer(ParkGeos, units::set_units(0.5, mile)) # units::set_units is intelligent about types of units so you can specify "mile". st_buffer will create a perimeter of the provided units.
+  
+  BlockShapes <- st_read("//dphcifs/APDE-CDIP/Shapefiles/Census_2020/block/kc_block.shp") 
+  BlockShapes <- st_transform(BlockShapes, st_crs(crsString)) #conform to same crs
+  
+  # ggplot() + geom_sf(data = BlockShapes, fill = NA) +
+  #   geom_sf(data = ParkGeos, fill = NA, color = 'purple')
+  
+  #get KC population estimates. Note, if a radius desired extends outside the county, then need to expand. Will greatly slow down calculations
+  #if not saved, pull and save. Otherwise, load from save
+  if(file.exists(here("2023/inputs/KCPops.csv"))) {
+    KCPops <- read.csv(here("2023/inputs/KCPops.csv"))
+  } else {
+    KCPops <- get_population(geo_type = "blk", kingco = T, year = 2022)
+    write.csv(x = KCPops, here("2023/inputs/KCPops.csv"), row.names = F)
+  }
+  
+  #Create data frame for final results
+  ParkPopulationTable <- data.table("parkNameFull" = ParksMetaData$`Park Name`, "censusYear" = 2022, "populationHalfMile" = 0)
+  
+  #loop through parks and generate crosswalk for each park.
+  for(rowIndex in 1:nrow(ParkGeos)) {
+    CW <- create_xwalk(BlockShapes, ParkGeos[rowIndex,], "GEOID20", "park",min_overlap = 0.00001)
+    CWPop <- merge(CW, KCPops, by.x = "source_id", by.y = "geo_id")
+    weightedPop <- sum(CWPop$s2t_fraction * CWPop$pop)
+    
+    ParkPopulationTable[parkNameFull == ParkGeos[rowIndex,]$park, ]$populationHalfMile <- weightedPop 
+  }
+
+  write.csv(ParkPopulationTable ,here("2023/outputs/data-metadata/Park Populations.csv"), row.names = F)
+}
 ```
 
 ## Study Tracker
 
-For the 2023 analysis we advised created a study tracker. For each time a park is studied, a new entry is created. Each entry should includ the park name, the date the study staretd, and a brief description of the study. We generate and save a study tracker that covers 2022 and 2023 studies.
+For the 2023 analysis we advised creating a study tracker. For each time a park is studied, a new entry is created. Each entry should includ the park name, the date the study staretd, and a brief description of the study. We generate and save a study tracker that covers 2022 and 2023 studies.
 
 In a later step we will use this table to append a study count to our parks
 
@@ -838,7 +941,7 @@ write.csv(parkStats, here("2023/outputs/data-metadata/QA_report.csv"), row.names
 
 ```
 
-## aggregation of periods for analysis
+## Aggregation of periods for analysis
 
 For all analyses, we do not want to distinguish between the first and second of a period (e.g. morning1 and morning2). We aggregate these according to the following:
 
@@ -922,6 +1025,10 @@ SOPARCAggregated <- SOPARCtoAggregate[,
 
 ```
 
+
+
+## Integrate metadata and analysis sets
+
 ```{r add metadata and save analysis sets}
 
 
@@ -939,6 +1046,7 @@ SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParksMetaData[,.(`REDCap Name`,
                                                   `Equity Score Priority `,
                                                   `Planned park changes?`,
                                                   Notes)], by.x = "park_name", by.y = "REDCap Name", all.x = T)
+SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParkPopulationTable, by.x = "park_name_full", by.y = "parkNameFull")
 
 SOPARCAggregated <- merge(SOPARCAggregated, ParksMetaData[,.(`REDCap Name`,
                                                   "park_name_full" = `Park Name`, 
@@ -953,6 +1061,7 @@ SOPARCAggregated <- merge(SOPARCAggregated, ParksMetaData[,.(`REDCap Name`,
                                                   `Equity Score Priority `,
                                                   `Planned park changes?`,
                                                   Notes)], by.x = "park_name", by.y = "REDCap Name", all.x = T)
+SOPARCAggregated <- merge(SOPARCAggregated, ParkPopulationTable, by.x = "park_name_full", by.y = "parkNameFull")
 
 #generate study count and append this to aggregated and non aggregated analysis ready sets
 SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParksStudyRecord[,.("study_count" = .N) , by = parkName], by.x = "park_name_full", by.y = "parkName", all.x = T)
@@ -967,57 +1076,6 @@ write.csv(SOPARCAggregated, here("2023/outputs/data-metadata/SOPARCAnalysisSetAg
 #write_xlsx(SOPARCtoAggregate, here("2023/outputs/data-metadata/SOPARCAnalysisSet.xlsx"), row.names = FALSE, showNA = FALSE)
 #write_xlsx(SOPARCAggregated, here("2023/outputs/data-metadata/SOPARCAnalysisSetAggregatedPeriods.xlsx"), row.names = FALSE)
 
-```
-
-## Assigning population counts
-
-For each park we estimate the number of people within 1 mile. This relies on access to APDE population data and use of the RADS library.
-
-words from Daniel
-you take the XY and you buffer (`st_buffer`) it a mile
-
-so now you have a polygon (in this case, a circle)
-
-
-you then relate it to census blocks via spatagg::create_xwalk (you might have to do some data cleaning in between)
-
-and then you use spatagg::crosswalk to convert get_population results at the block level to the buffered XY
-
-and that'll give you an estimate/approximation of the population in the radii
-
-```{r create population estimates}
-#library(crsuggest)
-library(units)
-
-ParkGeos <- ParksMetaData[,.("park" = `Park Name`, "long" = Longitude, "lat" = Latitude)] #create a prototype data frame for holding our geometry. This has the raw lat long data
-ParkGeos <- st_as_sf(x = ParkGeos,coords = c("long","lat"), crs = "EPSG:4326") #turn teh raw data into a geometry using crs 2926 (this is one recomended for WA)
-ParkGeos <- st_buffer(ParkGeos, units::set_units(1, mile)) # units::set_units is intelligent about types of units so you can specify "mile". st_buffer will create a perimeter of the provided units.
-#confirm that tihs peremeter defaults to a circle for points
-plot(ParkGeos)
-
-
-blk_shapes <- st_read("//dphcifs/APDE-CDIP/Shapefiles/Census_2020/block/kc_block.shp") 
-blk_shapes <- st_transform(blk_shapes, st_crs("EPSG:4326")) #conform to same crs
-
-plot(blk_shapes)
-
-Park_blk_intersection <- st_intersection(ParkGeos, blk_shapes) #this take a looooong time. save and load in future
-
-plot(Park_blk_intersection[2])
-
-blk_pops <- get_population( ,geo_type = "blk")
-
-
-st_point(unlist(ParkGeos[1,.(lon,lat)]))
-ParkGeos <- st_as_sf(x = ParkGeos,coords = c("lon","lat"), dim = "XY")
-
-st_sfc(ParkGeos, crs = 2926)
-st_sfc(ParkGeos, crs = 2926)
-st_transform(ParkGeos, 2926)
-
-
-st_buffer(ParkGeos, units::set_units(1, mile))
-?st_buffer
 ```
 
 # Results
@@ -1042,19 +1100,25 @@ kbl(SOPARCAggregated[order(park_name), .("Park Name" = unique(park_name_full))],
 
 ```
 
-## Park-Utilization
+## Park-Populations
 
 The following metrics rely on counts of people observed. The underlying data are of people observed within an observation period (e.g. "morning1"). It is possible that the same people may be observed across multiple blocks of time and multiple target areas.
 
-### Number of Users (not reported)
+### Number of Users
 
-```{r number of attendees chart}
+Total number of users observed in the park across all observation periods.
+
+```{r number of users}
 #| output: false
 
 # kbl(SOPARCtoAggregate[order(park_name),.("Number of Attendees" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name)], 
 #       caption =  "Total Number of Attendees",
 #     booktabs = T) %>% kable_styling(latex_options = "striped")
 DT <- SOPARCAggregated[order(park_name_full),.("Number of Attendees" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name_full)]
+
+
+WB$add_worksheet("User Counts")
+WB$add_data(sheet = "User Counts", DT)
 
 kbl(DT, 
       caption =  "Total Number of Attendees",
@@ -1064,6 +1128,11 @@ kbl(DT,
 
 
 ```
+
+Notes:
+
+- Due to the study design, user counts are subject to both over and under counting.
+
 
 ### Average Park Users By Time Period (not reported)
 
@@ -1395,77 +1464,66 @@ Notes:
 -   Rate is within-park (each park totals to 100%).
 
 
-### Occupancy Rate (not reported)
+## Occupancy
 
-NOTES:
+### Occupancy Rate
 
--   percentage of the 24 observation periods where the park had any occupancy Doing this by target areas has problem because the content of target areas is not stable.
--   this metric needs to be QA'd
+This is a measure of what percentage of observation periods had any target area occupied. 
+
+For each park, the number of observation periods with any target area in occupied status is devided by the total number of observation periods (24)
+
+This measure doesn't have associated charts
 
 ```{r analysis of occupancy rate}
-#| eval: false
 #| output: true
 
 
-DT <- SOPARCtoAggregate[order(park_name), ifelse(any(occupied %in% "Yes"), 1, 0), by = .(park_name, periodBasedOnSequence,dayNumberBasedOnSequence)][, .( "Rate of time Occupied" =round((sum(V1)/24 )*100,0)),by=.("Park Name" = park_name)]
+DT <- SOPARCtoAggregate[order(park_name_full), ifelse(any(occupied %in% "Yes"), 1, 0), by = .(park_name_full, periodBasedOnSequence,dayNumberBasedOnSequence)][, .( "Rate of Periods Occupied" =sum(V1)/24 ),by=.("Park Name" = park_name_full)]
 
 WB$add_worksheet("Rate Occupied")
 WB$add_data(sheet = "Rate Occupied", DT)
 
-
+if(!SUPPRESS_TABLES) {
 kbl(DT,
     caption = "Occupancy Rate",
     booktabs = TRUE,
     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
-
+}
 
 
 ```
+
+Notes:
+
+- 
 
 ## Activities
 
-Notes: \* activities are currently not properly handled for sub areas. Need to improve parsing for this to pass QA \* counts of people doing activities are unreliable as there may be double counting of individuals
+### Number of Users Per Activity
 
-### Number of People Doing an activitiy (not reported)
+This is the raw count of number of users observed doing an activity in a park over the study period
 
-```{r Number of people doing an activity in a park}
-#| eval: false
+```{r users doing an activity}
 #| output: true
 
-#this metric doesn't make sense given double counting of target areas
-DT <- rbind(SOPARCtoAggregate[,sum(num_child_prim, num_teen_prim, num_adult_prim, num_senior_prim, na.rm = T) , by = .(park_name,activity = prim_act_name)][V1 > 0,],
-SOPARCtoAggregate[,sum(num_child_snd, num_teen_snd, num_adult_snd, num_senior_snd, na.rm = T) , by = .(park_name,activity = snd_act_name)][V1 > 0,],
-SOPARCtoAggregate[,sum(num_child_spec, num_teen_spec, num_adult_spec, num_senior_spec, na.rm = T) , by = .(park_name,activity = spec_act_name)][V1 > 0,])[,.("Number of People" = sum(V1)), by = .("Park Name" = park_name,"Activity" = activity)]
+#construct an activity table from the non agrgeagted activity list to align record_ids
+DT <- merge(SOPARCActivities, SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full, tar_area, dayNumberBasedOnSequence, period, datePOSIX, day, month, weekend)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
+#merge(SOPARCActivities, SOPARCtoAggregate[,.("record_id" = as.numeric(record_id), park_name_full)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
+# repeat aggregation steps for people counts
+DT <- DT[, .(children = ceiling(mean(children, na.rm = T)), 
+             teen = ceiling(mean(teen, na.rm = T)), 
+             adult = ceiling(mean(adult, na.rm = T)), 
+             senior = ceiling(mean(senior, na.rm = T))), by = .(park_name_full, dayNumberBasedOnSequence,tar_area,  period, activity )]
+
+DT <- DT[,.("Users" = sum(children, teen, adult, senior)) , by = .("Park Name" = park_name_full, "Activity" = activity)]
 
 
-
-kbl(DT[order(`Park Name`)],
-    caption = "Rate of Park Use by Age Group",
-    booktabs = TRUE,
-    longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
-```
-
-### Rate of Activity Observed in Park (in progress)
-
-This is a measure of, in how many observation periods, an activity was reported. This is across all areas and sub areas.
-
-Still in progress (not ready)
-
-```{r Rate of Activities Per Park}
-#| output: true
-
-DT <- rbind(SOPARCtoAggregate[,sum(num_child_prim, num_teen_prim, num_adult_prim, num_senior_prim, na.rm = T) , by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity = prim_act_name)][V1 > 0,],
-SOPARCtoAggregate[,sum(num_child_snd, num_teen_snd, num_adult_snd, num_senior_snd, na.rm = T) , by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity = prim_act_name)][V1 > 0,],
-SOPARCtoAggregate[,sum(num_child_spec, num_teen_spec, num_adult_spec, num_senior_spec, na.rm = T) , by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity = prim_act_name)][V1 > 0,])[,sum(V1), by = .(park_name, dayNumberBasedOnSequence,periodBasedOnSequence,activity)][order(park_name) ,.("Rate" = .N / 24), by = .("Park Name" = park_name,"Activity" = activity)]
-
-
-
-WB$add_worksheet("Rate Activity")
-WB$add_data(sheet = "Rate Activity", DT)
+WB$add_worksheet("Users per Activity")
+WB$add_data(sheet = "Users per Activity", DT)
 
 if(!SUPPRESS_TABLES) {
   kbl(DT[`Park Name` == park,],
-      caption = "Rate of Activities Observed Per Park",
+      caption = "Number of Users Observed in Park Activities",
       booktabs = TRUE,
       longtable = TRUE) %>% 
     kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
@@ -1475,36 +1533,161 @@ if(!SUPPRESS_TABLES) {
 #export charts for use
 #save charts as individual files
 #cleanup old images of this chart
-if(file.exists(here("./2023/outputs/tables/rate_activity/"))) {
-  unlink(here("./2023/outputs/tables/rate_activity/"), recursive = T)
+if(file.exists(here("./2023/outputs/tables/num_user_activity/"))) {
+  unlink(here("./2023/outputs/tables/num_user_activity/"), recursive = T)
 }
-dir.create(here("./2023/outputs/tables/rate_activity"), recursive = T)
+dir.create(here("./2023/outputs/tables/num_user_activity"), recursive = T)
 
-for(park in unique(SOPARCtoAggregate$park_name)) {
-  KBObject <- kbl(DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)],
-      caption = "Rate of Activities Observed Per Park",
-      booktabs = TRUE,
-      longtable = TRUE) %>%
-    kable_styling(latex_options = c("striped", "repeat_header"))
-
-    save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_activity/",park,"rate_activity.pdf")))
+for(park in unique(SOPARCtoAggregate$park_name_full)) {
+  # KBObject <- kbl(DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)],
+  #     caption = "Rate of User Activy",
+  #     booktabs = TRUE,
+  #     longtable = TRUE) %>%
+  #   kable_styling(latex_options = c("striped", "repeat_header"))
+  # 
+  #   save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_user_activity/",park,"rate_user_activity.pdf")))
   
-  FT <- DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)] %>% regulartable() %>% autofit()
+  FT <- DT[order(Users, decreasing = TRUE)][`Park Name` == park,.(Activity, Users)]%>% regulartable() %>% autofit()
 
   read_docx() %>%
   body_add_flextable(FT) %>%
-  print(target = paste0("./outputs/tables/rate_activity/",park,"_rate_activity.docx"))  
+  print(target = paste0("./outputs/tables/num_user_activity/",park,"_num_user_activity.docx"))  
 
 }
 ```
 
 Notes:
 
-- this is of time that the activity was observed, not
+- user counts are subject to over and under counting due to 
+
+### Rate of User Activity
+
+This is a measure of the rate of users engaged in an activity per park.
+
+For each activity, the number of users engaged in that activity is divided by the total number of users observed in the study.
+
+```{r Rate of User Activity}
+#| output: true
+
+#construct an activity table from the non agrgeagted activity list to align record_ids
+DT <- merge(SOPARCActivities, SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full, tar_area, dayNumberBasedOnSequence, period, datePOSIX, day, month, weekend)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
+#merge(SOPARCActivities, SOPARCtoAggregate[,.("record_id" = as.numeric(record_id), park_name_full)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
+# repeat aggregation steps for people counts
+DT <- DT[, .(children = ceiling(mean(children, na.rm = T)), 
+             teen = ceiling(mean(teen, na.rm = T)), 
+             adult = ceiling(mean(adult, na.rm = T)), 
+             senior = ceiling(mean(senior, na.rm = T))), by = .(park_name_full, dayNumberBasedOnSequence, tar_area,  period, activity )]
+
+DT[,"Num" := sum(children, teen, adult, senior) , by = .(park_name_full, activity)]
+DT[,"Denom" := sum(children, teen, adult, senior) , by = .(park_name_full)]
+
+DT <- DT[!duplicated(DT[,.(park_name_full, activity,Num,Denom)]), .(park_name_full, activity, Num, Denom)]
+DT <- DT[,"Rate" := Num/Denom, by = .(park_name_full, activity)][,.("Park Name" = park_name_full, "Activity" = activity, "Rate" = Rate)]
+DT <- DT[order(`Park Name`, Activity),]
+
+
+WB$add_worksheet("Rate User Activity")
+WB$add_data(sheet = "Rate User Activity", DT)
+
+if(!SUPPRESS_TABLES) {
+  kbl(DT[`Park Name` == park,],
+      caption = "Rate of Users Observed in Park Activities",
+      booktabs = TRUE,
+      longtable = TRUE) %>% 
+    kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+}
+
+
+#export charts for use
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2023/outputs/tables/rate_user_activity/"))) {
+  unlink(here("./2023/outputs/tables/rate_user_activity/"), recursive = T)
+}
+dir.create(here("./2023/outputs/tables/rate_user_activity"), recursive = T)
+
+for(park in unique(SOPARCtoAggregate$park_name_full)) {
+  # KBObject <- kbl(DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)],
+  #     caption = "Rate of User Activy",
+  #     booktabs = TRUE,
+  #     longtable = TRUE) %>%
+  #   kable_styling(latex_options = c("striped", "repeat_header"))
+  # 
+  #   save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_user_activity/",park,"rate_user_activity.pdf")))
+  
+  FT <- DT[order(Rate, decreasing = TRUE)][`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100, 2), "%"))]%>% regulartable() %>% autofit()
+
+  read_docx() %>%
+  body_add_flextable(FT) %>%
+  print(target = paste0("./outputs/tables/rate_user_activity/",park,"_rate_user_activity.docx"))  
+
+}
+```
+
+Notes:
+
+- All activities listed have at least 1 participant, but some may show 0 in the prepared tables due to being less than 0.01%
+- The total rate of all user activities listed will equal 100%, the total amount of activity observed.
+- This is calculated on the non aggregated population counts.
+
+### Rate of Activity Observed
+
+This is a measure of the rate of activities observed across all possible observation periods (24)
+
+For each park, the total the number of periods the activity was observed is divided by 24, the total number of observations periods possible for any particular activity.
+
+```{r Rate of Activity Observed}
+#| output: true
+
+#construct an activity table from the activity list
+DT <- merge(SOPARCActivities, SOPARCtoAggregate[,.("record_id" = as.numeric(record_id), park_name_full)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
+
+DT <- DT[order(park_name_full, activity), .("Rate" = .N/24), by = .("Park Name" = park_name_full, "Activity" = activity)]
+
+WB$add_worksheet("Rate Activity Observed")
+WB$add_data(sheet = "Rate Activity Observed", DT)
+
+if(!SUPPRESS_TABLES) {
+
+}
+
+
+#export charts for use
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2023/outputs/tables/rate_activity_observed/"))) {
+  unlink(here("./2023/outputs/tables/rate_activity_observed/"), recursive = T)
+}
+dir.create(here("./2023/outputs/tables/rate_activity_observed"), recursive = T)
+
+for(park in unique(SOPARCtoAggregate$park_name_full)) {
+  # KBObject <- kbl(DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)],
+  #     caption = "Rate of User Activy",
+  #     booktabs = TRUE,
+  #     longtable = TRUE) %>%
+  #   kable_styling(latex_options = c("striped", "repeat_header"))
+  # 
+  #   save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_user_activity/",park,"rate_user_activity.pdf")))
+  
+  FT <- DT[order(Rate, decreasing = TRUE)][`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100, 2), "%"))]%>% regulartable() %>% autofit()
+
+  read_docx() %>%
+  body_add_flextable(FT) %>%
+  print(target = paste0("./outputs/tables/rate_activity_observed/",park,"_rate_activity_observed.docx"))  
+
+}
+```
+
+Notes:
+
+- Unlike many of the other measures provided, these rates are mostly independent of each other and do not have an additive meaning. This is because multiple activities may be observed in a single observation period. E..g "walking" may be observed in all 24 periods, and so have an observation rate of 100%, and "sitting" may be observed in 6 periods and so have a rate of 25%.
 
 ```{r save workbook}
 dir.create(here("./2023/outputs/tables/pivot_ready"), recursive = T)
-WB$save("./outputs/tables/pivot_ready/analysis_tables.xlsx", overwrite = TRUE)
+if(file.exists(here("2023/outputs/tables/pivot_ready/analysis_tables.xlsx"))){
+  file.remove(here("2023/outputs/tables/pivot_ready/analysis_tables.xlsx"))
+}
+WB$save("./outputs/tables/pivot_ready/analysis_tables.xlsx")
 ```
 
 
