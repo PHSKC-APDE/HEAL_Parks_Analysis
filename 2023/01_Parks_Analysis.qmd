@@ -87,7 +87,8 @@ if(!"kcparcelpop" %in% installed.packages()) {
 
 # load and install packages using pacman. 
 # Pacman will install and load missing packages.
-pacman::p_load(sf, #create spatial objects around long and lat
+pacman::p_load(scales, #format ggplot2 axes
+               sf, #create spatial objects around long and lat
                kcparcelpop,
                rads, #access apde data
                spatagg, #geospatial maping for populations
@@ -109,6 +110,23 @@ options(knitr.table.format = "latex")
 
 ```
 
+```{r define helpful functions}
+
+integer_breaks <- function(n = 5, ...) {
+  #accespt none
+  #returns break point
+  #used to get integers on short axies in ggplot
+  # by Joshua Cook: https://www.r-bloggers.com/2019/11/setting-axes-to-integer-values-in-ggplot2/
+
+  fxn <- function(x) {
+  breaks <- floor(pretty(x, n, ...))
+  names(breaks) <- attr(breaks, "labels")
+  breaks
+  }
+return(fxn)
+}
+
+```
 
 ## Secrets and tokens
 
@@ -284,6 +302,9 @@ SOPARCObservations <- SOPARCObservations[!(park_name %in% "Manhattan Park" & dat
 #remove identified records
 RemoveMe <- openxlsx2::read_xlsx(here("2023/inputs/Records-to-Remove.xlsx"))
 SOPARCObservations <- SOPARCObservations[!(record_id %in% RemoveMe$record_id),]
+
+#correct identified error
+SOPARCObservations[record_id == 4706, "tar_area"] <- 5
 
 #reorder given new data
 setorder(SOPARCObservations, cols = "timestampPOSIX")
@@ -569,7 +590,7 @@ for(park in unique(SOPARCObservationsToFix$park_name)) {
                          timeToInterpolate <- round(periodStartTimes[periodTracker] + (30 * (expectedTargetArea/areasExpected))-(30 * (1/areasExpected)),0) #calculate how far into the observation period thetime should be set
             timeToInterpolateChar <- ifelse(nchar(as.character(timeToInterpolate)) == 3, paste0("0",substr(as.character(timeToInterpolate),1,1),":",substr(as.character(timeToInterpolate),2,3)), paste0(substr(as.character(timeToInterpolate),1,2),":",substr(as.character(timeToInterpolate),3,4)))
             timestampToInterpolate <- paste(as.character(dateToFix),timeToInterpolateChar)
-                  tempObs <- data.table(record_id = "X",
+                  tempObs <- data.table(record_id = -1,
                                      redcap_survey_identifier = "",
                                      park_scan_data_collection_timestamp = "",
                                      obs_initial = "APDE",
@@ -877,12 +898,39 @@ sequenceLabels <- c("morning1",
              "evening2")
 
 
+
 #apply observation period labels based on the order that a park's target area was observed
-SOPARCAnalysisSet[order(timestampPOSIX, tar_area), periodBasedOnSequence := rep_len(sequenceLabels, .N), by = .(park_name)]
+#SOPARCAnalysisSet[order(timestampPOSIX, tar_area), periodBasedOnSequence := rep_len(sequenceLabels, .N), by = .(park_name)]
+#
+##apply day sequence labels based on the order of a park's observation period
+# SOPARCAnalysisSet[order(datePOSIX), dayNumberBasedOnSequence := as.numeric(factor(datePOSIX)), by = .(park_name)]
 
 
-#apply day sequence labels based on the order of a park's observation period
-SOPARCAnalysisSet[order(datePOSIX), dayNumberBasedOnSequence := as.numeric(factor(datePOSIX)), by = .(park_name)]
+
+#new process
+
+errorCatch <- data.frame("message" = "")
+
+SOPARCAnalysisSet$periodBasedOnSequence <- ""
+SOPARCAnalysisSet$dayNumberBasedOnSequence <- 0
+for(park in unique(SOPARCAnalysisSet$park_name)) {
+  datesToMatch <- unique(SOPARCAnalysisSet[park_name == park,][order(datePOSIX),]$datePOSIX)
+
+  for(dateIndex in 1:length(datesToMatch)) {
+    date <- datesToMatch[dateIndex]
+    SOPARCAnalysisSet[datePOSIX == date & park_name == park, ]$dayNumberBasedOnSequence <- dateIndex
+    taMax <- max(SOPARCAnalysisSet[datePOSIX == date & park_name == park,]$tar_area)
+    for(taIndex in 1:taMax) {
+      if(nrow(SOPARCAnalysisSet[datePOSIX == date & park_name == park & tar_area == taIndex,][order(timestampPOSIX),]) != 8) {errorCatch[nrow(errorCatch)+1, "message"]<-  paste0(park," on day ", as.POSIXct.Date(date), " for target area ",taIndex, " has ", nrow(SOPARCAnalysisSet[datePOSIX == date & park_name == park & tar_area == taIndex,][order(timestampPOSIX),]) , " observations, should have 8")}
+
+      SOPARCAnalysisSet[datePOSIX == date & park_name == park & tar_area == taIndex,][order(timestampPOSIX), ]$periodBasedOnSequence <- sequenceLabels
+      #SOPARCAnalysisSet[datePOSIX == date & park_name == park & tar_area == taIndex,][order(timestampPOSIX), ]
+    }
+  }
+}
+
+
+
 
 ```
 
@@ -1019,6 +1067,10 @@ SOPARCAggregated <- SOPARCtoAggregate[,
                                         "num_senior_spec" = ceiling(mean(num_senior_spec, na.rm = T))), 
                                       by = .(park_name, tar_area, dayNumberBasedOnSequence, period, datePOSIX, day, month, weekend )]
 
+#SOPARCtoAggregate[, .N, by = .(park_name, tar_area, dayNumberBasedOnSequence, period, datePOSIX, day, month, weekend ) ]
+
+
+
 #add columns for each activity
 
 
@@ -1088,6 +1140,10 @@ WB <- openxlsx2::wb_workbook()
 
 ```
 
+```{r create word doc data structure for export}
+WD <- read_docx()
+```
+
 ## Included Parks
 
 ```{r report included parks}
@@ -1100,41 +1156,100 @@ kbl(SOPARCAggregated[order(park_name), .("Park Name" = unique(park_name_full))],
 
 ```
 
-## Park-Populations
+## Utilization
 
-The following metrics rely on counts of people observed. The underlying data are of people observed within an observation period (e.g. "morning1"). It is possible that the same people may be observed across multiple blocks of time and multiple target areas.
+The following metrics rely on counts of people observed. The underlying data are of people observed within an observation period (e.g. "morning1") and target area. It is possible that the same people may be observed across multiple blocks of time and multiple target areas.
+
+Because of this user counts are more accurately understood as "person time of use per target area" and represents a target area being used by a person within the observation period. This explanation accounts for people being counted multiple times by crossing target areas during the observation period.
 
 ### Number of Users
 
 Total number of users observed in the park across all observation periods.
 
 ```{r number of users}
-#| output: false
+#| output: true
 
 # kbl(SOPARCtoAggregate[order(park_name),.("Number of Attendees" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name)], 
 #       caption =  "Total Number of Attendees",
 #     booktabs = T) %>% kable_styling(latex_options = "striped")
-DT <- SOPARCAggregated[order(park_name_full),.("Number of Attendees" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name_full)]
+DT <- SOPARCAggregated[order(park_name_full),.("Users" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name_full)]
 
 
 WB$add_worksheet("User Counts")
 WB$add_data(sheet = "User Counts", DT)
 
-kbl(DT, 
-      caption =  "Total Number of Attendees",
-    booktabs = TRUE,
-    longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 
+if(!SUPPRESS_TABLES){
+  kbl(DT, 
+        caption =  "Total Number of Users",
+      booktabs = TRUE,
+      longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+}
+
+#export charts for use
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2023/outputs/tables/num_users/"))) {
+  unlink(here("./2023/outputs/tables/num_users/"), recursive = T)
+}
+dir.create(here("./2023/outputs/tables/num_users"), recursive = T)
+write.csv(DT, here("2023/outputs/tables/num_users/num_users.csv"), row.names = FALSE)
+FT <- DT %>% regulartable() %>% autofit()
+
+read_docx() %>%
+body_add_flextable(FT) %>%
+print(target = paste0("./outputs/tables/num_users/num_users.docx"))  
 
 
 ```
 
 Notes:
 
-- Due to the study design, user counts are subject to both over and under counting.
+- Due to the study design, user counts are subject to both over and under counting
+- 
+- User counts are more accurately understood as "person time of use per target area"
+
+### Average Number of Daily Park users
+
+Average number of users observed in the park each day
+
+```{r vaerage number of daily users}
+#| output: true
+
+DT <- SOPARCAggregated[order(park_name_full),.("Users" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3), by = .("Park Name" = park_name_full)]
 
 
-### Average Park Users By Time Period (not reported)
+WB$add_worksheet("Avg Users")
+WB$add_data(sheet = "Avg Users", DT)
+
+
+if(!SUPPRESS_TABLES){
+  kbl(DT, 
+        caption =  "Daily Average Users",
+      booktabs = TRUE,
+      longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+}
+
+#export charts for use
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2023/outputs/tables/avg_users/"))) {
+  unlink(here("./2023/outputs/tables/avg_users/"), recursive = T)
+}
+dir.create(here("./2023/outputs/tables/avg_users"), recursive = T)
+write.csv(DT, here("2023/outputs/tables/avg_users/num_users.csv"), row.names = FALSE)
+FT <- DT[, .(`Park Name`,"Users" = round(Users,0))] %>% regulartable() %>% autofit()
+
+read_docx() %>%
+body_add_flextable(FT) %>%
+print(target = paste0("./outputs/tables/avg_users/avg_users.docx"))  
+
+
+```
+
+### Average Number of Daily Park Users By Time Period
+
+This is a measure of the 3 day average number of users of a park within each time period.
 
 For each park:
 
@@ -1192,24 +1307,28 @@ for(park in unique(SOPARCAggregated$park_name_full)) {
   } else {
     topOfY <- max(DT[`Park Name` %in% park]$Users)
   }
-  
+  tooLow <- topOfY *.30
   cityName <- first(SOPARCAggregated[park_name_full == park, City])
   
   PTExport <- ggplot(DT[`Park Name` %in% park], (aes(x = `Time Period`, y = `Users`))) +
   geom_col()  +
-  labs(title = paste0(park,"\n", cityName,"\n", "2023"), subtitle = paste("Average Users Per Period")) +
-  geom_text(aes(label = `Users`, colour = "#FFFFFF"), vjust = 01.50, ) +
-  scale_color_manual(values=c("#FFFFFF")) +
-  scale_y_continuous(limits=c(0,topOfY),) +
-  theme(plot.title = element_text(size = 12),
+  #labs(title = paste0(park,"\n", cityName,"\n", "2023"), subtitle = paste("Average Users Per Period")) +
+  labs(title = paste0(park," ", cityName," ", "2023"), subtitle = paste("Average Users Per Period")) +
+  geom_label(aes(label = `Users`, colour = "#000000", vjust =  ifelse(`Users` > tooLow, 1.5, 0) )) +
+  scale_color_manual(values=c("#000000")) +
+  scale_y_continuous(limits=c(0,topOfY), breaks = integer_breaks()) +
+  theme(plot.title = element_text(size = 8),
         plot.subtitle = element_text(size = 14,),
         #axis.title.x = element_text(size = 12))
-        axis.title.x = element_blank())
+        axis.title.x = element_blank(),
+        legend.position = "none")
 
   ggsave(paste0(park,"_avg_users_x_period.pdf"), plot = PTExport, path = paste0("./outputs/charts/avg_users_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
   ggsave(paste0(park,"_avg_users_x_period.png"), plot = PTExport, path = paste0("./outputs/charts/avg_users_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
   
 }
+
+
 
 if(!SUPPRESS_TABLES){
   kbl(DT,
@@ -1222,12 +1341,18 @@ if(!SUPPRESS_TABLES){
 
 Notes:
 
-- These are technically "person time of use" and a measure of how much each target area is used in a time period.
+- User counts are more accurately understood as "person time of use per target area"
+  + "Person using target area during the observation"
 - If taken strictly as "people using a park" then this may be an over or under count
   + If in the first morning observation 2 people are observed, and the second 3, this may be 3 unique people, or as many as 5, but we calculate this as 2.5 and round up to 3.  
   + If two people walk across all target areas during an observation period, they would be counted each time. With 10 target areas, this would be 20 people observed.
 
-### Rate of Park Use By Time
+### Rate of Daily Park Use By Time Period
+
+This is a measure of the 3 day average number of users of a park within each time period.
+
+
+This is a measure of the rate of people observed in a park over the study period.
 
 For each park:
 
@@ -1253,14 +1378,12 @@ DT <- SOPARCAggregated[order(park_name_full), sum(num_child_prim, num_child_snd,
 WB$add_worksheet("Rate Use x Period")
 WB$add_data(sheet = "Rate Use x Period", DT)
 
-PT <- ggplot(DT, (aes(x = `Time Period`, y = `Rate of Use`))) +
-  geom_col() +
-  facet_wrap(vars(`Park Name`), scales = "free") +
-  scale_y_continuous(limits = c(0,1),labels = scales::percent) +
-   theme(axis.text.x = element_text(angle = 0, vjust = 0, hjust=0))
-
-
 if(!SUPPRESS_CHARTS) {
+  PT <- ggplot(DT, (aes(x = `Time Period`, y = `Rate of Use`))) +
+    geom_col() +
+    facet_wrap(vars(`Park Name`), scales = "free") +
+    scale_y_continuous(limits = c(0,1),labels = scales::percent) +
+     theme(axis.text.x = element_text(angle = 0, vjust = 0, hjust=0))
   print(PT)
 }
 
@@ -1277,14 +1400,24 @@ for(park in unique(SOPARCAggregated$park_name_full)) {
   
   PTExport <- ggplot(DT[`Park Name` %in% park], (aes(label = paste0(`Time Period`," \n \n",round(`Rate of Use`*100),"%"), area = `Rate of Use`))) +
   geom_treemap()  +
-  geom_treemap_text(color = "white",
-                    place = "centre",
-                    size = 6) +
-  labs(title = paste0(park, "\n", cityName,"\n","2023"), subtitle = paste("Rate of Park Use Per Period")) +
-  theme(plot.title = element_text(size = 12),
+   geom_treemap_text(color = "white",
+                     place = "centre",
+                     size = 6) +
+  labs(title = paste0(park, " ", cityName," ","2023"), subtitle = paste("Rate of Park Use Per Period")) +
+  theme(plot.title = element_text(size = 8),
         plot.subtitle = element_text(size = 14,),
         axis.title.x = element_text(size = 12))
-
+    
+#     ggplot(DT[`Park Name` %in% park], aes(x =`Park Name`, y = `Rate of Use`, fill = `Time Period`)) +
+#   geom_bar(position = "stack", stat = "identity") +
+#       geom_text((aes(label = paste0(`Time Period`," \n \n",round(`Rate of Use`*100),"%")))) +
+#       labs(title = paste0(park, " ", cityName," ","2023"), subtitle = paste("Rate of Park Use Per Period")) +
+#       theme(plot.title = element_text(size = 8),
+#             plot.subtitle = element_text(size = 14,),
+#             axis.title.x = element_text(size = 12)) +
+#             scale_fill_grey()+
+#       theme_bw()
+# PTExport
   ggsave(paste0(park,"_rate_use_x_period.pdf"), plot = PTExport, path = paste0("./outputs/charts/rate_use_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
   ggsave(paste0(park,"_rate_use_x_period.png"), plot = PTExport, path = paste0("./outputs/charts/rate_use_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
 }
@@ -1301,12 +1434,16 @@ if(!SUPPRESS_TABLES) {
 
 Notes:
 
-- Rate is within-park (each park totals to 100%).
+- This is accurately understood as the rate of park use during the period
+- There is likely still some error from the under and overcounting of the underlying counts, but the more true that over and under counting is randomly distributed across all time periods, the less true this is. 
+- Rate is within-park (each park totals to 100%)
 
 
-### Distribution Of Park Users By Ages (not reported)
+### Average Number of Daily Park Users By Age
 
+This is a measure of the daily average of users observed in each age group.
 
+Computationally this measure is similar to the average users by time period above.
 
 ```{r average park users by age, fig.cap="Average Park Users By Age"}
 #| output: true
@@ -1333,12 +1470,11 @@ WB$add_worksheet("Avg Users x Age")
 WB$add_data(sheet = "Avg Users x Age", DT)
 
 if(!SUPPRESS_CHARTS) {
-PT <- ggplot(DT, (aes(x = `Age Group`, y = `Users`))) +
-  geom_col() +
-  facet_wrap(vars(`Park Name`), scales = "free") +
-   theme(axis.text.x = element_text(angle = 0, vjust = 0, hjust=0))
-  
-
+  PT <- ggplot(DT, (aes(x = `Age Group`, y = `Users`))) +
+    geom_col() +
+    facet_wrap(vars(`Park Name`), scales = "free") +
+     theme(axis.text.x = element_text(angle = 0, vjust = 0, hjust=0))
+    
   print(PT)
 }
 
@@ -1367,27 +1503,24 @@ for(park in unique(SOPARCAggregated$park_name_full)) {
   } else {
     topOfY <- max(DT[`Park Name` %in% park]$Users)
   }
-  
+  tooLow <- topOfY *.30
   cityName <- first(SOPARCAggregated[park_name_full == park, City])
   
   PTExport <- ggplot(DT[`Park Name` %in% park,], (aes(x = `Age Group`, y = `Users`))) +
   geom_col()  +
-  labs(title = paste0(park,"\n", cityName,"\n", "2023"), subtitle = paste("Average Users Per Age")) +
-  geom_text(aes(label = `Users`, colour = "#FFFFFF"), vjust = 01.50, ) +
-  scale_color_manual(values=c("#FFFFFF")) +
-  scale_y_continuous(limits=c(0,topOfY),) +
-  theme(plot.title = element_text(size = 12),
+  labs(title = paste0(park," ", cityName," ", "2023"), subtitle = paste("Average Users Per Age")) +
+  geom_label(aes(label = `Users`, colour = "#000000", vjust =  ifelse(`Users` > tooLow, 1.5, 0))) +
+  scale_color_manual(values=c("#000000")) +
+  scale_y_continuous(limits=c(0,topOfY), breaks = integer_breaks()) +
+  theme(plot.title = element_text(size = 8),
         plot.subtitle = element_text(size = 14,),
         #axis.title.x = element_text(size = 12))
         axis.title.x = element_blank(),
         legend.position = "none")
-PTExport
+
   ggsave(paste0(park,"_avg_users_x_age.pdf"), plot = PTExport, path = paste0("./outputs/charts/avg_users_x_age"),width = CHARTWIDTH, height = CHARTHEIGHT)
   ggsave(paste0(park,"_avg_users_x_age.png"), plot = PTExport, path = paste0("./outputs/charts/avg_users_x_age"),width = CHARTWIDTH, height = CHARTHEIGHT)
-  
 }
-
-
 
 if(!SUPPRESS_TABLES){
   kbl(DT,
@@ -1399,7 +1532,14 @@ if(!SUPPRESS_TABLES){
 
 ```
 
-### Rate of Park Use By Age
+Notes:
+
+- User counts are more accurately understood as "person time of use per target area"
+- If taken strictly as "people using a park" then this may be an over or under count
+  + If in the first morning observation 2 people are observed, and the second 3, this may be 3 unique people, or as many as 5, but we calculate this as 2.5 and round up to 3.  
+  + If two people walk across all target areas during an observation period, they would be counted each time. With 10 target areas, this would be 20 people observed.
+
+### Rate of Daily Park Use By Age
 
 
 ```{r rate of park use by age, fig.cap="Rate of Park Use By Age"}
@@ -1441,8 +1581,8 @@ for(park in unique(SOPARCAggregated$park_name_full)) {
   geom_treemap_text(color = "white",
                     place = "centre",
                     size = 6) +
-  labs(title = paste0(park, "\n", cityName,"\n","2023"), subtitle = paste("Rate of Park Use Per Age")) +
-  theme(plot.title = element_text(size = 12),
+  labs(title = paste0(park, " ", cityName, " ","2023"), subtitle = paste("Rate of Park Use Per Age")) +
+  theme(plot.title = element_text(size = 8),
         plot.subtitle = element_text(size = 14,),
         axis.title.x = element_text(size = 12))
 
@@ -1461,7 +1601,9 @@ if(!SUPPRESS_TABLES) {
 
 Notes:
 
--   Rate is within-park (each park totals to 100%).
+- This is accurately understood as the rate of park use by each age group
+- There is likely still some error from the under and over counting of the underlying counts, but the more true that over and under counting is randomly distributed across all time periods, the less true this is. 
+- Rate is within-park (each park totals to 100%)
 
 
 ## Occupancy
@@ -1472,13 +1614,12 @@ This is a measure of what percentage of observation periods had any target area 
 
 For each park, the number of observation periods with any target area in occupied status is devided by the total number of observation periods (24)
 
-This measure doesn't have associated charts
 
 ```{r analysis of occupancy rate}
 #| output: true
 
 
-DT <- SOPARCtoAggregate[order(park_name_full), ifelse(any(occupied %in% "Yes"), 1, 0), by = .(park_name_full, periodBasedOnSequence,dayNumberBasedOnSequence)][, .( "Rate of Periods Occupied" =sum(V1)/24 ),by=.("Park Name" = park_name_full)]
+DT <- SOPARCtoAggregate[order(park_name_full), ifelse(any(occupied %in% "Yes"), 1, 0), by = .(park_name_full, periodBasedOnSequence,dayNumberBasedOnSequence)][, .( "Rate" =sum(V1)/24 ),by=.("Park Name" = park_name_full)]
 
 WB$add_worksheet("Rate Occupied")
 WB$add_data(sheet = "Rate Occupied", DT)
@@ -1490,7 +1631,19 @@ kbl(DT,
     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 }
 
+#export charts for use
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2023/outputs/tables/rate_occupied/"))) {
+  unlink(here("./2023/outputs/tables/rate_occupied/"), recursive = T)
+}
+dir.create(here("./2023/outputs/tables/rate_occupied"), recursive = T)
+write.csv(DT, here("2023/outputs/tables/rate_occupied/rate_occupied.csv"), row.names = FALSE)
+FT <- DT %>% regulartable() %>% autofit()
 
+read_docx() %>%
+body_add_flextable(FT) %>%
+print(target = paste0("./outputs/tables/rate_occupied/rate_occupied.docx"))  
 ```
 
 Notes:
@@ -1509,6 +1662,7 @@ This is the raw count of number of users observed doing an activity in a park ov
 #construct an activity table from the non agrgeagted activity list to align record_ids
 DT <- merge(SOPARCActivities, SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full, tar_area, dayNumberBasedOnSequence, period, datePOSIX, day, month, weekend)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
 #merge(SOPARCActivities, SOPARCtoAggregate[,.("record_id" = as.numeric(record_id), park_name_full)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
+
 # repeat aggregation steps for people counts
 DT <- DT[, .(children = ceiling(mean(children, na.rm = T)), 
              teen = ceiling(mean(teen, na.rm = T)), 
@@ -1640,7 +1794,7 @@ For each park, the total the number of periods the activity was observed is divi
 #| output: true
 
 #construct an activity table from the activity list
-DT <- merge(SOPARCActivities, SOPARCtoAggregate[,.("record_id" = as.numeric(record_id), park_name_full)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
+DT <- merge(SOPARCActivities, SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
 
 DT <- DT[order(park_name_full, activity), .("Rate" = .N/24), by = .("Park Name" = park_name_full, "Activity" = activity)]
 
@@ -1682,13 +1836,82 @@ Notes:
 
 - Unlike many of the other measures provided, these rates are mostly independent of each other and do not have an additive meaning. This is because multiple activities may be observed in a single observation period. E..g "walking" may be observed in all 24 periods, and so have an observation rate of 100%, and "sitting" may be observed in 6 periods and so have a rate of 25%.
 
+## Spatial Analysees
+
+### Ratio of use to catchment
+
+For each park we calculate a ratio of how many people visit per day on average rleative to how many people live within 0.5 miles of the park.
+
+This is provided per 1000 residents to improve readability.
+
+```{r ratio of use to catchment}
+#| output: true
+#calculate average users
+DT <- SOPARCAggregated[order(park_name_full),.("Users" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3), by = .("Park Name" = park_name_full)]
+
+#attac
+DT <- merge(DT, ParkPopulationTable, by.x =  "Park Name", by.y = "parkNameFull")
+
+DT <- DT[order(`Park Name`), .("Ratio" = Users / populationHalfMile), by = `Park Name`][, .("Ratio Per 1000" = Ratio *1000), by = "Park Name"]
+
+WB$add_worksheet("Ratio Use Catchment")
+WB$add_data(sheet = "Ratio Use Catchment", DT)
+
+if(!SUPPRESS_TABLES) {
+
+}
+
+
+#export charts for use
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2023/outputs/tables/ratio_use_catch/"))) {
+  unlink(here("./2023/outputs/tables/ratio_use_catch/"), recursive = T)
+}
+dir.create(here("./2023/outputs/tables/ratio_use_catch"), recursive = T)
+
+
+  # KBObject <- kbl(DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)],
+  #     caption = "Rate of User Activy",
+  #     booktabs = TRUE,
+  #     longtable = TRUE) %>%
+  #   kable_styling(latex_options = c("striped", "repeat_header"))
+  # 
+  #   save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_user_activity/",park,"rate_user_activity.pdf")))
+  
+  FT <- DT %>% regulartable() %>% autofit()
+
+  read_docx() %>%
+  body_add_flextable(FT) %>%
+  print(target = paste0("./outputs/tables/ratio_use_catch/ratio_use_catch.docx"))
+
+
+
+```
+
+Notes: 
+
+
+
 ```{r save workbook}
-dir.create(here("./2023/outputs/tables/pivot_ready"), recursive = T)
+dir.create(here("./2023/outputs/tables/pivot_ready"), recursive = T, showWarnings = FALSE)
 if(file.exists(here("2023/outputs/tables/pivot_ready/analysis_tables.xlsx"))){
   file.remove(here("2023/outputs/tables/pivot_ready/analysis_tables.xlsx"))
 }
 WB$save("./outputs/tables/pivot_ready/analysis_tables.xlsx")
 ```
+
+```{r create workbooks specific to each park}
+
+```
+
+```{r save measure summary}
+
+
+```
+
+# Closure and Next Steps
+
 
 
 ```{r}
