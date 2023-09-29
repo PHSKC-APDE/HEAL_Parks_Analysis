@@ -314,7 +314,7 @@ setorder(SOPARCObservations, cols = "timestampPOSIX")
 
 ```{r create seperate activity table}
 
-if(!(file.exists("2023/outputs/data-metadata/Park Activities.csv")) & REBUILDACTIVITYTABLE){
+if(!(file.exists("2023/inputs/data-metadata/Park Activities.csv")) | REBUILDACTIVITYTABLE){
 SOPARCActivities <- data.table("record_id" = SOPARCObservations[prim_act_name != "",]$record_id, 
                                "record_id_aggregated" = SOPARCObservations[prim_act_name != "",]$record_id, 
                                "activity" = "", 
@@ -346,8 +346,9 @@ for(id in SOPARCActivities$record_id) {
 }
 
 write.csv(SOPARCActivities, here("2023/outputs/data-metadata/Park Activities.csv"), row.names = FALSE)
+write.csv(SOPARCActivities, here("2023/inputs/data-metadata/Park Activities.csv"), row.names = FALSE)
 } else {
-  SOPARCActivities <-  fread(here("2023/outputs/data-metadata/Park Activities.csv"))
+  SOPARCActivities <-  fread(here("2023/inputs/data-metadata/Park Activities.csv"))
 }
 ```
 
