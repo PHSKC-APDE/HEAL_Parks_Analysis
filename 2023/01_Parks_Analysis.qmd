@@ -314,7 +314,7 @@ setorder(SOPARCObservations, cols = "timestampPOSIX")
 
 ```{r create seperate activity table}
 
-if(!(file.exists("2023/inputs/data-metadata/Park Activities.csv")) | REBUILDACTIVITYTABLE){
+if( !(file.exists(here("2023/inputs/Park Activities.csv"))) | REBUILDACTIVITYTABLE){
 SOPARCActivities <- data.table("record_id" = SOPARCObservations[prim_act_name != "",]$record_id, 
                                "record_id_aggregated" = SOPARCObservations[prim_act_name != "",]$record_id, 
                                "activity" = "", 
@@ -346,9 +346,9 @@ for(id in SOPARCActivities$record_id) {
 }
 
 write.csv(SOPARCActivities, here("2023/outputs/data-metadata/Park Activities.csv"), row.names = FALSE)
-write.csv(SOPARCActivities, here("2023/inputs/data-metadata/Park Activities.csv"), row.names = FALSE)
+write.csv(SOPARCActivities, here("2023/inputs/Park Activities.csv"), row.names = FALSE)
 } else {
-  SOPARCActivities <-  fread(here("2023/inputs/data-metadata/Park Activities.csv"))
+  SOPARCActivities <-  fread(here("2023/inputs/Park Activities.csv"))
 }
 ```
 
@@ -1133,16 +1133,21 @@ write.csv(SOPARCAggregated, here("2023/outputs/data-metadata/SOPARCAnalysisSetAg
 
 # Results
 
-Results are saved in two locations, an excel workbook that contains a separate page for each table of analysis results, and this document which contains a human readable report format. Note that the charts in the excel book are much large and more appropriate for reproduction
+Results are saved in multiple locations:
+
+- an excel workbook that contains a separate page for each table of analysis results
+- folders with charts and tables of results designed to be integrated into documents
+- outputs of various steps of the metadata, QA, and final analysis ready sets
 
 ```{r create excel workbook data structure for export}
 WB <- openxlsx2::wb_workbook()
 
 
+WBs <- sapply(unique(SOPARCAggregated[,park_name_full]), assign, value = wb_workbook())
 ```
 
 ```{r create word doc data structure for export}
-WD <- read_docx()
+
 ```
 
 ## Included Parks
@@ -1178,6 +1183,14 @@ DT <- SOPARCAggregated[order(park_name_full),.("Users" = sum(num_child_prim, num
 
 WB$add_worksheet("User Counts")
 WB$add_data(sheet = "User Counts", DT)
+
+for (i in names(WBs)) {
+  wb = WBs[[i]]
+  wb$add_worksheet("User Counts")
+  wb$add_data(sheet = "User Counts", DT[`Park Name` == i])
+}
+
+
 
 
 if(!SUPPRESS_TABLES){
@@ -1223,6 +1236,12 @@ DT <- SOPARCAggregated[order(park_name_full),.("Users" = sum(num_child_prim, num
 WB$add_worksheet("Avg Users")
 WB$add_data(sheet = "Avg Users", DT)
 
+for (i in names(WBs)) {
+  wb = WBs[[i]]
+  wb$add_worksheet("Avg Users")
+  wb$add_data(sheet = "Avg Users", DT[`Park Name` == i])
+}
+
 
 if(!SUPPRESS_TABLES){
   kbl(DT, 
@@ -1230,6 +1249,8 @@ if(!SUPPRESS_TABLES){
       booktabs = TRUE,
       longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 }
+
+
 
 #export charts for use
 #save charts as individual files
@@ -1273,6 +1294,11 @@ DT <- SOPARCAggregated[order(park_name_full),.("Users" = round(sum(num_child_pri
 WB$add_worksheet("Avg Users x Period")
 WB$add_data(sheet = "Avg Users x Period", DT)
 
+for (i in names(WBs)) {
+  wb = WBs[[i]]
+  wb$add_worksheet("Avg Users x Period")
+  wb$add_data(sheet = "Avg Users x Period", DT[`Park Name` == i])
+}
 
 if(!SUPPRESS_CHARTS) {
 PT <- ggplot(DT, (aes(x = `Time Period`, y = Users))) +
@@ -1379,6 +1405,12 @@ DT <- SOPARCAggregated[order(park_name_full), sum(num_child_prim, num_child_snd,
 WB$add_worksheet("Rate Use x Period")
 WB$add_data(sheet = "Rate Use x Period", DT)
 
+for (i in names(WBs)) {
+  wb = WBs[[i]]
+  wb$add_worksheet("Rate Use x Period")
+  wb$add_data(sheet = "Rate Use x Period", DT[`Park Name` == i])
+}
+
 if(!SUPPRESS_CHARTS) {
   PT <- ggplot(DT, (aes(x = `Time Period`, y = `Rate of Use`))) +
     geom_col() +
@@ -1399,26 +1431,27 @@ for(park in unique(SOPARCAggregated$park_name_full)) {
   
   cityName <- first(SOPARCAggregated[park_name_full == park, City])
   
-  PTExport <- ggplot(DT[`Park Name` %in% park], (aes(label = paste0(`Time Period`," \n \n",round(`Rate of Use`*100),"%"), area = `Rate of Use`))) +
-  geom_treemap()  +
-   geom_treemap_text(color = "white",
-                     place = "centre",
-                     size = 6) +
-  labs(title = paste0(park, " ", cityName," ","2023"), subtitle = paste("Rate of Park Use Per Period")) +
-  theme(plot.title = element_text(size = 8),
-        plot.subtitle = element_text(size = 14,),
-        axis.title.x = element_text(size = 12))
+  # PTExport <- ggplot(DT[`Park Name` %in% park], (aes(label = paste0(`Time Period`," \n \n",round(`Rate of Use`*100),"%"), area = `Rate of Use`))) +
+  # geom_treemap()  +
+  #  geom_treemap_text(color = "white",
+  #                    place = "centre",
+  #                    size = 6) +
+  # labs(title = paste0(park, " ", cityName," ","2023"), subtitle = paste("Rate of Park Use Per Period")) +
+  # theme(plot.title = element_text(size = 8),
+  #       plot.subtitle = element_text(size = 14,),
+  #       axis.title.x = element_text(size = 12))
     
-#     ggplot(DT[`Park Name` %in% park], aes(x =`Park Name`, y = `Rate of Use`, fill = `Time Period`)) +
-#   geom_bar(position = "stack", stat = "identity") +
-#       geom_text((aes(label = paste0(`Time Period`," \n \n",round(`Rate of Use`*100),"%")))) +
-#       labs(title = paste0(park, " ", cityName," ","2023"), subtitle = paste("Rate of Park Use Per Period")) +
-#       theme(plot.title = element_text(size = 8),
-#             plot.subtitle = element_text(size = 14,),
-#             axis.title.x = element_text(size = 12)) +
-#             scale_fill_grey()+
-#       theme_bw()
-# PTExport
+  PTExport <-  ggplot(DT[`Park Name` %in% park], aes(x =`Park Name`, y = `Rate of Use`, fill = `Time Period`)) +
+  geom_bar(position = "stack", stat = "identity") +
+      #geom_text((aes(label = paste0(`Time Period`," \n \n",round(`Rate of Use`*100),"%")))) +
+      #labs(title = paste0(park, " ", cityName," ","2023"), subtitle = paste("Rate of Park Use Per Period"))  +
+      theme(plot.title = element_text(size = 8),
+            plot.subtitle = element_text(size = 14,),
+            axis.title.x = element_text(size = 12)) +
+            scale_fill_grey()+
+      theme_bw() 
+
+
   ggsave(paste0(park,"_rate_use_x_period.pdf"), plot = PTExport, path = paste0("./outputs/charts/rate_use_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
   ggsave(paste0(park,"_rate_use_x_period.png"), plot = PTExport, path = paste0("./outputs/charts/rate_use_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
 }
@@ -1469,6 +1502,12 @@ DT <- SOPARCAggregated[order(park_name_full), .( "Age Group" = rep(c("child","te
 
 WB$add_worksheet("Avg Users x Age")
 WB$add_data(sheet = "Avg Users x Age", DT)
+
+for (i in names(WBs)) {
+  wb = WBs[[i]]
+  wb$add_worksheet("Avg Users x Age")
+  wb$add_data(sheet = "Avg Users x Age", DT[`Park Name` == i])
+}
 
 if(!SUPPRESS_CHARTS) {
   PT <- ggplot(DT, (aes(x = `Age Group`, y = `Users`))) +
@@ -1558,6 +1597,11 @@ DT <- SOPARCAggregated[order(park_name_full), .("Age Group" = rep(c("child","tee
 WB$add_worksheet("Rate Use x Age")
 WB$add_data(sheet = "Rate Use x Age", DT)
 
+for (i in names(WBs)) {
+  wb = WBs[[i]]
+  wb$add_worksheet("Rate Use x Age")
+  wb$add_data(sheet = "Rate Use x Age", DT[`Park Name` == i])
+}
 
 if(!SUPPRESS_CHARTS) {
   PT <- ggplot(DT, (aes(x = factor(`Age Group`, levels = c("child","teen","adult","senior")), y = `Rate of Use`))) +
@@ -1625,6 +1669,12 @@ DT <- SOPARCtoAggregate[order(park_name_full), ifelse(any(occupied %in% "Yes"), 
 WB$add_worksheet("Rate Occupied")
 WB$add_data(sheet = "Rate Occupied", DT)
 
+for (i in names(WBs)) {
+  wb = WBs[[i]]
+  wb$add_worksheet("Rate Occupied")
+  wb$add_data(sheet = "Rate Occupied", DT[`Park Name` == i])
+}
+
 if(!SUPPRESS_TABLES) {
 kbl(DT,
     caption = "Occupancy Rate",
@@ -1675,6 +1725,12 @@ DT <- DT[,.("Users" = sum(children, teen, adult, senior)) , by = .("Park Name" =
 
 WB$add_worksheet("Users per Activity")
 WB$add_data(sheet = "Users per Activity", DT)
+
+for (i in names(WBs)) {
+  wb = WBs[[i]]
+  wb$add_worksheet("Users per Activity")
+  wb$add_data(sheet = "Users per Activity", DT[`Park Name` == i])
+}
 
 if(!SUPPRESS_TABLES) {
   kbl(DT[`Park Name` == park,],
@@ -1744,6 +1800,12 @@ DT <- DT[order(`Park Name`, Activity),]
 WB$add_worksheet("Rate User Activity")
 WB$add_data(sheet = "Rate User Activity", DT)
 
+for (i in names(WBs)) {
+  wb = WBs[[i]]
+  wb$add_worksheet("Rate User Activity")
+  wb$add_data(sheet = "Rate User Activity", DT[`Park Name` == i])
+}
+
 if(!SUPPRESS_TABLES) {
   kbl(DT[`Park Name` == park,],
       caption = "Rate of Users Observed in Park Activities",
@@ -1802,6 +1864,12 @@ DT <- DT[order(park_name_full, activity), .("Rate" = .N/24), by = .("Park Name" 
 WB$add_worksheet("Rate Activity Observed")
 WB$add_data(sheet = "Rate Activity Observed", DT)
 
+for (i in names(WBs)) {
+  wb = WBs[[i]]
+  wb$add_worksheet("Rate Activity Observed")
+  wb$add_data(sheet = "Rate Activity Observed", DT[`Park Name` == i])
+}
+
 if(!SUPPRESS_TABLES) {
 
 }
@@ -1858,6 +1926,12 @@ DT <- DT[order(`Park Name`), .("Ratio" = Users / populationHalfMile), by = `Park
 WB$add_worksheet("Ratio Use Catchment")
 WB$add_data(sheet = "Ratio Use Catchment", DT)
 
+for (i in names(WBs)) {
+  wb = WBs[[i]]
+  wb$add_worksheet("Ratio Use Catchment")
+  wb$add_data(sheet = "ratio Use Catchment", DT[`Park Name` == i])
+}
+
 if(!SUPPRESS_TABLES) {
 
 }
@@ -1894,12 +1968,25 @@ Notes:
 
 
 
-```{r save workbook}
+```{r save workbooks}
+#create project wide workbooks
 dir.create(here("./2023/outputs/tables/pivot_ready"), recursive = T, showWarnings = FALSE)
 if(file.exists(here("2023/outputs/tables/pivot_ready/analysis_tables.xlsx"))){
   file.remove(here("2023/outputs/tables/pivot_ready/analysis_tables.xlsx"))
 }
 WB$save("./outputs/tables/pivot_ready/analysis_tables.xlsx")
+
+#create park speciifc workbooks
+dir.create(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/")), recursive = T, showWarnings = FALSE)
+for (i in names(WBs)) {
+  wb = WBs[[i]]
+  
+  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))){
+    file.remove(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))
+  }
+  wb$save(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))
+}
+
 ```
 
 ```{r create workbooks specific to each park}
