@@ -20,22 +20,18 @@ execute:
 
 This document outlines procedures, technical considerations, and analytic results for the 2023 analysis of data from the HEAL Parks Study. The primary purpose of this PDF is technical review by analyst and project managers to confirm the process and data quality. 
 
-For general information about the project please review the git (make into link) or contact Seth Schromen-Wawrin (email link)
+For general information about the project please review the [git](https://github.com/PHSKC-APDE/HEAL_Parks_Analysis) or contact Seth Schromen-Wawrin.
 
-## Major Inputs
+## Major inputs
 
 Inputs to this script are contained at ./inputs/*.* and include
 
-* Access to the ITHS REDCap(link) project: "Public Health - Seattle & King County Park Observations"
+* Access to the [ITHS REDCap](https://redcap.iths.org/) project: "Public Health - Seattle & King County Park Observations"
  + or data extracted from that project
 * file of park meta data, including address, zip, city, neighborhood, official name, and REDCap name for each park
 * (optional) file containing record ids to redact
 
-## Major Outputs
-
-Outputs to this script are sent to ./outputs/<output-type>/*.*
-
-Types include
+## Output categories
 
 * data-metadata - tables of analyzable line item data from different stages of preparation leading up to analysis, generally in csv format
 * tables - tabular outputs of analysis, generally in xlsx format
@@ -48,7 +44,7 @@ dir.create("./outputs/tables", recursive = TRUE, showWarnings = FALSE)
 dir.create("./outputs/data-metadata", recursive = TRUE, showWarnings = FALSE)
 ```
 
-## This is a Quarto Generated Document
+## This is a quarto generated document
 
 By rendering/knitting the qmd file, the analysis is re-executed, this document rebuilt, and new outputs are generated. To learn more about Quarto see <https://quarto.org>.
 
@@ -138,6 +134,8 @@ Note, that the .gitignore for this project is configured to exclude your secrets
 
 ## Extraction
 
+Data are extracted directly from REDCap via API.
+
 ```{r import data}
 
 if (file.exists(here(SECRETS_LOCALE))) {
@@ -175,6 +173,7 @@ write.csv(RawSOPARCObservations,here("2023/outputs/data-metadata/REDCapSOPARCObs
 
 ## Transformation
 
+Data types are assigned. And character dates configured to POSIX dates.
 ```{r convert object and set data types}
 
 
@@ -234,7 +233,7 @@ RawSOPARCObservations$num_senior_spec <- as.numeric(RawSOPARCObservations$num_se
 
 ```
 
-
+POSIX dates are used to generate individual variables for the day, month, and a weekend indicator variable.
 
 
 ```{r add timestamp information and metadata}
@@ -306,15 +305,19 @@ SOPARCObservations <- SOPARCObservations[!(record_id %in% RemoveMe$record_id),]
 #correct identified error
 SOPARCObservations[record_id == 4706, "tar_area"] <- 5
 
+
+
 #reorder given new data
 setorder(SOPARCObservations, cols = "timestampPOSIX")
 ```
 
 ## Create table of activities including sub areas
 
+Park activities are extracted from other park data for more accurate analysis.
+
 ```{r create seperate activity table}
 
-if( !(file.exists(here("2023/inputs/Park Activities.csv"))) | REBUILDACTIVITYTABLE){
+if( !(file.exists(here("2023/inputs/SOPARCActivities.csv"))) | REBUILDACTIVITYTABLE){
 SOPARCActivities <- data.table("record_id" = SOPARCObservations[prim_act_name != "",]$record_id, 
                                "record_id_aggregated" = SOPARCObservations[prim_act_name != "",]$record_id, 
                                "activity" = "", 
@@ -345,22 +348,30 @@ for(id in SOPARCActivities$record_id) {
   }
 }
 
-write.csv(SOPARCActivities, here("2023/outputs/data-metadata/Park Activities.csv"), row.names = FALSE)
-write.csv(SOPARCActivities, here("2023/inputs/Park Activities.csv"), row.names = FALSE)
+write.csv(SOPARCActivities, here("2023/outputs/data-metadata/SOPARCActivities.csv"), row.names = FALSE)
+write.csv(SOPARCActivities, here("2023/inputs/SOPARCActivities.csv"), row.names = FALSE)
 } else {
-  SOPARCActivities <-  fread(here("2023/inputs/Park Activities.csv"))
+  SOPARCActivities <-  fread(here("2023/inputs/SOPARCActivities.csv"))
 }
 ```
 
 ## Collapse sub areas
 
-For this analysis, we are not using sub areas. These can be collapsed into single areas. For each observation, sub areas will be collapsed using the following rules: \* numerical observations will be added together \* categorical observations become affirmative/existing if any of the subareas are affirmative/existing \* timestamp of the earliest observation in the set will be used
+For this analysis, we are not using sub areas. These can be collapsed into single areas. For each observation, sub areas will be collapsed using the following rules: 
 
-Sub areas of the same target area will be assumed to be of the same observation period based on the following logic: \* for a sequence of sub areas observed in the same 50 hours period apparently missing sub-areas will be ignored (assumption: not all sub areas are necessary)
+- numerical observations will be added together 
+-categorical observations become affirmative/existing if any of the subareas are affirmative/existing 
+-timestamp of the earliest observation in the set will be used
 
-If non unique sub area labels are identified: \* check if the expected list of sub areas are in teh data set if too many, attempt to identify redundancies and remove these if too few, interpolate missing information
+Sub areas of the same target area will be assumed to be of the same observation period based on the following logic: 
 
-In this step we also append changed record_ids to our activity table and save the updated activity table
+-for a sequence of sub areas observed in the same 50 hours period apparently missing sub-areas will be ignored (assumption: not all sub areas are necessary)
+
+If non unique sub area labels are identified: 
+
+- check if the expected list of sub areas are in teh data set if too many, attempt to identify redundancies and remove these if too few, interpolate missing information
+
+In this step we also append changed record_ids to our activity table as "record_id_aggregated" and save the updated activity table.
 
 ```{r collapse sub areas into a single area}
 SOPARCObservationsSubAreas <- copy(SOPARCObservations[sub_area != "",])
@@ -538,7 +549,7 @@ write.csv(SOPARCObservationsToFix, here("2023/outputs/data-metadata/QAFailSOPARC
 
 ```
 
-### Strategy 1: correct missingness where observations are only missing but correct number of days
+### strategy 1: correct missingness where observations are only missing but correct number of days
 
 This strategy looks at the number of days of data observed, and, if only 3 days are observed, then checks to confirm that, for each target area, 8 or fewer observations are made. If both of these conditions are met, this strategy attempts to insert the missing observations as blank entries in the part of the day that appeaer to be missing them. It identifies part of day by looking at each data collection period and inserting observations into the underweighted period(s) until 8 exists for each target area.
 
@@ -733,7 +744,7 @@ if(USEGOODDATA) {
 ```
 
 
-## Parks Metadata
+## Parks metadata
 
 Metadata are provided for each park by Seth. The formal name, address, city, zip, neighborhood, tract, equity score, image status, planned park change notes, and general notes for each park will be appended to the analysis table.
 
@@ -743,18 +754,15 @@ ParksMetaData <- as.data.table(read_xlsx(here("2023/inputs/Parks_MASTER.xlsx"), 
 
 ## Assign population within half-mile radius
 
-https://10minutewalk.org/
+For each park we estimate the number of people within a half-mile. This is based on the generally accepted threshold of a [10-minute walk](https://10minutewalk.org/) to a park as a metric goal. 
 
-For each park we estimate the number of people within a half-mile. This is based on the generally accepted threshold of a 10-minute walk to a park as a metric goal (https://10minutewalk.org/). 
-This relies on access to APDE population data and use of the RADS library.
-
-Depends on park longitudes and latitudes provided in the meta data.
+This relies on access to APDE population data and use of the RADS library and on park longitudes and latitudes provided in the meta data.
 
 ```{r create population estimates}
 #this chunk is very slow, so if the data already exists, do not rerun.
 skip <- FALSE
-if(file.exists(here("2023/outputs/data-metadata/Park Populations.csv"))) {
-  ParkPopulationTable <- fread(here("2023/outputs/data-metadata/Park Populations.csv"))
+if(file.exists(here("2023/inputs/Park Populations.csv"))) {
+  ParkPopulationTable <- fread(here("2023/inputs/Park Populations.csv"))
   if("populationHalfMile" %in% names(ParkPopulationTable) &
      all(ParksMetaData$`Park Name` %in% ParkPopulationTable[censusYear == 2022,]$parkNameFull)) 
     skip <- TRUE #yay no need to calculate
@@ -799,10 +807,11 @@ if(!skip | RECALCULATEPOPULATIONS) {
   }
 
   write.csv(ParkPopulationTable ,here("2023/outputs/data-metadata/Park Populations.csv"), row.names = F)
+  write.csv(ParkPopulationTable ,here("2023/inputs/Park Populations.csv"), row.names = F)
 }
 ```
 
-## Study Tracker
+## Study tracker
 
 For the 2023 analysis we advised creating a study tracker. For each time a park is studied, a new entry is created. Each entry should includ the park name, the date the study staretd, and a brief description of the study. We generate and save a study tracker that covers 2022 and 2023 studies.
 
@@ -841,6 +850,8 @@ For each observation we need to assign a time period to that observation. Becaus
 ```{r period assignment based on timestamp}
 #| eval: false
 
+#this was an earlier attempt that is not used in teh final analysis
+
 expectedTimeBreakpoints <- c(0800, #start morning2
                              0830, #between M2 and L1
                              1230, #start L1
@@ -877,7 +888,7 @@ SOPARCAnalysisSet$periodBasedOnBreakpoint <- breakpointAssignments
 
 ```
 
-### Assigning time periods based on sequence
+### assigning time periods based on sequence
 
 Our primary approach to assigning time periods relies on the assumption that timestamps are in order for each target area (e.g. the first observation of park A area 1 is always "morning1", the second, "morning2" and so on.)
 
@@ -935,7 +946,11 @@ for(park in unique(SOPARCAnalysisSet$park_name)) {
 
 ```
 
-Finally, we cross check each day and period assignment to confirm that: \* all all parks have the expected number of period observations (e.g. if a park has 4 target areas, it should have 12 morning1 observations). \* all observations assigned to a particular day-count (e.g. "1") actually are on the same date (this assumption may need to be relaxed or data corrected before all data pass QA). \* that each day has the expected number of observations.
+Finally, we cross check each day and period assignment to confirm that: 
+
+- All all parks have the expected number of period observations (e.g. if a park has 4 target areas, it should have 12 morning1 observations). 
+- All observations assigned to a particular day-count (e.g. "1") actually are on the same date (this assumption may need to be relaxed or data corrected before all data pass QA). 
+- That each day has the expected number of observations.
 
 ```{r QA day assignments}
 
@@ -1019,15 +1034,7 @@ For all analyses, we do not want to distinguish between the first and second of 
 | num_senior_snd  | ceiling of mean   |
 | num_senior_spec | ceiling of mean   |
 
-| open text field of | aggregate to     |
-|--------------------|------------------|
-| prim_act_name      | concantinate ";" |
-| prim_act_other     | concantinate ";" |
-| snd_act_name       | concantinate ";" |
-| other_act_snd      | concantinate ";" |
-| spec_act_name      | concantinate ";" |
-| other_act_spec     | concantinate ";" |
-| comments           | concantinate ";" |
+Activities are independently captured in the activity table and not aggregated here. The non aggregated observations table may contain multiple activities separated by a ";" where they were grouped from sub-areas. It is recommended to use the activity table for analysis, and join other park observation data to it using the record_id and record_id_aggregated where necessary.
 
 ```{r period aggregation}
 
@@ -1082,6 +1089,8 @@ SOPARCAggregated <- SOPARCtoAggregate[,
 
 ## Integrate metadata and analysis sets
 
+We join our metadata and park observations for analysis and for use in other software such as excel.
+
 ```{r add metadata and save analysis sets}
 
 
@@ -1100,6 +1109,9 @@ SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParksMetaData[,.(`REDCap Name`,
                                                   `Planned park changes?`,
                                                   Notes)], by.x = "park_name", by.y = "REDCap Name", all.x = T)
 SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParkPopulationTable, by.x = "park_name_full", by.y = "parkNameFull")
+SOPARCtoAggregate$studyStartDate <- "2023-07-01"
+SOPARCtoAggregate$studyDescription <- "2023 annual study"
+
 
 SOPARCAggregated <- merge(SOPARCAggregated, ParksMetaData[,.(`REDCap Name`,
                                                   "park_name_full" = `Park Name`, 
@@ -1115,6 +1127,8 @@ SOPARCAggregated <- merge(SOPARCAggregated, ParksMetaData[,.(`REDCap Name`,
                                                   `Planned park changes?`,
                                                   Notes)], by.x = "park_name", by.y = "REDCap Name", all.x = T)
 SOPARCAggregated <- merge(SOPARCAggregated, ParkPopulationTable, by.x = "park_name_full", by.y = "parkNameFull")
+SOPARCAggregated$studyStartDate <- "2023-07-01"
+SOPARCAggregated$studyDescription <- "2023 annual study"
 
 #generate study count and append this to aggregated and non aggregated analysis ready sets
 SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParksStudyRecord[,.("study_count" = .N) , by = parkName], by.x = "park_name_full", by.y = "parkName", all.x = T)
@@ -1143,14 +1157,24 @@ Results are saved in multiple locations:
 WB <- openxlsx2::wb_workbook()
 
 
-WBs <- sapply(unique(SOPARCAggregated[,park_name_full]), assign, value = wb_workbook())
+#WBs <- sapply(unique(SOPARCAggregated[,park_name_full]), assign, value = openxlsx::createWorkbook())
+
+#WBs2 <- sapply(unique(SOPARCAggregated[,park_name_full]), assign, value = openxlsx2::wb_workbook())
+
+dir.create(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/")), recursive = T, showWarnings = FALSE)
+for (i in unique(SOPARCAggregated$park_name_full)) {
+  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))){
+    file.remove(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+  }
+}
+
 ```
 
 ```{r create word doc data structure for export}
 
 ```
 
-## Included Parks
+## Included parks
 
 ```{r report included parks}
 #| output: true
@@ -1168,9 +1192,9 @@ The following metrics rely on counts of people observed. The underlying data are
 
 Because of this user counts are more accurately understood as "person time of use per target area" and represents a target area being used by a person within the observation period. This explanation accounts for people being counted multiple times by crossing target areas during the observation period.
 
-### Number of Users
+### number of park users
 
-Total number of users observed in the park across all observation periods.
+The total number of users observed in the park across all observation periods.
 
 ```{r number of users}
 #| output: true
@@ -1183,22 +1207,55 @@ DT <- SOPARCAggregated[order(park_name_full),.("Users" = sum(num_child_prim, num
 
 WB$add_worksheet("User Counts")
 WB$add_data(sheet = "User Counts", DT)
+i <- unique(DT$`Park Name`)[3]
 
-for (i in names(WBs)) {
-  wb = WBs[[i]]
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if("User Counts" %in% wb$sheet_names){
+      wb$remove_worksheet("User Counts")
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
   wb$add_worksheet("User Counts")
-  wb$add_data(sheet = "User Counts", DT[`Park Name` == i])
+  wb$add_data(sheet = "User Counts", DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
 }
 
+# WBs$`Annex Park`
+# WBs[i]
+# openxlsx2::wb_add_worksheet(WBs[[i]], "User Counts")
+# openxlsx2::wb_add_data(WBs[[i]],sheet = "User Counts", DT[`Park Name` == i])
+# WBs <- sapply(unique(SOPARCAggregated[,park_name_full]), assign, value = openxlsx2::wb_workbook())
+# WBs$i
+# 
+# WBs <- sapply(unique(SOPARCAggregated[,park_name_full]), assign, value = openxlsx2::wb_workbook())
+# 
+# WBs$add_worksheet("User Counts")
+# for (i in names(WBs)) {
+#   eval(paste0("WBs$",i))
+#   wb_add_worksheet(WBs$, "User Counts")
+#   wb$add_worksheet("User Counts")
+#   WBs[i]$add_data(sheet = "User Counts", DT[`Park Name` == i])
+# 
+# }
 
-
-
-if(!SUPPRESS_TABLES){
-  kbl(DT, 
-        caption =  "Total Number of Users",
-      booktabs = TRUE,
-      longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
-}
+#this is a bit wonky, as worksheets get created across all workbooks in the list. So we create these outside of the loop, calling a member of the list arbitrarily
+# openxlsx::addWorksheet(WBs[[1]], sheetName = "User Counts")
+# for (i in names(WBs)) {
+#   openxlsx::writeData(wb = WBs[[i]], sheet = "User Counts",DT[`Park Name` == i,])
+# }
+# openxlsx::writeData(WBs$`White Center Heights Park`,sheet = "User Counts", DT[`Park Name` == i,])
+# 
+# if(!SUPPRESS_TABLES){
+#   kbl(DT, 
+#         caption =  "Total Number of Users",
+#       booktabs = TRUE,
+#       longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+# }
 
 #export charts for use
 #save charts as individual files
@@ -1220,14 +1277,13 @@ print(target = paste0("./outputs/tables/num_users/num_users.docx"))
 Notes:
 
 - Due to the study design, user counts are subject to both over and under counting
-- 
 - User counts are more accurately understood as "person time of use per target area"
 
-### Average Number of Daily Park users
+### average number of daily park users
 
-Average number of users observed in the park each day
+The daily average number of users observed in the park.
 
-```{r vaerage number of daily users}
+```{r average number of daily users}
 #| output: true
 
 DT <- SOPARCAggregated[order(park_name_full),.("Users" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3), by = .("Park Name" = park_name_full)]
@@ -1235,11 +1291,29 @@ DT <- SOPARCAggregated[order(park_name_full),.("Users" = sum(num_child_prim, num
 
 WB$add_worksheet("Avg Users")
 WB$add_data(sheet = "Avg Users", DT)
+# 
+# for (i in names(WBs)) {
+#   wb = WBs[[i]]
+#   wb$add_worksheet("Avg Users")
+#   wb$add_data(sheet = "Avg Users", DT[`Park Name` == i])
+# }
 
-for (i in names(WBs)) {
-  wb = WBs[[i]]
-  wb$add_worksheet("Avg Users")
-  wb$add_data(sheet = "Avg Users", DT[`Park Name` == i])
+wsName <- "Avg Users"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
 }
 
 
@@ -1259,7 +1333,7 @@ if(file.exists(here("./2023/outputs/tables/avg_users/"))) {
   unlink(here("./2023/outputs/tables/avg_users/"), recursive = T)
 }
 dir.create(here("./2023/outputs/tables/avg_users"), recursive = T)
-write.csv(DT, here("2023/outputs/tables/avg_users/num_users.csv"), row.names = FALSE)
+write.csv(DT, here("2023/outputs/tables/avg_users/avg_users.csv"), row.names = FALSE)
 FT <- DT[, .(`Park Name`,"Users" = round(Users,0))] %>% regulartable() %>% autofit()
 
 read_docx() %>%
@@ -1269,9 +1343,10 @@ print(target = paste0("./outputs/tables/avg_users/avg_users.docx"))
 
 ```
 
-### Average Number of Daily Park Users By Time Period
 
-This is a measure of the 3 day average number of users of a park within each time period.
+### average number of daily park users by time period
+
+The daily average number of users within each time period.
 
 For each park:
 
@@ -1291,14 +1366,29 @@ $$
 
 DT <- SOPARCAggregated[order(park_name_full),.("Users" = round(sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3 ,0)), by = .("Park Name" = park_name_full, "Time Period" = period)]
 
+DT$`Time Period` <- factor(DT$`Time Period`, level = c("Morning","Lunch","Afternoon","Evening"))
+
 WB$add_worksheet("Avg Users x Period")
 WB$add_data(sheet = "Avg Users x Period", DT)
 
-for (i in names(WBs)) {
-  wb = WBs[[i]]
-  wb$add_worksheet("Avg Users x Period")
-  wb$add_data(sheet = "Avg Users x Period", DT[`Park Name` == i])
+wsName <- "Avg Users x Period"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
 }
+
 
 if(!SUPPRESS_CHARTS) {
 PT <- ggplot(DT, (aes(x = `Time Period`, y = Users))) +
@@ -1374,12 +1464,9 @@ Notes:
   + If in the first morning observation 2 people are observed, and the second 3, this may be 3 unique people, or as many as 5, but we calculate this as 2.5 and round up to 3.  
   + If two people walk across all target areas during an observation period, they would be counted each time. With 10 target areas, this would be 20 people observed.
 
-### Rate of Daily Park Use By Time Period
+### rate of park use by time period
 
-This is a measure of the 3 day average number of users of a park within each time period.
-
-
-This is a measure of the rate of people observed in a park over the study period.
+The proportion of the total users observed within each time period.
 
 For each park:
 
@@ -1402,14 +1489,31 @@ The total number of people in a day, $\text{People}_d$, is defined as the sum of
 
 DT <- SOPARCAggregated[order(park_name_full), sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3 , by = .(park_name_full, period)][,.("Time Period" = period, "Rate of Use" = (V1/ sum(V1))), by = .("Park Name" = park_name_full) ]
 
+
+DT$`Time Period` <- factor(DT$`Time Period`, level = c("Morning","Lunch","Afternoon","Evening"))
+
+
 WB$add_worksheet("Rate Use x Period")
 WB$add_data(sheet = "Rate Use x Period", DT)
 
-for (i in names(WBs)) {
-  wb = WBs[[i]]
-  wb$add_worksheet("Rate Use x Period")
-  wb$add_data(sheet = "Rate Use x Period", DT[`Park Name` == i])
+wsName <- "Rate Use x Period"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
 }
+
 
 if(!SUPPRESS_CHARTS) {
   PT <- ggplot(DT, (aes(x = `Time Period`, y = `Rate of Use`))) +
@@ -1441,17 +1545,21 @@ for(park in unique(SOPARCAggregated$park_name_full)) {
   #       plot.subtitle = element_text(size = 14,),
   #       axis.title.x = element_text(size = 12))
     
-  PTExport <-  ggplot(DT[`Park Name` %in% park], aes(x =`Park Name`, y = `Rate of Use`, fill = `Time Period`)) +
-  geom_bar(position = "stack", stat = "identity") +
-      #geom_text((aes(label = paste0(`Time Period`," \n \n",round(`Rate of Use`*100),"%")))) +
-      #labs(title = paste0(park, " ", cityName," ","2023"), subtitle = paste("Rate of Park Use Per Period"))  +
-      theme(plot.title = element_text(size = 8),
-            plot.subtitle = element_text(size = 14,),
-            axis.title.x = element_text(size = 12)) +
-            scale_fill_grey()+
-      theme_bw() 
-
-
+  PTExport <-  ggplot(DT[`Park Name` %in% park]) +
+    theme_bw() +
+    scale_fill_grey(labels = c(paste0("Morning", " (",label_percent()(DT[`Park Name` %in% park & `Time Period` %in% "Morning",`Rate of Use`]),")"),
+                                  paste0("Lunch", " (",label_percent()(DT[`Park Name` %in% park & `Time Period` %in% "Lunch",`Rate of Use`]),")"),
+                                  paste0("Afternoon", " (",label_percent()(DT[`Park Name` %in% park & `Time Period` %in% "Afternoon",`Rate of Use`]),")"),
+                                  paste0("Evening", " (",label_percent()(DT[`Park Name` %in% park & `Time Period` %in% "Evening",`Rate of Use`]),")")))  +
+    geom_bar(position = "stack", stat = "identity",  aes(x =`Park Name`, y = `Rate of Use`, fill = `Time Period`)) +
+    labs(title = paste0(park, " ", cityName," ","2023"), subtitle = paste("Rate of Park Use Per Period"))  +
+    theme(plot.title = element_text(size = 8),
+          plot.subtitle = element_text(size = 14,),
+          axis.title.x = element_blank(),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank())+
+    scale_y_continuous(labels=percent) 
+      
   ggsave(paste0(park,"_rate_use_x_period.pdf"), plot = PTExport, path = paste0("./outputs/charts/rate_use_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
   ggsave(paste0(park,"_rate_use_x_period.png"), plot = PTExport, path = paste0("./outputs/charts/rate_use_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
 }
@@ -1473,9 +1581,9 @@ Notes:
 - Rate is within-park (each park totals to 100%)
 
 
-### Average Number of Daily Park Users By Age
+### average number of daily park users by age
 
-This is a measure of the daily average of users observed in each age group.
+The daily average number of users observed in each age group.
 
 Computationally this measure is similar to the average users by time period above.
 
@@ -1500,14 +1608,29 @@ DT <- SOPARCAggregated[order(park_name_full), .( "Age Group" = rep(c("child","te
                                                                                     num_senior_spec, 
                                                                                     na.rm = TRUE)/3))), by = .("Park Name" = park_name_full)]
 
+DT$`Age Group` <- factor(DT$`Age Group`, level = c("child", "teen", "adult", "senior"))
+
 WB$add_worksheet("Avg Users x Age")
 WB$add_data(sheet = "Avg Users x Age", DT)
 
-for (i in names(WBs)) {
-  wb = WBs[[i]]
-  wb$add_worksheet("Avg Users x Age")
-  wb$add_data(sheet = "Avg Users x Age", DT[`Park Name` == i])
+wsName <- "Avg Users x Age"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
 }
+
 
 if(!SUPPRESS_CHARTS) {
   PT <- ggplot(DT, (aes(x = `Age Group`, y = `Users`))) +
@@ -1579,8 +1702,9 @@ Notes:
   + If in the first morning observation 2 people are observed, and the second 3, this may be 3 unique people, or as many as 5, but we calculate this as 2.5 and round up to 3.  
   + If two people walk across all target areas during an observation period, they would be counted each time. With 10 target areas, this would be 20 people observed.
 
-### Rate of Daily Park Use By Age
+### rate of park use by age
 
+The proportion of the total users observed within each age group.
 
 ```{r rate of park use by age, fig.cap="Rate of Park Use By Age"}
 #| output: true
@@ -1594,14 +1718,29 @@ DT <- SOPARCAggregated[order(park_name_full), .("Age Group" = rep(c("child","tee
                                              sum(num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE))), by = .("Park Name" = park_name_full)]
 
 
+DT$`Age Group` <- factor(DT$`Age Group`, level = c("child", "teen", "adult", "senior"))
+
 WB$add_worksheet("Rate Use x Age")
 WB$add_data(sheet = "Rate Use x Age", DT)
 
-for (i in names(WBs)) {
-  wb = WBs[[i]]
-  wb$add_worksheet("Rate Use x Age")
-  wb$add_data(sheet = "Rate Use x Age", DT[`Park Name` == i])
+wsName <- "Rate Use x Age"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
 }
+
 
 if(!SUPPRESS_CHARTS) {
   PT <- ggplot(DT, (aes(x = factor(`Age Group`, levels = c("child","teen","adult","senior")), y = `Rate of Use`))) +
@@ -1621,16 +1760,32 @@ dir.create(here("./2023/outputs/charts/rate_use_x_age"), recursive = T)
 
 for(park in unique(SOPARCAggregated$park_name_full)) {
   cityName <- first(SOPARCAggregated[park_name_full == park, City])
-  PTExport <- ggplot(DT[`Park Name` %in% park], (aes(label = paste0(factor(`Age Group`, levels = c("child","teen","adult","senior"))," \n",round(`Rate of Use`*100),"%"), area = `Rate of Use`))) +
-  geom_treemap()  +
-  geom_treemap_text(color = "white",
-                    place = "centre",
-                    size = 6) +
-  labs(title = paste0(park, " ", cityName, " ","2023"), subtitle = paste("Rate of Park Use Per Age")) +
-  theme(plot.title = element_text(size = 8),
-        plot.subtitle = element_text(size = 14,),
-        axis.title.x = element_text(size = 12))
+  # PTExport <- ggplot(DT[`Park Name` %in% park], (aes(label = paste0(factor(`Age Group`, levels = c("child","teen","adult","senior"))," \n",round(`Rate of Use`*100),"%"), area = `Rate of Use`))) +
+  # geom_treemap()  +
+  # geom_treemap_text(color = "white",
+  #                   place = "centre",
+  #                   size = 6) +
+  # labs(title = paste0(park, " ", cityName, " ","2023"), subtitle = paste("Rate of Park Use Per Age")) +
+  # theme(plot.title = element_text(size = 8),
+  #       plot.subtitle = element_text(size = 14,),
+  #       axis.title.x = element_text(size = 12))
 
+    PTExport <-  ggplot(DT[`Park Name` %in% park]) +
+    theme_bw() +
+    scale_fill_grey(,labels = c(paste0("Child", " (",label_percent()(DT[`Park Name` %in% park & `Age Group` %in% "child",`Rate of Use`]),")"),
+                                  paste0("Teen", " (",label_percent()(DT[`Park Name` %in% park & `Age Group` %in% "teen",`Rate of Use`]),")"),
+                                  paste0("Adult", " (",label_percent()(DT[`Park Name` %in% park & `Age Group` %in% "adult",`Rate of Use`]),")"),
+                                  paste0("Senior", " (",label_percent()(DT[`Park Name` %in% park & `Age Group` %in% "senior",`Rate of Use`]),")")))  +
+    geom_bar(position = "stack", stat = "identity",  aes(x =`Park Name`, y = `Rate of Use`, fill = `Age Group`)) +
+    labs(title = paste0(park, " ", cityName," ","2023"), subtitle = paste("Rate of Park Use Per Age"))  +
+    theme(plot.title = element_text(size = 8),
+          plot.subtitle = element_text(size = 14,),
+          axis.title.x = element_blank(),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank())+
+    scale_y_continuous(labels=percent) 
+    
+  PTExport  
   ggsave(paste0(park,"_rate_use_x_age.pdf"), plot = PTExport, path = paste0("./outputs/charts/rate_use_x_age"),width = CHARTWIDTH, height = CHARTHEIGHT)
   ggsave(paste0(park,"_rate_use_x_age.png"), plot = PTExport, path = paste0("./outputs/charts/rate_use_x_age"),width = CHARTWIDTH, height = CHARTHEIGHT)
 }
@@ -1653,11 +1808,11 @@ Notes:
 
 ## Occupancy
 
-### Occupancy Rate
+### occupancy rate
 
-This is a measure of what percentage of observation periods had any target area occupied. 
+The percentage of observations where at least one user was observed in the park.
 
-For each park, the number of observation periods with any target area in occupied status is devided by the total number of observation periods (24)
+For each park, the number of observation periods with any target area in occupied status is divided by the total number of observation periods (24)
 
 
 ```{r analysis of occupancy rate}
@@ -1669,11 +1824,24 @@ DT <- SOPARCtoAggregate[order(park_name_full), ifelse(any(occupied %in% "Yes"), 
 WB$add_worksheet("Rate Occupied")
 WB$add_data(sheet = "Rate Occupied", DT)
 
-for (i in names(WBs)) {
-  wb = WBs[[i]]
-  wb$add_worksheet("Rate Occupied")
-  wb$add_data(sheet = "Rate Occupied", DT[`Park Name` == i])
+wsName <- "Rate Occupied"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
 }
+
 
 if(!SUPPRESS_TABLES) {
 kbl(DT,
@@ -1690,7 +1858,7 @@ if(file.exists(here("./2023/outputs/tables/rate_occupied/"))) {
 }
 dir.create(here("./2023/outputs/tables/rate_occupied"), recursive = T)
 write.csv(DT, here("2023/outputs/tables/rate_occupied/rate_occupied.csv"), row.names = FALSE)
-FT <- DT %>% regulartable() %>% autofit()
+FT <- DT[, .(`Park Name`, "Rate" = percent(Rate))] %>% regulartable() %>% autofit()
 
 read_docx() %>%
 body_add_flextable(FT) %>%
@@ -1699,13 +1867,12 @@ print(target = paste0("./outputs/tables/rate_occupied/rate_occupied.docx"))
 
 Notes:
 
-- 
 
 ## Activities
 
-### Number of Users Per Activity
+### number of users per activity
 
-This is the raw count of number of users observed doing an activity in a park over the study period
+The number of users observed doing the activity in the park.
 
 ```{r users doing an activity}
 #| output: true
@@ -1726,11 +1893,24 @@ DT <- DT[,.("Users" = sum(children, teen, adult, senior)) , by = .("Park Name" =
 WB$add_worksheet("Users per Activity")
 WB$add_data(sheet = "Users per Activity", DT)
 
-for (i in names(WBs)) {
-  wb = WBs[[i]]
-  wb$add_worksheet("Users per Activity")
-  wb$add_data(sheet = "Users per Activity", DT[`Park Name` == i])
+wsName <- "Users per Activity"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
 }
+
 
 if(!SUPPRESS_TABLES) {
   kbl(DT[`Park Name` == park,],
@@ -1771,23 +1951,30 @@ Notes:
 
 - user counts are subject to over and under counting due to 
 
-### Rate of User Activity
+### rate of user activity
 
-This is a measure of the rate of users engaged in an activity per park.
+The percentage users observed doing the activity in the park.
 
-For each activity, the number of users engaged in that activity is divided by the total number of users observed in the study.
+For each park, the number of users engaged in an activity is divided by the total number of users observed in the park throughout the study duration.
 
 ```{r Rate of User Activity}
 #| output: true
 
 #construct an activity table from the non agrgeagted activity list to align record_ids
-DT <- merge(SOPARCActivities, SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full, tar_area, dayNumberBasedOnSequence, period, datePOSIX, day, month, weekend)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
+DT <- merge(SOPARCActivities, SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full, tar_area, dayNumberBasedOnSequence, period, periodBasedOnSequence,datePOSIX, day, month, weekend)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
 #merge(SOPARCActivities, SOPARCtoAggregate[,.("record_id" = as.numeric(record_id), park_name_full)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
 # repeat aggregation steps for people counts
+# 
+#add together observations of poeple doing the same activity at the same time in the same target area but different sub areas
+DT <- DT[, .(children = sum(children, na.rm = T), 
+             teen = sum(teen, na.rm = T), 
+             adult = sum(adult, na.rm = T), 
+             senior = sum(senior, na.rm = T)), by = .(park_name_full, record_id_aggregated,dayNumberBasedOnSequence, tar_area,  periodBasedOnSequence, period,activity )]
+#aggregate first and second half of 
 DT <- DT[, .(children = ceiling(mean(children, na.rm = T)), 
              teen = ceiling(mean(teen, na.rm = T)), 
              adult = ceiling(mean(adult, na.rm = T)), 
-             senior = ceiling(mean(senior, na.rm = T))), by = .(park_name_full, dayNumberBasedOnSequence, tar_area,  period, activity )]
+             senior = ceiling(mean(senior, na.rm = T))), by = .(park_name_full, dayNumberBasedOnSequence, tar_area, period, activity )]
 
 DT[,"Num" := sum(children, teen, adult, senior) , by = .(park_name_full, activity)]
 DT[,"Denom" := sum(children, teen, adult, senior) , by = .(park_name_full)]
@@ -1800,11 +1987,24 @@ DT <- DT[order(`Park Name`, Activity),]
 WB$add_worksheet("Rate User Activity")
 WB$add_data(sheet = "Rate User Activity", DT)
 
-for (i in names(WBs)) {
-  wb = WBs[[i]]
-  wb$add_worksheet("Rate User Activity")
-  wb$add_data(sheet = "Rate User Activity", DT[`Park Name` == i])
+wsName <- "Rate User Activity"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
 }
+
 
 if(!SUPPRESS_TABLES) {
   kbl(DT[`Park Name` == park,],
@@ -1847,32 +2047,44 @@ Notes:
 - The total rate of all user activities listed will equal 100%, the total amount of activity observed.
 - This is calculated on the non aggregated population counts.
 
-### Rate of Activity Observed
+### rate of activity observed
 
-This is a measure of the rate of activities observed across all possible observation periods (24)
+The percentage of observations where at least one user was observed doing the activity in the park.
 
 For each park, the total the number of periods the activity was observed is divided by 24, the total number of observations periods possible for any particular activity.
+
 
 ```{r Rate of Activity Observed}
 #| output: true
 
 #construct an activity table from the activity list
-DT <- merge(SOPARCActivities, SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
+DT <- merge(SOPARCActivities[,.(record_id_aggregated,activity)], SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full, periodBasedOnSequence,dayNumberBasedOnSequence)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
+
+DT <- DT[,.N, by = .(park_name_full,activity,periodBasedOnSequence,dayNumberBasedOnSequence)]
 
 DT <- DT[order(park_name_full, activity), .("Rate" = .N/24), by = .("Park Name" = park_name_full, "Activity" = activity)]
 
 WB$add_worksheet("Rate Activity Observed")
 WB$add_data(sheet = "Rate Activity Observed", DT)
 
-for (i in names(WBs)) {
-  wb = WBs[[i]]
-  wb$add_worksheet("Rate Activity Observed")
-  wb$add_data(sheet = "Rate Activity Observed", DT[`Park Name` == i])
+wsName <- "Rate Activity Observed"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
 }
 
-if(!SUPPRESS_TABLES) {
-
-}
 
 
 #export charts for use
@@ -1905,13 +2117,13 @@ Notes:
 
 - Unlike many of the other measures provided, these rates are mostly independent of each other and do not have an additive meaning. This is because multiple activities may be observed in a single observation period. E..g "walking" may be observed in all 24 periods, and so have an observation rate of 100%, and "sitting" may be observed in 6 periods and so have a rate of 25%.
 
-## Spatial Analysees
+## Spatial analysees
 
-### Ratio of use to catchment
+### ratio of use to half-mile catchment area
 
-For each park we calculate a ratio of how many people visit per day on average rleative to how many people live within 0.5 miles of the park.
+The ratio of how many users were observed per day on average relative to how many people live within 0.5 miles of the park. 
 
-This is provided per 1000 residents to improve readability.
+This is provided per 1,000 residents to improve readability.
 
 ```{r ratio of use to catchment}
 #| output: true
@@ -1921,21 +2133,30 @@ DT <- SOPARCAggregated[order(park_name_full),.("Users" = sum(num_child_prim, num
 #attac
 DT <- merge(DT, ParkPopulationTable, by.x =  "Park Name", by.y = "parkNameFull")
 
-DT <- DT[order(`Park Name`), .("Ratio" = Users / populationHalfMile), by = `Park Name`][, .("Ratio Per 1000" = Ratio *1000), by = "Park Name"]
+DT <- DT[order(`Park Name`), .("Ratio" = Users / populationHalfMile, "Population in Half Mile" = populationHalfMile, Users), by = `Park Name`][, .("Ratio Per 1000" = Ratio *1000,"Average Daily Users" = Users, `Population in Half Mile`), by = "Park Name"]
+
+
 
 WB$add_worksheet("Ratio Use Catchment")
 WB$add_data(sheet = "Ratio Use Catchment", DT)
 
-for (i in names(WBs)) {
-  wb = WBs[[i]]
-  wb$add_worksheet("Ratio Use Catchment")
-  wb$add_data(sheet = "ratio Use Catchment", DT[`Park Name` == i])
+wsName <- "Ratio Use catchment"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
 }
-
-if(!SUPPRESS_TABLES) {
-
-}
-
 
 #export charts for use
 #save charts as individual files
@@ -1954,7 +2175,7 @@ dir.create(here("./2023/outputs/tables/ratio_use_catch"), recursive = T)
   # 
   #   save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_user_activity/",park,"rate_user_activity.pdf")))
   
-  FT <- DT %>% regulartable() %>% autofit()
+  FT <- DT[, .(`Park Name`, "Ratio Per 1000" = round(`Ratio Per 1000`,2),"Average Daily Users" = round(`Average Daily Users`,0), "Population in Half Mile" = round(`Population in Half Mile`,0))] %>% regulartable() %>% autofit()
 
   read_docx() %>%
   body_add_flextable(FT) %>%
@@ -1966,7 +2187,7 @@ dir.create(here("./2023/outputs/tables/ratio_use_catch"), recursive = T)
 
 Notes: 
 
-
+- The ratios are calculated on non-rounded data, and then rounded. The average number of users and populations provided in the formatted word document are rounded. This causes a rounding error where you wouldn't get the exact ratio if you were to divide these users and populations. For accurate results use the numbers provided in the pivot ready tables.
 
 ```{r save workbooks}
 #create project wide workbooks
@@ -1974,156 +2195,68 @@ dir.create(here("./2023/outputs/tables/pivot_ready"), recursive = T, showWarning
 if(file.exists(here("2023/outputs/tables/pivot_ready/analysis_tables.xlsx"))){
   file.remove(here("2023/outputs/tables/pivot_ready/analysis_tables.xlsx"))
 }
-WB$save("./outputs/tables/pivot_ready/analysis_tables.xlsx")
+openxlsx2::wb_save(WB, file = "./outputs/tables/pivot_ready/analysis_tables.xlsx")
 
 #create park speciifc workbooks
-dir.create(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/")), recursive = T, showWarnings = FALSE)
-for (i in names(WBs)) {
-  wb = WBs[[i]]
-  
-  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))){
-    file.remove(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))
-  }
-  wb$save(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))
-}
+# dir.create(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/")), recursive = T, showWarnings = FALSE)
+# for (i in names(WBs)) {
+#   wb = WBs[[i]]
+#   
+#   if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))){
+#     file.remove(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))
+#   }
+#   #wb$save(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))
+#   openxlsx2::wb_save(wb, file = paste0("./outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx"))
+# }
+
+# dir.create(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/")), recursive = T, showWarnings = FALSE)
+# for (i in names(WBs)) {
+#   if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))){
+#     file.remove(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))
+#   } 
+#   
+#   openxlsx::saveWorkbook(WBs[[i]], paste0("./outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx"), overwrite = T)
+# }
+
+
 
 ```
 
-```{r create workbooks specific to each park}
-
-```
-
-```{r save measure summary}
-
-
+```{r save expanded activity table}
+write.csv(merge(SOPARCActivities,SOPARCtoAggregate[,.(park_name_full, record_id, period, target_area, datePOSIX)], by.x = "record_id_aggregated", by.y = "record_id"), here("2023/outputs/data-metadata/SOPARCActivitiesExpanded.csv"), row.names = FALSE)
+ 
 ```
 
 # Closure and Next Steps
 
+## REDCap maintanence
+
+Project has been in "development" status throughout the study period. It has now been moved into "analysis/cleanup". It is recommended to keep it in this stage until finished with any future studies and analyses in this line of work, e.g. if planing to use the data from this study in the future, it is good to keep this REDCap project in analysis mode for review. There is an additional "completed" status, which should generally only be used when completely finished with the body of work. This status makes the project largely inaccessible. Notably, changing the project to "complete" status would also break this script (or require it to be fed a different data source rather than pulling from the REDCap API.)
+
+As currently envisioned, these data are part of a longitudinal study, and so this and future REDCap projects would ideally remain accessible.
+
+I recommend conducting future data collection efforts in their own REDCap projects, naming them similarly, such as "Public Health - Seattle & King County Park Observations: <title of study>"
+
+The project used for this analysis has been renamed to: Public Health - Seattle & King County Park Observations: 2023 Annual Study
+
+### recommended changes to future surveys instruments
+
+- variable for capturing other primary activities is inconsistent to secondary and special ones
+- modify instrument to have observers indicate the time of their data collection
+- add a study name to data (hidden value)
+- include additional testing and possibly consultation with ITHS REDCap staff for issues with data upload from cell phones. This cause problems for observers. It is unclear if this is a problem with the cell phone application or due to the study being executed with the project in "development" status.
+
+## Data management
+
+Files in the provided data-metadata directory should be retained. These include QA information, updated metadata, and observational data at different stages of data preperation.
+
+Most critical is the maintenance of the version of the data used for the above analysis. Over the years, these would be the ones expected for use in further analytic work and for comparing year-over-year results.
+
+The analysis-ready files include:
+
+- SOPARCAnalysisSet.csv (fully cleaned park observation)
+- SOPARCAnalysisSetAggregatedPeriods.csv (analysis set with observations aggregated by period, the level of analysis most commonly used)
+- SOPARCActivities.csv & SOPARCActivitiesExpanded.csv (all activity data at the individual record level. The expanded version includes some park information already attached for human readability)
 
 
-```{r}
-#| eval: false
 
-
-#resolve redundant observations
-for(park in unique(SOPARCObservations[,park_name])) {
-  for(area in 1:max(SOPARCObservations[park_name == park, tar_area])) {
-    #check if the expected number of observations exists for each area
-    if(all(SOPARCObservations[park_name == park & tar_area == area, sub_area ] == "")) { #testing areas where all observations are without sub areas
-      if(!nrow(SOPARCObservations[park_name == park & tar_area == area,] ) == 24) { #checks that there are exactly 24 observations. Note, this skips any that have 24 to instead assert sequential observation order. That may be an awful assumption
-        #check that there are 3 days and 8 observations per day for each target area of the park
-        if(length(unique(SOPARCObservations[park_name == park & tar_area == area,]$datePOSIX)) == 3){           #checks for those that have 3 days...
-
-          #confirm that each target area has 8 observations per day, and make corrections if not
-          for(day in unique(SOPARCObservations[park_name == park & tar_area == area,]$idate)) {
-            if(nrow(SOPARCObservations[park_name == park & tar_area == area & idate == day,]) > 8) {
-              numberToFix <- nrow(SOPARCObservations[park_name == park & tar_area == area & idate == day,]) - 8
-              #things to do to resolve when there are extra observations in a day
-              print(paste("there are", numberToFix, "too many observations in", park, area, as.Date(day)))
-              print("attempting to resolve by temporal proximity and data similarity")
-              #where X is the number of excess observations, choose X_1 where X_1 is an entry that matches at least one other entry in all regards except timestamp and ID
-              #if more than 2 identical items exists within a +/- 30m timespan of X_1, delete X_1
-              #X-1, if X >0 repeat
-              duplicates <- SOPARCObservations[park_name == park & tar_area == area & as.Date(timestampPOSIX, tz = "America/Los_Angeles") == day,record_id][duplicated(SOPARCObservations[park_name == park & tar_area == area & as.Date(timestampPOSIX, tz = "America/Los_Angeles") == day, !c("record_id","start_time","timestampPOSIX", "itimeOfDay")],by = )]
-              duplicateseWithNearMatches <- NA
-              
-              #check sequentially if there are 3 items within 30 minutes of each other, and one is identical
-              for( id in duplicates) {
-                varsToMatchOn <- c("park_name",
-                                   "tar_area",
-                                   "sub_area",
-                                   "accessible",
-                                   "usable",
-                                   "lit",
-                                   "occupied",
-                                   "supervised",
-                                   "organized",
-                                   "equipped",
-                                   "num_child_prim",
-                                   "num_child_snd",
-                                   "num_child_spec",
-                                   "num_teen_prim",
-                                   "num_teen_snd",
-                                   "num_teen_spec",
-                                   "num_adult_prim",
-                                   "num_adult_snd",
-                                   "num_adult_spec",
-                                   "num_senior_prim",
-                                   "num_senior_snd",
-                                   "num_senior_spec",
-                                   "prim_act_name",
-                                   "prim_act_other",
-                                   "yesno_snd",
-                                   "snd_act_name",
-                                   "other_act_snd",
-                                   "yesno_spec",
-                                   "spec_act_name",
-                                   "other_act_spec",
-                                   "comments")
-                accessible_check <- SOPARCObservations[record_id == id]$accessible
-                usable_check <- SOPARCObservations[record_id == id]$usable
-                lit_check <- SOPARCObservations[record_id == id]$lit
-                occupied_check <- SOPARCObservations[record_id == id]$occupied
-                supervised_check <- SOPARCObservations[record_id == id]$supervised
-                organized_check <- SOPARCObservations[record_id == id]$organized
-                equipped_check <- SOPARCObservations[record_id == id]$equipped
-                num_child_prim_check <- SOPARCObservations[record_id == id]$num_child_prim
-                num_child_snd_check <- SOPARCObservations[record_id == id]$num_child_snd
-                num_child_spec_check <- SOPARCObservations[record_id == id]$num_child_spec
-                num_teen_prim_check <- SOPARCObservations[record_id == id]$num_teen_prim
-                num_teen_snd_check <- SOPARCObservations[record_id == id]$num_teen_snd
-                num_teen_spec_check <- SOPARCObservations[record_id == id]$num_teen_spec
-                num_adult_prim_check <- SOPARCObservations[record_id == id]$num_adult_prim
-                num_adult_snd_check <- SOPARCObservations[record_id == id]$num_adult_snd
-                num_adult_spec_check <- SOPARCObservations[record_id == id]$num_adult_spec
-                num_senior_prim_check <- SOPARCObservations[record_id == id]$num_senior_prim
-                num_senior_snd_check <- SOPARCObservations[record_id == id]$num_senior_snd
-                num_senior_spec_check <- SOPARCObservations[record_id == id]$num_senior_spec
-                prim_act_name_check <- SOPARCObservations[record_id == id]$prim_act_name
-                prim_act_other_check <- SOPARCObservations[record_id == id]$prim_act_other
-                yesno_snd_check <- SOPARCObservations[record_id == id]$yesno_snd
-                snd_act_name_check <- SOPARCObservations[record_id == id]$snd_act_name
-                other_act_snd_check <- SOPARCObservations[record_id == id]$other_act_snd
-                yesno_spec_check <- SOPARCObservations[record_id == id]$yesno_spec
-                spec_act_name_check <- SOPARCObservations[record_id == id]$spec_act_name
-                other_act_spec_check <- SOPARCObservations[record_id == id]$other_act_spec
-                comments_check <- SOPARCObservations[record_id == id]$comments
-                
-                temporalmid <- SOPARCObservations[record_id == id, itimeOfDay]
-                print(paste("searching for records within +/- 30m of record", id))
-                print(paste(SOPARCObservations[park_name == park & tar_area == area & idate == day & record_id != id & (itimeOfDay > temporalmid - 1800 & itimeOfDay < temporalmid + 1800),]$record_id, "was found"))
-                #duplicated(SOPARCObservations[park_name == park & tar_area == area & idate == day,],by =   varsToMatchOn)
-
-                #SOPARCObservations[park_name == park & tar_area == area & as.Date(timestampPOSIX, tz = "America/Los_Angeles") == day & (itimeOfDay > temporalmid - 1800 & itimeOfDay < temporalmid + 1800),]
-                
-              }
-
-              SOPARCObservations[park_name == park & tar_area == area,]
-
-              while(numberToFix > 0) {
-                
-              }
-              
-              
-            }
-            if(nrow(SOPARCObservations[park_name == park & tar_area == area & as.Date(timestampPOSIX, tz = "America/Los_Angeles") == day,]) < 8) {
-              print(paste("there are too few observations in", park, area, as.Date(day, tz = "America/Los_Angeles")))
-            }
-          }
-          
-        } else if(length(unique(as.Date(SOPARCObservations[park_name == park & tar_area == area,]$timestampPOSIX, tz = "America/Los_Angeles"))) > 3){
-          print(paste("more than 3 days detected for", park, area))
-        } else if((length(unique(as.Date(SOPARCObservations[park_name == park & tar_area == area,]$timestampPOSIX, tz = "America/Los_Angeles"))) < 3)) {
-          print(paste("less than 3 days detected for", park, area))
-        } else {
-          print(paste("undefined date error found in", park, area))
-        }
-        
-      }
-    } else { #testing observations where any of the area has sub areas
-      #for(subarea in SOPARCObservations[park_name == park & tar_area == area, sub_area ]) {
-    }
-  }
-}
-```
