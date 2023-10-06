@@ -56,7 +56,7 @@ secrets.txt
 # data
 *.csv
 *.xlsx
-
+*.zip
 
 
 # final deliverables
