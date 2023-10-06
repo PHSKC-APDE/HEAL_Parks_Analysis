@@ -26,6 +26,6 @@ While a park is the primary unit of analysis, data on each park are collected in
 
 Specific analyses may be viewed in the sub directories of this folder:
 
--  [./2023] Annual Study
+-  [2023 Annual Study](./2023)
 
 [SOPARC]: https://activelivingresearch.org/sites/activelivingresearch.org/files/SOPARC_Protocols.pdf
