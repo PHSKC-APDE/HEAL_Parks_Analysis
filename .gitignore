@@ -50,13 +50,9 @@ rsconnect/
 
 # Secrets
 secrets.txt
-
 .Rproj.user
+*/local_only/*
 
-# data
-*.csv
-*.xlsx
-*.zip
 
 
 # final deliverables

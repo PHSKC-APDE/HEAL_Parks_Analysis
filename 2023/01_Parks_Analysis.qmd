@@ -3,8 +3,20 @@ title: "HEAL Parks 2023 Analysis"
 author: "Ronald Buie"
 date-modified: "`r Sys.Date()`"
 
-format: 
+format:
+  gfm: 
+    output-file: "README.md"
+    toc: true
+    number-sections: true
+    fig-height: 12
+    fig-width: 16
   pdf:
+    toc: true
+    number-sections: true
+    df-print: kable
+    fig-height: 12
+    fig-width: 16
+  html:
     toc: true
     number-sections: true
     df-print: kable
@@ -53,8 +65,8 @@ By rendering/knitting the qmd file, the analysis is re-executed, this document r
 This script was last executed using `r version$version.string`.
 
 ```{r define constant and environment variables}
-SECRETS_LOCALE <- "./2023/inputs/secrets.txt" #REDCap project API access information goes here
-DATA_LOCALE <- "2023/inputs/data.csv" #use this if REDCap is not accessable
+SECRETS_LOCALE <- "./2023/local_only/secrets.txt" #REDCap project API access information goes here
+DATA_LOCALE <- "./2023/local_only/data.csv" #use this if REDCap is not accessable
 
 REBUILDACTIVITYTABLE <- FALSE
 RECALCULATEPOPULATIONS <- FALSE
@@ -126,9 +138,17 @@ return(fxn)
 
 ## Secrets and tokens
 
-In order to pull data directly from REDCap, API information must be provided. You should create a file called "secrets.txt" in this directory. This file should contain the following information:
+In order to pull data directly from REDCap, API information must be provided. You should create a file called "secrets.txt" in a subdirectory "./local_only/" This file should include two lines of R code:
 
-Note, that the .gitignore for this project is configured to exclude your secrets.txt file, so, by default, it will not upload to github, and you will not be able to see other users' secrets.txt. They are only stored on your machine.
+```{r}
+#| eval: false
+#| echo: true
+api_token       <- 'yourapikeyhere'
+api_url         <- 'https://redcap.iths.org/api/'
+
+```
+
+Note, that the .gitignore for this project is configured to exclude your secrets.txt and anything else in the local_only direcotry by default, it will not upload to github, and you will not be able to see other users' secrets.txt. They are only stored on your machine.
 
 # Data Preperation
 
@@ -139,7 +159,7 @@ Data are extracted directly from REDCap via API.
 ```{r import data}
 
 if (file.exists(here(SECRETS_LOCALE))) {
-  source(here("2023/inputs/secrets.txt"))
+  source(here(SECRETS_LOCALE))
 } else {
   warning("secrets not found. checking for data.csv")
   if(!file.exists(here(DATA_LOCALE))){
@@ -317,7 +337,7 @@ Park activities are extracted from other park data for more accurate analysis.
 
 ```{r create seperate activity table}
 
-if( !(file.exists(here("2023/inputs/SOPARCActivities.csv"))) | REBUILDACTIVITYTABLE){
+if( !(file.exists(here("2023/local_only/SOPARCActivities.csv"))) | REBUILDACTIVITYTABLE){
 SOPARCActivities <- data.table("record_id" = SOPARCObservations[prim_act_name != "",]$record_id, 
                                "record_id_aggregated" = SOPARCObservations[prim_act_name != "",]$record_id, 
                                "activity" = "", 
@@ -347,11 +367,10 @@ for(id in SOPARCActivities$record_id) {
                                            senior = SOPARCObservations[record_id == id, ]$num_senior_spec)] 
   }
 }
-
+write.csv(SOPARCActivities, here("2023/local_only/SOPARCActivities.csv"), row.names = FALSE)
 write.csv(SOPARCActivities, here("2023/outputs/data-metadata/SOPARCActivities.csv"), row.names = FALSE)
-write.csv(SOPARCActivities, here("2023/inputs/SOPARCActivities.csv"), row.names = FALSE)
 } else {
-  SOPARCActivities <-  fread(here("2023/inputs/SOPARCActivities.csv"))
+  SOPARCActivities <-  fread(here("2023/local_only/SOPARCActivities.csv"))
 }
 ```
 
@@ -464,7 +483,7 @@ for(index in 1:nrow(listToCollapseStarts)) {
 #combine observations without sub areas, and our newly collapsed sub areas, into a single DT
 SOPARCObservations <- rbind(SOPARCObservations[sub_area == "",], SOPARCCollapsedSubAreas)
 
-#save newly udpated activity table
+#save newly updated activity table
 
 
 write.csv(SOPARCActivities, here("2023/outputs/data-metadata/Park Activities.csv"), row.names = F)
@@ -761,8 +780,8 @@ This relies on access to APDE population data and use of the RADS library and on
 ```{r create population estimates}
 #this chunk is very slow, so if the data already exists, do not rerun.
 skip <- FALSE
-if(file.exists(here("2023/inputs/Park Populations.csv"))) {
-  ParkPopulationTable <- fread(here("2023/inputs/Park Populations.csv"))
+if(file.exists(here("2023/local_only/Park Populations.csv"))) {
+  ParkPopulationTable <- fread(here("2023/local_only/Park Populations.csv"))
   if("populationHalfMile" %in% names(ParkPopulationTable) &
      all(ParksMetaData$`Park Name` %in% ParkPopulationTable[censusYear == 2022,]$parkNameFull)) 
     skip <- TRUE #yay no need to calculate
@@ -807,7 +826,7 @@ if(!skip | RECALCULATEPOPULATIONS) {
   }
 
   write.csv(ParkPopulationTable ,here("2023/outputs/data-metadata/Park Populations.csv"), row.names = F)
-  write.csv(ParkPopulationTable ,here("2023/inputs/Park Populations.csv"), row.names = F)
+  write.csv(ParkPopulationTable ,here("2023/local_only/Park Populations.csv"), row.names = F)
 }
 ```
 

@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.433">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald Buie">
+
+<title>HEAL Parks 2023 Analysis</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="01_Parks_Analysis_files/libs/clipboard/clipboard.min.js"></script>
+<script src="01_Parks_Analysis_files/libs/quarto-html/quarto.js"></script>
+<script src="01_Parks_Analysis_files/libs/quarto-html/popper.min.js"></script>
+<script src="01_Parks_Analysis_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="01_Parks_Analysis_files/libs/quarto-html/anchor.min.js"></script>
+<link href="01_Parks_Analysis_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="01_Parks_Analysis_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="01_Parks_Analysis_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="01_Parks_Analysis_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="01_Parks_Analysis_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+<script src="01_Parks_Analysis_files/libs/kePrint-0.0.1/kePrint.js"></script>
+<link href="01_Parks_Analysis_files/libs/lightable-0.0.1/lightable.css" rel="stylesheet">
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+</head>
+
+<body>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#front-matter" id="toc-front-matter" class="nav-link active" data-scroll-target="#front-matter"><span class="header-section-number">1</span> Front Matter</a>
+  <ul class="collapse">
+  <li><a href="#major-inputs" id="toc-major-inputs" class="nav-link" data-scroll-target="#major-inputs"><span class="header-section-number">1.1</span> Major inputs</a></li>
+  <li><a href="#output-categories" id="toc-output-categories" class="nav-link" data-scroll-target="#output-categories"><span class="header-section-number">1.2</span> Output categories</a></li>
+  <li><a href="#this-is-a-quarto-generated-document" id="toc-this-is-a-quarto-generated-document" class="nav-link" data-scroll-target="#this-is-a-quarto-generated-document"><span class="header-section-number">1.3</span> This is a quarto generated document</a></li>
+  </ul></li>
+  <li><a href="#setup-environment" id="toc-setup-environment" class="nav-link" data-scroll-target="#setup-environment"><span class="header-section-number">2</span> Setup &amp; Environment</a>
+  <ul class="collapse">
+  <li><a href="#secrets-and-tokens" id="toc-secrets-and-tokens" class="nav-link" data-scroll-target="#secrets-and-tokens"><span class="header-section-number">2.1</span> Secrets and tokens</a></li>
+  </ul></li>
+  <li><a href="#data-preperation" id="toc-data-preperation" class="nav-link" data-scroll-target="#data-preperation"><span class="header-section-number">3</span> Data Preperation</a>
+  <ul class="collapse">
+  <li><a href="#extraction" id="toc-extraction" class="nav-link" data-scroll-target="#extraction"><span class="header-section-number">3.1</span> Extraction</a></li>
+  <li><a href="#transformation" id="toc-transformation" class="nav-link" data-scroll-target="#transformation"><span class="header-section-number">3.2</span> Transformation</a></li>
+  <li><a href="#cleaning" id="toc-cleaning" class="nav-link" data-scroll-target="#cleaning"><span class="header-section-number">3.3</span> Cleaning</a></li>
+  <li><a href="#create-table-of-activities-including-sub-areas" id="toc-create-table-of-activities-including-sub-areas" class="nav-link" data-scroll-target="#create-table-of-activities-including-sub-areas"><span class="header-section-number">3.4</span> Create table of activities including sub areas</a></li>
+  <li><a href="#collapse-sub-areas" id="toc-collapse-sub-areas" class="nav-link" data-scroll-target="#collapse-sub-areas"><span class="header-section-number">3.5</span> Collapse sub areas</a></li>
+  <li><a href="#quality-checks" id="toc-quality-checks" class="nav-link" data-scroll-target="#quality-checks"><span class="header-section-number">3.6</span> Quality Checks</a>
+  <ul class="collapse">
+  <li><a href="#strategy-1-correct-missingness-where-observations-are-only-missing-but-correct-number-of-days" id="toc-strategy-1-correct-missingness-where-observations-are-only-missing-but-correct-number-of-days" class="nav-link" data-scroll-target="#strategy-1-correct-missingness-where-observations-are-only-missing-but-correct-number-of-days"><span class="header-section-number">3.6.1</span> strategy 1: correct missingness where observations are only missing but correct number of days</a></li>
+  </ul></li>
+  <li><a href="#parks-metadata" id="toc-parks-metadata" class="nav-link" data-scroll-target="#parks-metadata"><span class="header-section-number">3.7</span> Parks metadata</a></li>
+  <li><a href="#assign-population-within-half-mile-radius" id="toc-assign-population-within-half-mile-radius" class="nav-link" data-scroll-target="#assign-population-within-half-mile-radius"><span class="header-section-number">3.8</span> Assign population within half-mile radius</a></li>
+  <li><a href="#study-tracker" id="toc-study-tracker" class="nav-link" data-scroll-target="#study-tracker"><span class="header-section-number">3.9</span> Study tracker</a></li>
+  </ul></li>
+  <li><a href="#parameterizing-data-for-analysis" id="toc-parameterizing-data-for-analysis" class="nav-link" data-scroll-target="#parameterizing-data-for-analysis"><span class="header-section-number">4</span> Parameterizing Data For Analysis</a>
+  <ul class="collapse">
+  <li><a href="#time-of-day" id="toc-time-of-day" class="nav-link" data-scroll-target="#time-of-day"><span class="header-section-number">4.1</span> Time of day</a>
+  <ul class="collapse">
+  <li><a href="#assigning-time-periods-based-on-sequence" id="toc-assigning-time-periods-based-on-sequence" class="nav-link" data-scroll-target="#assigning-time-periods-based-on-sequence"><span class="header-section-number">4.1.1</span> assigning time periods based on sequence</a></li>
+  </ul></li>
+  <li><a href="#aggregation-of-periods-for-analysis" id="toc-aggregation-of-periods-for-analysis" class="nav-link" data-scroll-target="#aggregation-of-periods-for-analysis"><span class="header-section-number">4.2</span> Aggregation of periods for analysis</a></li>
+  <li><a href="#integrate-metadata-and-analysis-sets" id="toc-integrate-metadata-and-analysis-sets" class="nav-link" data-scroll-target="#integrate-metadata-and-analysis-sets"><span class="header-section-number">4.3</span> Integrate metadata and analysis sets</a></li>
+  </ul></li>
+  <li><a href="#results" id="toc-results" class="nav-link" data-scroll-target="#results"><span class="header-section-number">5</span> Results</a>
+  <ul class="collapse">
+  <li><a href="#included-parks" id="toc-included-parks" class="nav-link" data-scroll-target="#included-parks"><span class="header-section-number">5.1</span> Included parks</a></li>
+  <li><a href="#utilization" id="toc-utilization" class="nav-link" data-scroll-target="#utilization"><span class="header-section-number">5.2</span> Utilization</a>
+  <ul class="collapse">
+  <li><a href="#number-of-park-users" id="toc-number-of-park-users" class="nav-link" data-scroll-target="#number-of-park-users"><span class="header-section-number">5.2.1</span> number of park users</a></li>
+  <li><a href="#average-number-of-daily-park-users" id="toc-average-number-of-daily-park-users" class="nav-link" data-scroll-target="#average-number-of-daily-park-users"><span class="header-section-number">5.2.2</span> average number of daily park users</a></li>
+  <li><a href="#average-number-of-daily-park-users-by-time-period" id="toc-average-number-of-daily-park-users-by-time-period" class="nav-link" data-scroll-target="#average-number-of-daily-park-users-by-time-period"><span class="header-section-number">5.2.3</span> average number of daily park users by time period</a></li>
+  <li><a href="#rate-of-park-use-by-time-period" id="toc-rate-of-park-use-by-time-period" class="nav-link" data-scroll-target="#rate-of-park-use-by-time-period"><span class="header-section-number">5.2.4</span> rate of park use by time period</a></li>
+  <li><a href="#average-number-of-daily-park-users-by-age" id="toc-average-number-of-daily-park-users-by-age" class="nav-link" data-scroll-target="#average-number-of-daily-park-users-by-age"><span class="header-section-number">5.2.5</span> average number of daily park users by age</a></li>
+  <li><a href="#rate-of-park-use-by-age" id="toc-rate-of-park-use-by-age" class="nav-link" data-scroll-target="#rate-of-park-use-by-age"><span class="header-section-number">5.2.6</span> rate of park use by age</a></li>
+  </ul></li>
+  <li><a href="#occupancy" id="toc-occupancy" class="nav-link" data-scroll-target="#occupancy"><span class="header-section-number">5.3</span> Occupancy</a>
+  <ul class="collapse">
+  <li><a href="#occupancy-rate" id="toc-occupancy-rate" class="nav-link" data-scroll-target="#occupancy-rate"><span class="header-section-number">5.3.1</span> occupancy rate</a></li>
+  </ul></li>
+  <li><a href="#activities" id="toc-activities" class="nav-link" data-scroll-target="#activities"><span class="header-section-number">5.4</span> Activities</a>
+  <ul class="collapse">
+  <li><a href="#number-of-users-per-activity" id="toc-number-of-users-per-activity" class="nav-link" data-scroll-target="#number-of-users-per-activity"><span class="header-section-number">5.4.1</span> number of users per activity</a></li>
+  <li><a href="#rate-of-user-activity" id="toc-rate-of-user-activity" class="nav-link" data-scroll-target="#rate-of-user-activity"><span class="header-section-number">5.4.2</span> rate of user activity</a></li>
+  <li><a href="#rate-of-activity-observed" id="toc-rate-of-activity-observed" class="nav-link" data-scroll-target="#rate-of-activity-observed"><span class="header-section-number">5.4.3</span> rate of activity observed</a></li>
+  </ul></li>
+  <li><a href="#spatial-analysees" id="toc-spatial-analysees" class="nav-link" data-scroll-target="#spatial-analysees"><span class="header-section-number">5.5</span> Spatial analysees</a>
+  <ul class="collapse">
+  <li><a href="#ratio-of-use-to-half-mile-catchment-area" id="toc-ratio-of-use-to-half-mile-catchment-area" class="nav-link" data-scroll-target="#ratio-of-use-to-half-mile-catchment-area"><span class="header-section-number">5.5.1</span> ratio of use to half-mile catchment area</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#closure-and-next-steps" id="toc-closure-and-next-steps" class="nav-link" data-scroll-target="#closure-and-next-steps"><span class="header-section-number">6</span> Closure and Next Steps</a>
+  <ul class="collapse">
+  <li><a href="#redcap-maintanence" id="toc-redcap-maintanence" class="nav-link" data-scroll-target="#redcap-maintanence"><span class="header-section-number">6.1</span> REDCap maintanence</a>
+  <ul class="collapse">
+  <li><a href="#recommended-changes-to-future-surveys-instruments" id="toc-recommended-changes-to-future-surveys-instruments" class="nav-link" data-scroll-target="#recommended-changes-to-future-surveys-instruments"><span class="header-section-number">6.1.1</span> recommended changes to future surveys instruments</a></li>
+  </ul></li>
+  <li><a href="#data-management" id="toc-data-management" class="nav-link" data-scroll-target="#data-management"><span class="header-section-number">6.2</span> Data management</a></li>
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="README.md"><i class="bi bi-file-code"></i>Github (GFM)</a></li><li><a href="01_Parks_Analysis.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">HEAL Parks 2023 Analysis</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald Buie </p>
+          </div>
+  </div>
+    
+  
+    <div>
+    <div class="quarto-title-meta-heading">Modified</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date-modified">October 6, 2023</p>
+    </div>
+  </div>
+    
+  </div>
+  
+
+</header>
+
+<section id="front-matter" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Front Matter</h1>
+<p>This document outlines procedures, technical considerations, and analytic results for the 2023 analysis of data from the HEAL Parks Study. The primary purpose of this PDF is technical review by analyst and project managers to confirm the process and data quality.</p>
+<p>For general information about the project please review the <a href="https://github.com/PHSKC-APDE/HEAL_Parks_Analysis">git</a> or contact Seth Schromen-Wawrin.</p>
+<section id="major-inputs" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="major-inputs"><span class="header-section-number">1.1</span> Major inputs</h2>
+<p>Inputs to this script are contained at ./inputs/<em>.</em> and include</p>
+<ul>
+<li>Access to the <a href="https://redcap.iths.org/">ITHS REDCap</a> project: “Public Health - Seattle &amp; King County Park Observations”</li>
+<li>or data extracted from that project</li>
+<li>file of park meta data, including address, zip, city, neighborhood, official name, and REDCap name for each park</li>
+<li>(optional) file containing record ids to redact</li>
+</ul>
+</section>
+<section id="output-categories" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="output-categories"><span class="header-section-number">1.2</span> Output categories</h2>
+<ul>
+<li>data-metadata - tables of analyzable line item data from different stages of preparation leading up to analysis, generally in csv format</li>
+<li>tables - tabular outputs of analysis, generally in xlsx format</li>
+<li>charts - chart outputs of analysis, generally in pdf and/or png format</li>
+</ul>
+</section>
+<section id="this-is-a-quarto-generated-document" class="level2" data-number="1.3">
+<h2 data-number="1.3" class="anchored" data-anchor-id="this-is-a-quarto-generated-document"><span class="header-section-number">1.3</span> This is a quarto generated document</h2>
+<p>By rendering/knitting the qmd file, the analysis is re-executed, this document rebuilt, and new outputs are generated. To learn more about Quarto see <a href="https://quarto.org" class="uri">https://quarto.org</a>.</p>
+</section>
+</section>
+<section id="setup-environment" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Setup &amp; Environment</h1>
+<p>This script was last executed using R version 4.3.1 (2023-06-16 ucrt).</p>
+<section id="secrets-and-tokens" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="secrets-and-tokens"><span class="header-section-number">2.1</span> Secrets and tokens</h2>
+<p>In order to pull data directly from REDCap, API information must be provided. You should create a file called “secrets.txt” in a subdirectory “./local_only/” This file should include two lines of R code:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>api_token       <span class="ot">&lt;-</span> <span class="st">'yourapikeyhere'</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>api_url         <span class="ot">&lt;-</span> <span class="st">'https://redcap.iths.org/api/'</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Note, that the .gitignore for this project is configured to exclude your secrets.txt and anything else in the local_only direcotry by default, it will not upload to github, and you will not be able to see other users’ secrets.txt. They are only stored on your machine.</p>
+</section>
+</section>
+<section id="data-preperation" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Data Preperation</h1>
+<section id="extraction" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="extraction"><span class="header-section-number">3.1</span> Extraction</h2>
+<p>Data are extracted directly from REDCap via API.</p>
+</section>
+<section id="transformation" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="transformation"><span class="header-section-number">3.2</span> Transformation</h2>
+<p>Data types are assigned. And character dates configured to POSIX dates.</p>
+<p>POSIX dates are used to generate individual variables for the day, month, and a weekend indicator variable.</p>
+</section>
+<section id="cleaning" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="cleaning"><span class="header-section-number">3.3</span> Cleaning</h2>
+<table class="table">
+<colgroup>
+<col style="width: 56%">
+<col style="width: 43%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Description</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Drop pre-study data</td>
+<td>Study start date is 7/1/23 with the first park being Garfield Playfield. Observations prior to this date or the first observation of Garfield are dropped</td>
+</tr>
+<tr class="even">
+<td>Drop incomplete entries</td>
+<td>observations where the REDCap status is not “Complete”, that are missing a timestamp, or missing a park name are dropped</td>
+</tr>
+<tr class="odd">
+<td>Drop duplicates</td>
+<td>duplicate entries (exclusive of redcapID) are dropped. Note that where this creates incomplete days, this is corrected in later QA</td>
+</tr>
+<tr class="even">
+<td>Drop inacurate subareas</td>
+<td>Some parks were identified as having having sub area data input without having multiple sub areas (and so shouldn’t be processed as sub areas). The subarea entry for these parks is removed.</td>
+</tr>
+<tr class="odd">
+<td>Drop observations identified by human review</td>
+<td>Some observations were identified through review of base data by program managers. These are identified in the file “Records-to-Remove.xlsx”</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="create-table-of-activities-including-sub-areas" class="level2" data-number="3.4">
+<h2 data-number="3.4" class="anchored" data-anchor-id="create-table-of-activities-including-sub-areas"><span class="header-section-number">3.4</span> Create table of activities including sub areas</h2>
+<p>Park activities are extracted from other park data for more accurate analysis.</p>
+</section>
+<section id="collapse-sub-areas" class="level2" data-number="3.5">
+<h2 data-number="3.5" class="anchored" data-anchor-id="collapse-sub-areas"><span class="header-section-number">3.5</span> Collapse sub areas</h2>
+<p>For this analysis, we are not using sub areas. These can be collapsed into single areas. For each observation, sub areas will be collapsed using the following rules:</p>
+<ul>
+<li>numerical observations will be added together -categorical observations become affirmative/existing if any of the subareas are affirmative/existing -timestamp of the earliest observation in the set will be used</li>
+</ul>
+<p>Sub areas of the same target area will be assumed to be of the same observation period based on the following logic:</p>
+<p>-for a sequence of sub areas observed in the same 50 hours period apparently missing sub-areas will be ignored (assumption: not all sub areas are necessary)</p>
+<p>If non unique sub area labels are identified:</p>
+<ul>
+<li>check if the expected list of sub areas are in teh data set if too many, attempt to identify redundancies and remove these if too few, interpolate missing information</li>
+</ul>
+<p>In this step we also append changed record_ids to our activity table as “record_id_aggregated” and save the updated activity table.</p>
+</section>
+<section id="quality-checks" class="level2" data-number="3.6">
+<h2 data-number="3.6" class="anchored" data-anchor-id="quality-checks"><span class="header-section-number">3.6</span> Quality Checks</h2>
+<p>The QA process attempts to identify and correct errors. The process initially performs a series of checks on all park data and reports results. For each park that fails QA, various strategies are executed to attempt to cure that park’s data. The final results, including which strategies were executed, and the final QA status are saved in a csv file for review.</p>
+<section id="strategy-1-correct-missingness-where-observations-are-only-missing-but-correct-number-of-days" class="level3" data-number="3.6.1">
+<h3 data-number="3.6.1" class="anchored" data-anchor-id="strategy-1-correct-missingness-where-observations-are-only-missing-but-correct-number-of-days"><span class="header-section-number">3.6.1</span> strategy 1: correct missingness where observations are only missing but correct number of days</h3>
+<p>This strategy looks at the number of days of data observed, and, if only 3 days are observed, then checks to confirm that, for each target area, 8 or fewer observations are made. If both of these conditions are met, this strategy attempts to insert the missing observations as blank entries in the part of the day that appeaer to be missing them. It identifies part of day by looking at each data collection period and inserting observations into the underweighted period(s) until 8 exists for each target area.</p>
+<p>When executing this script, the user may choose to use all data, or only data that have passed QA. It is generally suggested to only use data that have passed QA.</p>
+</section>
+</section>
+<section id="parks-metadata" class="level2" data-number="3.7">
+<h2 data-number="3.7" class="anchored" data-anchor-id="parks-metadata"><span class="header-section-number">3.7</span> Parks metadata</h2>
+<p>Metadata are provided for each park by Seth. The formal name, address, city, zip, neighborhood, tract, equity score, image status, planned park change notes, and general notes for each park will be appended to the analysis table.</p>
+</section>
+<section id="assign-population-within-half-mile-radius" class="level2" data-number="3.8">
+<h2 data-number="3.8" class="anchored" data-anchor-id="assign-population-within-half-mile-radius"><span class="header-section-number">3.8</span> Assign population within half-mile radius</h2>
+<p>For each park we estimate the number of people within a half-mile. This is based on the generally accepted threshold of a <a href="https://10minutewalk.org/">10-minute walk</a> to a park as a metric goal.</p>
+<p>This relies on access to APDE population data and use of the RADS library and on park longitudes and latitudes provided in the meta data.</p>
+</section>
+<section id="study-tracker" class="level2" data-number="3.9">
+<h2 data-number="3.9" class="anchored" data-anchor-id="study-tracker"><span class="header-section-number">3.9</span> Study tracker</h2>
+<p>For the 2023 analysis we advised creating a study tracker. For each time a park is studied, a new entry is created. Each entry should includ the park name, the date the study staretd, and a brief description of the study. We generate and save a study tracker that covers 2022 and 2023 studies.</p>
+<p>In a later step we will use this table to append a study count to our parks</p>
+</section>
+</section>
+<section id="parameterizing-data-for-analysis" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Parameterizing Data For Analysis</h1>
+<section id="time-of-day" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="time-of-day"><span class="header-section-number">4.1</span> Time of day</h2>
+<p>For each observation we need to assign a time period to that observation. Because time stamps and the actual time of data collection may not align, the assignment of the time period requires some assumptions and may effect results.</p>
+<section id="assigning-time-periods-based-on-sequence" class="level3" data-number="4.1.1">
+<h3 data-number="4.1.1" class="anchored" data-anchor-id="assigning-time-periods-based-on-sequence"><span class="header-section-number">4.1.1</span> assigning time periods based on sequence</h3>
+<p>Our primary approach to assigning time periods relies on the assumption that timestamps are in order for each target area (e.g.&nbsp;the first observation of park A area 1 is always “morning1”, the second, “morning2” and so on.)</p>
+<p>In turn, with this approach, we assign the sequence of the day such that the first morning1 is day 1, the second is day2, and so on.</p>
+<p>We assume that there are the correct number of observation periods such that 1 can be assigned to each period, and 8 to each day.</p>
+<p>For each park, there should be 3 days of observation. We will detect this by extracting the date per park and putting observations in order of day “1” “2” “3”.</p>
+<p>Finally, we cross check each day and period assignment to confirm that:</p>
+<ul>
+<li>All all parks have the expected number of period observations (e.g.&nbsp;if a park has 4 target areas, it should have 12 morning1 observations).</li>
+<li>All observations assigned to a particular day-count (e.g.&nbsp;“1”) actually are on the same date (this assumption may need to be relaxed or data corrected before all data pass QA).</li>
+<li>That each day has the expected number of observations.</li>
+</ul>
+</section>
+</section>
+<section id="aggregation-of-periods-for-analysis" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="aggregation-of-periods-for-analysis"><span class="header-section-number">4.2</span> Aggregation of periods for analysis</h2>
+<p>For all analyses, we do not want to distinguish between the first and second of a period (e.g.&nbsp;morning1 and morning2). We aggregate these according to the following:</p>
+<table class="table">
+<thead>
+<tr class="header">
+<th>positive indicaters</th>
+<th>aggregate to</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>accessible</td>
+<td>Yes</td>
+</tr>
+<tr class="even">
+<td>usable</td>
+<td>Yes</td>
+</tr>
+<tr class="odd">
+<td>lit</td>
+<td>Yes</td>
+</tr>
+<tr class="even">
+<td>occupied</td>
+<td>Yes</td>
+</tr>
+<tr class="odd">
+<td>supervised</td>
+<td>Yes</td>
+</tr>
+<tr class="even">
+<td>organized</td>
+<td>Yes</td>
+</tr>
+<tr class="odd">
+<td>equipped</td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<table class="table">
+<thead>
+<tr class="header">
+<th>counts of</th>
+<th>are aggregated as</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>num_child_prim</td>
+<td>ceiling of mean</td>
+</tr>
+<tr class="even">
+<td>num_child_snd</td>
+<td>ceiling of mean</td>
+</tr>
+<tr class="odd">
+<td>num_child_spec</td>
+<td>ceiling of mean</td>
+</tr>
+<tr class="even">
+<td>num_teen_prim</td>
+<td>ceiling of mean</td>
+</tr>
+<tr class="odd">
+<td>num_teen_snd</td>
+<td>ceiling of mean</td>
+</tr>
+<tr class="even">
+<td>num_teen_spec</td>
+<td>ceiling of mean</td>
+</tr>
+<tr class="odd">
+<td>num_adult_prim</td>
+<td>ceiling of mean</td>
+</tr>
+<tr class="even">
+<td>num_adult_snd</td>
+<td>ceiling of mean</td>
+</tr>
+<tr class="odd">
+<td>num_adult_spec</td>
+<td>ceiling of mean</td>
+</tr>
+<tr class="even">
+<td>num_senior_prim</td>
+<td>ceiling of mean</td>
+</tr>
+<tr class="odd">
+<td>num_senior_snd</td>
+<td>ceiling of mean</td>
+</tr>
+<tr class="even">
+<td>num_senior_spec</td>
+<td>ceiling of mean</td>
+</tr>
+</tbody>
+</table>
+<p>Activities are independently captured in the activity table and not aggregated here. The non aggregated observations table may contain multiple activities separated by a “;” where they were grouped from sub-areas. It is recommended to use the activity table for analysis, and join other park observation data to it using the record_id and record_id_aggregated where necessary.</p>
+</section>
+<section id="integrate-metadata-and-analysis-sets" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="integrate-metadata-and-analysis-sets"><span class="header-section-number">4.3</span> Integrate metadata and analysis sets</h2>
+<p>We join our metadata and park observations for analysis and for use in other software such as excel.</p>
+</section>
+</section>
+<section id="results" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Results</h1>
+<p>Results are saved in multiple locations:</p>
+<ul>
+<li>an excel workbook that contains a separate page for each table of analysis results</li>
+<li>folders with charts and tables of results designed to be integrated into documents</li>
+<li>outputs of various steps of the metadata, QA, and final analysis ready sets</li>
+</ul>
+<section id="included-parks" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="included-parks"><span class="header-section-number">5.1</span> Included parks</h2>
+<div class="cell">
+<div class="cell-output-display">
+<table class="table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>Parks Included In Analysis</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">Park Name</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Annex Park</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Arbor Lake Park</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Bicentennial Park</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Cascade View Community Park</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Cecil Memorial Park</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Chelsea Park</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Crestview Park</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Crystal Springs Park</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Dick Thurnau Memorial Park</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Dotty Harper Park</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Duwamish Gardens</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Duwamish Hill Preserve</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Duwamish Park</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Fort Dent Park (North)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Fort Dent Park (South)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Garfield Playfield</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Hazel Valley Park</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Hazelnut Park</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Hilltop Park</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Jacob Ambaum Park</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Joseph Foster Memorial Park</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Lake Burien School Memorial Park</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Lakeview Park</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Linde Hill Park</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Manhattan Park</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Mathison Park</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Moshier Memorial Park</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">North Shorewood Park</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Puget Sound Park</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Riverton Park</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Salmon Creek</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Seahurst Park</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Skyway Park</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Southern Heights Park</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Town Square Park</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Tukwila Community Center</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Tukwila Park</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Tukwila Pond</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">White Center Heights Park</td>
+</tr>
+</tbody>
+</table>
+
+
+</div>
+</div>
+</section>
+<section id="utilization" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="utilization"><span class="header-section-number">5.2</span> Utilization</h2>
+<p>The following metrics rely on counts of people observed. The underlying data are of people observed within an observation period (e.g.&nbsp;“morning1”) and target area. It is possible that the same people may be observed across multiple blocks of time and multiple target areas.</p>
+<p>Because of this user counts are more accurately understood as “person time of use per target area” and represents a target area being used by a person within the observation period. This explanation accounts for people being counted multiple times by crossing target areas during the observation period.</p>
+<section id="number-of-park-users" class="level3" data-number="5.2.1">
+<h3 data-number="5.2.1" class="anchored" data-anchor-id="number-of-park-users"><span class="header-section-number">5.2.1</span> number of park users</h3>
+<p>The total number of users observed in the park across all observation periods.</p>
+<p>Notes:</p>
+<ul>
+<li>Due to the study design, user counts are subject to both over and under counting</li>
+<li>User counts are more accurately understood as “person time of use per target area”</li>
+</ul>
+</section>
+<section id="average-number-of-daily-park-users" class="level3" data-number="5.2.2">
+<h3 data-number="5.2.2" class="anchored" data-anchor-id="average-number-of-daily-park-users"><span class="header-section-number">5.2.2</span> average number of daily park users</h3>
+<p>The daily average number of users observed in the park.</p>
+</section>
+<section id="average-number-of-daily-park-users-by-time-period" class="level3" data-number="5.2.3">
+<h3 data-number="5.2.3" class="anchored" data-anchor-id="average-number-of-daily-park-users-by-time-period"><span class="header-section-number">5.2.3</span> average number of daily park users by time period</h3>
+<p>The daily average number of users within each time period.</p>
+<p>For each park:</p>
+<p><span class="math display">\[
+\text{(Average Park Users By Period)} = \frac{\sum_{d=1}^{3}{(\text{People}_p)_d}}{3}
+\]</span></p>
+<p>where <span class="math inline">\(_d\)</span> is the day of study and <span class="math inline">\((\text{People}_p)\)</span> are the sum of number of people observed in a time period of a given day.</p>
+<p>The people within a given time period and day is defined as the average (rounded up) of people observed in a time period of a given day and target area <span class="math inline">\(_t\)</span>, summed across across all target areas. <span class="math display">\[
+\text{People}_p = \sum_{t=1}^{n}{\left( \lceil\frac{\text{(people observed first half of period)}+\text{(people observed second half of period)}}{2}\rceil\right) _t}
+\]</span></p>
+<p>Notes:</p>
+<ul>
+<li>User counts are more accurately understood as “person time of use per target area”
+<ul>
+<li>“Person using target area during the observation”</li>
+</ul></li>
+<li>If taken strictly as “people using a park” then this may be an over or under count
+<ul>
+<li>If in the first morning observation 2 people are observed, and the second 3, this may be 3 unique people, or as many as 5, but we calculate this as 2.5 and round up to 3.<br>
+</li>
+<li>If two people walk across all target areas during an observation period, they would be counted each time. With 10 target areas, this would be 20 people observed.</li>
+</ul></li>
+</ul>
+</section>
+<section id="rate-of-park-use-by-time-period" class="level3" data-number="5.2.4">
+<h3 data-number="5.2.4" class="anchored" data-anchor-id="rate-of-park-use-by-time-period"><span class="header-section-number">5.2.4</span> rate of park use by time period</h3>
+<p>The proportion of the total users observed within each time period.</p>
+<p>For each park:</p>
+<p><span class="math display">\[
+\text{(Rate of Park Use By Period)} = \frac{\sum_{d=1}^{3}{(\text{People}_p)_d}}{\sum_{d=1}^{3}{\text{People}_d}}
+\]</span></p>
+<p>where <span class="math inline">\(_d\)</span> is the day of study and <span class="math inline">\((\text{People}_p)\)</span> are the sum of number of people observed in a time period of a given day.</p>
+<p>The people within a given time period and day is defined as the average (rounded up) of people observed in a time period of a given day and target area <span class="math inline">\(_t\)</span>, summed across across all target areas. <span class="math display">\[
+\text{People}_p = \sum_{t=1}^{n}{\left( \lceil\frac{\text{(people observed first half of period)}+\text{(people observed second half of period)}}{2}\rceil\right) _t}
+\]</span></p>
+<p>The total number of people in a day, <span class="math inline">\(\text{People}_d\)</span>, is defined as the sum of all <span class="math inline">\(\text{People}_p\)</span> within a day.</p>
+<p>Notes:</p>
+<ul>
+<li>This is accurately understood as the rate of park use during the period</li>
+<li>There is likely still some error from the under and overcounting of the underlying counts, but the more true that over and under counting is randomly distributed across all time periods, the less true this is.</li>
+<li>Rate is within-park (each park totals to 100%)</li>
+</ul>
+</section>
+<section id="average-number-of-daily-park-users-by-age" class="level3" data-number="5.2.5">
+<h3 data-number="5.2.5" class="anchored" data-anchor-id="average-number-of-daily-park-users-by-age"><span class="header-section-number">5.2.5</span> average number of daily park users by age</h3>
+<p>The daily average number of users observed in each age group.</p>
+<p>Computationally this measure is similar to the average users by time period above.</p>
+<p>Notes:</p>
+<ul>
+<li>User counts are more accurately understood as “person time of use per target area”</li>
+<li>If taken strictly as “people using a park” then this may be an over or under count
+<ul>
+<li>If in the first morning observation 2 people are observed, and the second 3, this may be 3 unique people, or as many as 5, but we calculate this as 2.5 and round up to 3.<br>
+</li>
+<li>If two people walk across all target areas during an observation period, they would be counted each time. With 10 target areas, this would be 20 people observed.</li>
+</ul></li>
+</ul>
+</section>
+<section id="rate-of-park-use-by-age" class="level3" data-number="5.2.6">
+<h3 data-number="5.2.6" class="anchored" data-anchor-id="rate-of-park-use-by-age"><span class="header-section-number">5.2.6</span> rate of park use by age</h3>
+<p>The proportion of the total users observed within each age group.</p>
+<p>Notes:</p>
+<ul>
+<li>This is accurately understood as the rate of park use by each age group</li>
+<li>There is likely still some error from the under and over counting of the underlying counts, but the more true that over and under counting is randomly distributed across all time periods, the less true this is.</li>
+<li>Rate is within-park (each park totals to 100%)</li>
+</ul>
+</section>
+</section>
+<section id="occupancy" class="level2" data-number="5.3">
+<h2 data-number="5.3" class="anchored" data-anchor-id="occupancy"><span class="header-section-number">5.3</span> Occupancy</h2>
+<section id="occupancy-rate" class="level3" data-number="5.3.1">
+<h3 data-number="5.3.1" class="anchored" data-anchor-id="occupancy-rate"><span class="header-section-number">5.3.1</span> occupancy rate</h3>
+<p>The percentage of observations where at least one user was observed in the park.</p>
+<p>For each park, the number of observation periods with any target area in occupied status is divided by the total number of observation periods (24)</p>
+<p>Notes:</p>
+</section>
+</section>
+<section id="activities" class="level2" data-number="5.4">
+<h2 data-number="5.4" class="anchored" data-anchor-id="activities"><span class="header-section-number">5.4</span> Activities</h2>
+<section id="number-of-users-per-activity" class="level3" data-number="5.4.1">
+<h3 data-number="5.4.1" class="anchored" data-anchor-id="number-of-users-per-activity"><span class="header-section-number">5.4.1</span> number of users per activity</h3>
+<p>The number of users observed doing the activity in the park.</p>
+<p>Notes:</p>
+<ul>
+<li>user counts are subject to over and under counting due to</li>
+</ul>
+</section>
+<section id="rate-of-user-activity" class="level3" data-number="5.4.2">
+<h3 data-number="5.4.2" class="anchored" data-anchor-id="rate-of-user-activity"><span class="header-section-number">5.4.2</span> rate of user activity</h3>
+<p>The percentage users observed doing the activity in the park.</p>
+<p>For each park, the number of users engaged in an activity is divided by the total number of users observed in the park throughout the study duration.</p>
+<p>Notes:</p>
+<ul>
+<li>All activities listed have at least 1 participant, but some may show 0 in the prepared tables due to being less than 0.01%</li>
+<li>The total rate of all user activities listed will equal 100%, the total amount of activity observed.</li>
+<li>This is calculated on the non aggregated population counts.</li>
+</ul>
+</section>
+<section id="rate-of-activity-observed" class="level3" data-number="5.4.3">
+<h3 data-number="5.4.3" class="anchored" data-anchor-id="rate-of-activity-observed"><span class="header-section-number">5.4.3</span> rate of activity observed</h3>
+<p>The percentage of observations where at least one user was observed doing the activity in the park.</p>
+<p>For each park, the total the number of periods the activity was observed is divided by 24, the total number of observations periods possible for any particular activity.</p>
+<p>Notes:</p>
+<ul>
+<li>Unlike many of the other measures provided, these rates are mostly independent of each other and do not have an additive meaning. This is because multiple activities may be observed in a single observation period. E..g “walking” may be observed in all 24 periods, and so have an observation rate of 100%, and “sitting” may be observed in 6 periods and so have a rate of 25%.</li>
+</ul>
+</section>
+</section>
+<section id="spatial-analysees" class="level2" data-number="5.5">
+<h2 data-number="5.5" class="anchored" data-anchor-id="spatial-analysees"><span class="header-section-number">5.5</span> Spatial analysees</h2>
+<section id="ratio-of-use-to-half-mile-catchment-area" class="level3" data-number="5.5.1">
+<h3 data-number="5.5.1" class="anchored" data-anchor-id="ratio-of-use-to-half-mile-catchment-area"><span class="header-section-number">5.5.1</span> ratio of use to half-mile catchment area</h3>
+<p>The ratio of how many users were observed per day on average relative to how many people live within 0.5 miles of the park.</p>
+<p>This is provided per 1,000 residents to improve readability.</p>
+<p>Notes:</p>
+<ul>
+<li>The ratios are calculated on non-rounded data, and then rounded. The average number of users and populations provided in the formatted word document are rounded. This causes a rounding error where you wouldn’t get the exact ratio if you were to divide these users and populations. For accurate results use the numbers provided in the pivot ready tables.</li>
+</ul>
+</section>
+</section>
+</section>
+<section id="closure-and-next-steps" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Closure and Next Steps</h1>
+<section id="redcap-maintanence" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="redcap-maintanence"><span class="header-section-number">6.1</span> REDCap maintanence</h2>
+<p>Project has been in “development” status throughout the study period. It has now been moved into “analysis/cleanup”. It is recommended to keep it in this stage until finished with any future studies and analyses in this line of work, e.g.&nbsp;if planing to use the data from this study in the future, it is good to keep this REDCap project in analysis mode for review. There is an additional “completed” status, which should generally only be used when completely finished with the body of work. This status makes the project largely inaccessible. Notably, changing the project to “complete” status would also break this script (or require it to be fed a different data source rather than pulling from the REDCap API.)</p>
+<p>As currently envisioned, these data are part of a longitudinal study, and so this and future REDCap projects would ideally remain accessible.</p>
+I recommend conducting future data collection efforts in their own REDCap projects, naming them similarly, such as “Public Health - Seattle &amp; King County Park Observations:
+<title of="" study="">
+&lt;p&gt;”&lt;/p&gt;
+&lt;p&gt;The project used for this analysis has been renamed to: Public Health - Seattle &amp; King County Park Observations: 2023 Annual Study&lt;/p&gt;
+&lt;section id="recommended-changes-to-future-surveys-instruments" class="level3" data-number="6.1.1"&gt;
+&lt;h3 data-number="6.1.1"&gt;&lt;span class="header-section-number"&gt;6.1.1&lt;/span&gt; recommended changes to future surveys instruments&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;variable for capturing other primary activities is inconsistent to secondary and special ones&lt;/li&gt;
+&lt;li&gt;modify instrument to have observers indicate the time of their data collection&lt;/li&gt;
+&lt;li&gt;add a study name to data (hidden value)&lt;/li&gt;
+&lt;li&gt;include additional testing and possibly consultation with ITHS REDCap staff for issues with data upload from cell phones. This cause problems for observers. It is unclear if this is a problem with the cell phone application or due to the study being executed with the project in “development” status.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+&lt;section id="data-management" class="level2" data-number="6.2"&gt;
+&lt;h2 data-number="6.2"&gt;&lt;span class="header-section-number"&gt;6.2&lt;/span&gt; Data management&lt;/h2&gt;
+&lt;p&gt;Files in the provided data-metadata directory should be retained. These include QA information, updated metadata, and observational data at different stages of data preperation.&lt;/p&gt;
+&lt;p&gt;Most critical is the maintenance of the version of the data used for the above analysis. Over the years, these would be the ones expected for use in further analytic work and for comparing year-over-year results.&lt;/p&gt;
+&lt;p&gt;The analysis-ready files include:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;SOPARCAnalysisSet.csv (fully cleaned park observation)&lt;/li&gt;
+&lt;li&gt;SOPARCAnalysisSetAggregatedPeriods.csv (analysis set with observations aggregated by period, the level of analysis most commonly used)&lt;/li&gt;
+&lt;li&gt;SOPARCActivities.csv &amp; SOPARCActivitiesExpanded.csv (all activity data at the individual record level. The expanded version includes some park information already attached for human readability)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/section&gt;
+&lt;/section&gt;
+
+&lt;/main&gt;
+&lt;!-- /main column --&gt;
+&lt;script id = "quarto-html-after-body" type="application/javascript"&gt;
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) =&gt; {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () =&gt; {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) =&gt; {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i&lt;noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) =&gt; {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) =&gt; {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) =&gt; {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length &gt; 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length &gt; 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null &amp;&amp; height !== null &amp;&amp; parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () =&gt; {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) =&gt; {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) =&gt; {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) =&gt; {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i&lt;bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+&lt;/script&gt;
+&lt;/div&gt; &lt;!-- /content --&gt;
+
+&lt;/body&gt;
+
+&lt;/html&gt;</title></section></section></main></div></body></html>
