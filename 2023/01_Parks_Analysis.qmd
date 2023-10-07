@@ -10,6 +10,7 @@ format:
     number-sections: true
     fig-height: 12
     fig-width: 16
+    prefer-html: true
   pdf:
     toc: true
     number-sections: true
@@ -92,6 +93,10 @@ if(!"spatagg" %in% installed.packages()) {
 if(!"kcparcelpop" %in% installed.packages()) {
   remotes::install_github('https://github.com/PHSKC-APDE/kcparcelpop/')
 }
+if(!"webshot2" %in% installed.packages()) {
+  install.packages("webshot2")
+}
+
 
 # load and install packages using pacman. 
 # Pacman will install and load missing packages.
