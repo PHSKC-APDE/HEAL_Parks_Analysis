@@ -605,7 +605,7 @@ Notes:
 Project has been in “development” status throughout the study period. It
 has now been moved into “analysis/cleanup”. It is recommended to keep it
 in this stage until finished with any future studies and analyses in
-this line of work, e.g. if planing to use the data from this study in
+this line of work, e.g. if planing to use the data from this study in
 the future, it is good to keep this REDCap project in analysis mode for
 review. There is an additional “completed” status, which should
 generally only be used when completely finished with the body of work.
@@ -620,6 +620,7 @@ and so this and future REDCap projects would ideally remain accessible.
 I recommend conducting future data collection efforts in their own
 REDCap projects, naming them similarly, such as “Public Health - Seattle
 & King County Park Observations:
+
 <title of study>
 
 ”
