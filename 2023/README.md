@@ -96,6 +96,8 @@ Ronald Buie
       instruments](#recommended-changes-to-future-surveys-instruments)
   - [<span class="toc-section-number">6.2</span> Data
     management](#data-management)
+  - [<span class="toc-section-number">6.3</span>
+    Documentation](#documentation)
 
 # Front Matter
 
@@ -130,7 +132,7 @@ Inputs to this script are contained at ./inputs/*.* and include
 
 By rendering/knitting the qmd file, the analysis is re-executed, this
 document rebuilt, and new outputs are generated. To learn more about
-Quarto see <https://quarto.org>.
+Quarto see \[https://quarto.org\].
 
 # Setup & Environment
 
@@ -439,7 +441,9 @@ number of people observed in a time period of a given day.
 
 The people within a given time period and day is defined as the average
 (rounded up) of people observed in a time period of a given day and
-target area $_t$, summed across across all target areas. $$
+target area $_t$, summed across across all target areas.
+
+$$
 \text{People}_p = \sum_{t=1}^{n}{\left( \lceil\frac{\text{(people observed first half of period)}+\text{(people observed second half of period)}}{2}\rceil\right) _t}
 $$
 
@@ -452,7 +456,7 @@ Notes:
   under count
   - If in the first morning observation 2 people are observed, and the
     second 3, this may be 3 unique people, or as many as 5, but we
-    calculate this as 2.5 and round up to 3.  
+    calculate this as 2.5 and round up to 3.
   - If two people walk across all target areas during an observation
     period, they would be counted each time. With 10 target areas, this
     would be 20 people observed.
@@ -504,7 +508,7 @@ Notes:
   under count
   - If in the first morning observation 2 people are observed, and the
     second 3, this may be 3 unique people, or as many as 5, but we
-    calculate this as 2.5 and round up to 3.  
+    calculate this as 2.5 and round up to 3.
   - If two people walk across all target areas during an observation
     period, they would be counted each time. With 10 target areas, this
     would be 20 people observed.
@@ -659,3 +663,12 @@ The analysis-ready files include:
 - SOPARCActivities.csv & SOPARCActivitiesExpanded.csv (all activity data
   at the individual record level. The expanded version includes some
   park information already attached for human readability)
+
+## Documentation
+
+- Latex math chunks do not render correctly when the README.me is viewed
+  on github
+- Latex in-line math does not render at all when the README.me is viewed
+  on github
+- Some package/visualization is preventing a non-html compilation of
+  github markdown
