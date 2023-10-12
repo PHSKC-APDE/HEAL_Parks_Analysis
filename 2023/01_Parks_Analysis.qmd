@@ -1986,17 +1986,37 @@ The number of users observed doing the activity in the park.
 ```{r users doing an activity}
 #| output: true
 
-#construct an activity table from the non agrgeagted activity list to align record_ids
-DT <- merge(SOPARCActivities, SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full, tar_area, dayNumberBasedOnSequence, period, datePOSIX, day, month, weekend)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
-#merge(SOPARCActivities, SOPARCtoAggregate[,.("record_id" = as.numeric(record_id), park_name_full)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
+# #construct an activity table from the non aggregated activity list to align record_ids
+# DT <- merge(SOPARCActivities, SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full, tar_area, dayNumberBasedOnSequence, period, datePOSIX, day, month, weekend)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
+# #merge(SOPARCActivities, SOPARCtoAggregate[,.("record_id" = as.numeric(record_id), park_name_full)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
+# 
+# # repeat aggregation steps for people counts
+# DT <- DT[, .(children = ceiling(mean(children, na.rm = T)), 
+#              teen = ceiling(mean(teen, na.rm = T)), 
+#              adult = ceiling(mean(adult, na.rm = T)), 
+#              senior = ceiling(mean(senior, na.rm = T))), by = .(park_name_full, dayNumberBasedOnSequence,tar_area,  period, activity )]
+# 
+# DT <- DT[,.("Users" = sum(children, teen, adult, senior)) , by = .("Park Name" = park_name_full, "Activity" = activity)]
 
+#construct an activity table from the non agrgeagted activity list to align record_ids
+DT <- merge(SOPARCActivities, SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full, tar_area, sub_area, dayNumberBasedOnSequence, period, periodBasedOnSequence,datePOSIX, day, month, weekend)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
+#merge(SOPARCActivities, SOPARCtoAggregate[,.("record_id" = as.numeric(record_id), park_name_full)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
 # repeat aggregation steps for people counts
+# 
+#create target area level aggregation by adding together observations of poeple doing the same activity at the same sub-period in the same target area but different sub areas
+DT <- DT[, .(children = sum(children, na.rm = T), 
+             teen = sum(teen, na.rm = T), 
+             adult = sum(adult, na.rm = T), 
+             senior = sum(senior, na.rm = T)), by = .(park_name_full, dayNumberBasedOnSequence, tar_area, period, periodBasedOnSequence,activity )]
+#aggregate first and second half of each period such that people doing the same activity in the same target area are averaged rounding up
 DT <- DT[, .(children = ceiling(mean(children, na.rm = T)), 
              teen = ceiling(mean(teen, na.rm = T)), 
              adult = ceiling(mean(adult, na.rm = T)), 
-             senior = ceiling(mean(senior, na.rm = T))), by = .(park_name_full, dayNumberBasedOnSequence,tar_area,  period, activity )]
+             senior = ceiling(mean(senior, na.rm = T))), by = .(park_name_full, dayNumberBasedOnSequence, tar_area, period, activity )]
 
 DT <- DT[,.("Users" = sum(children, teen, adult, senior)) , by = .("Park Name" = park_name_full, "Activity" = activity)]
+
+DT <- DT[order(`Park Name`, Activity),]
 
 
 WB$add_worksheet("Users per Activity")
@@ -2071,16 +2091,16 @@ total number of users observed in the park throughout the study duration.
 #| output: true
 
 #construct an activity table from the non agrgeagted activity list to align record_ids
-DT <- merge(SOPARCActivities, SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full, tar_area, dayNumberBasedOnSequence, period, periodBasedOnSequence,datePOSIX, day, month, weekend)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
+DT <- merge(SOPARCActivities, SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full, tar_area, sub_area, dayNumberBasedOnSequence, period, periodBasedOnSequence,datePOSIX, day, month, weekend)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
 #merge(SOPARCActivities, SOPARCtoAggregate[,.("record_id" = as.numeric(record_id), park_name_full)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
 # repeat aggregation steps for people counts
 # 
-#add together observations of poeple doing the same activity at the same time in the same target area but different sub areas
+#create target area level aggregation by adding together observations of poeple doing the same activity at the same sub-period in the same target area but different sub areas
 DT <- DT[, .(children = sum(children, na.rm = T), 
              teen = sum(teen, na.rm = T), 
              adult = sum(adult, na.rm = T), 
-             senior = sum(senior, na.rm = T)), by = .(park_name_full, record_id_aggregated,dayNumberBasedOnSequence, tar_area,  periodBasedOnSequence, period,activity )]
-#aggregate first and second half of 
+             senior = sum(senior, na.rm = T)), by = .(park_name_full, dayNumberBasedOnSequence, tar_area, period, periodBasedOnSequence,activity )]
+#aggregate first and second half of each period such that people doing the same activity in the same target area are averaged rounding up
 DT <- DT[, .(children = ceiling(mean(children, na.rm = T)), 
              teen = ceiling(mean(teen, na.rm = T)), 
              adult = ceiling(mean(adult, na.rm = T)), 
@@ -2285,7 +2305,7 @@ if(file.exists(here("./2023/outputs/tables/ratio_use_catch/"))) {
   unlink(here("./2023/outputs/tables/ratio_use_catch/"), recursive = T)
 }
 dir.create(here("./2023/outputs/tables/ratio_use_catch"), recursive = T)
-
+  write.csv(DT, here("2023/outputs/tables/ratio_use_catch/ratio_use_catch.csv"), row.names = FALSE)
 
   # KBObject <- kbl(DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)],
   #     caption = "Rate of User Activy",
@@ -2411,4 +2431,3 @@ The analysis-ready files include:
 -   SOPARCActivities.csv & SOPARCActivitiesExpanded.csv (all activity data at
     the individual record level. The expanded version includes some park
     information already attached for human readability)
-
