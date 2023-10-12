@@ -2393,11 +2393,7 @@ this and future REDCap projects would ideally remain accessible.
 
 I recommend conducting future data collection efforts in their own REDCap
 projects, naming them similarly, such as "Public Health - Seattle & King County
-Park Observations:
-
-<title of study>
-
-"
+Park Observations: title_of_study"
 
 The project used for this analysis has been renamed to: Public Health - Seattle
 & King County Park Observations: 2023 Annual Study
