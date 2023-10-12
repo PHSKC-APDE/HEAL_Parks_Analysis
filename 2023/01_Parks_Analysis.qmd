@@ -1579,7 +1579,9 @@ people observed in a time period of a given day.
 
 The people within a given time period and day is defined as the average (rounded
 up) of people observed in a time period of a given day and target area $_t$,
-summed across across all target areas. $$
+summed across across all target areas.
+
+$$
 \text{People}_p = \sum_{t=1}^{n}{\left( \lceil\frac{\text{(people observed first half of period)}+\text{(people observed second half of period)}}{2}\rceil\right) _t}
 $$
 
