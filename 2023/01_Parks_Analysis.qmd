@@ -83,7 +83,7 @@ This script was last executed using `r version$version.string`.
 SECRETS_LOCALE <- "./2023/local_only/secrets.txt" #REDCap project API access information goes here
 DATA_LOCALE <- "./2023/local_only/data.csv" #use this if REDCap is not accessable
 
-REBUILDACTIVITYTABLE <- FALSE
+REBUILDACTIVITYTABLE <- TRUE
 RECALCULATEPOPULATIONS <- FALSE
 
 SUPPRESS_TABLES <- TRUE #do not print tables in report. 
@@ -358,37 +358,71 @@ Park activities are extracted from other park data for more accurate analysis.
 ```{r create seperate activity table}
 
 if( !(file.exists(here("2023/local_only/SOPARCActivities.csv"))) | REBUILDACTIVITYTABLE){
-SOPARCActivities <- data.table("record_id" = SOPARCObservations[prim_act_name != "",]$record_id, 
-                               "record_id_aggregated" = SOPARCObservations[prim_act_name != "",]$record_id, 
-                               "activity" = "", 
-                               "children" = 0, 
-                               "teen" = 0, 
-                               "adult" = 0, 
-                               "senior" = 0)
-for(id in SOPARCActivities$record_id) {
+# SOPARCActivities <- data.table("record_id" = SOPARCObservations[prim_act_name != "",]$record_id, 
+#                                "record_id_aggregated" = SOPARCObservations[prim_act_name != "",]$record_id, 
+#                                "activity" = "", 
+#                                "children" = 0, 
+#                                "teen" = 0, 
+#                                "adult" = 0, 
+#                                "senior" = 0)
+#                                
+#                                
+#                                
 
-    SOPARCActivities[record_id == id, `:=`(activity = ifelse(SOPARCObservations[record_id == id, ]$prim_act_name == "Other", SOPARCObservations[record_id == id, ]$prim_act_other, SOPARCObservations[record_id == id, ]$prim_act_name),
-                                           children = SOPARCObservations[record_id == id, ]$num_child_prim, 
-                                           teen = SOPARCObservations[record_id == id, ]$num_teen_prim, 
-                                           adult = SOPARCObservations[record_id == id, ]$num_adult_prim, 
-                                           senior = SOPARCObservations[record_id == id, ]$num_senior_prim)] 
-  if(SOPARCObservations[record_id == id,]$yesno_snd == "Yes") {
-    SOPARCActivities[record_id == id, `:=`(activity = ifelse(SOPARCObservations[record_id == id, ]$snd_act_name == "Other", SOPARCObservations[record_id == id, ]$other_act_snd, SOPARCObservations[record_id == id, ]$snd_act_name),
-                                           children = SOPARCObservations[record_id == id, ]$num_child_snd, 
-                                           teen = SOPARCObservations[record_id == id, ]$num_teen_snd, 
-                                           adult = SOPARCObservations[record_id == id, ]$num_adult_snd, 
-                                           senior = SOPARCObservations[record_id == id, ]$num_senior_snd)] 
+SOPARCActivities <- data.table()
+
+  for(id in SOPARCObservations[prim_act_name != "",]$record_id) {
+
+      # SOPARCActivities[record_id == id, `:=`(activity = ifelse(SOPARCObservations[record_id == id, ]$prim_act_name == "Other", SOPARCObservations[record_id == id, ]$prim_act_other, SOPARCObservations[record_id == id, ]$prim_act_name),
+      #                                        children = SOPARCObservations[record_id == id, ]$num_child_prim, 
+      #                                        teen = SOPARCObservations[record_id == id, ]$num_teen_prim, 
+      #                                        adult = SOPARCObservations[record_id == id, ]$num_adult_prim, 
+      #                                        senior = SOPARCObservations[record_id == id, ]$num_senior_prim)] 
+    
+    DT <- SOPARCObservations[record_id == id, .(record_id = id,
+                                                record_id_aggregated = id,
+                                          activity = ifelse(prim_act_name == "Other", prim_act_other, prim_act_name),
+                                          children = num_child_prim, 
+                                          teen = num_teen_prim, 
+                                          adult = num_adult_prim, 
+                                          senior = num_senior_prim)]
+    
+    SOPARCActivities <- rbindlist(list(SOPARCActivities, DT))
+    
+    if(SOPARCObservations[record_id == id,]$yesno_snd == "Yes") {
+      # SOPARCActivities[record_id == id, `:=`(activity = ifelse(SOPARCObservations[record_id == id, ]$snd_act_name == "Other", SOPARCObservations[record_id == id, ]$other_act_snd, SOPARCObservations[record_id == id, ]$snd_act_name),
+      #                                        children = SOPARCObservations[record_id == id, ]$num_child_snd, 
+      #                                        teen = SOPARCObservations[record_id == id, ]$num_teen_snd, 
+      #                                        adult = SOPARCObservations[record_id == id, ]$num_adult_snd, 
+      #                                        senior = SOPARCObservations[record_id == id, ]$num_senior_snd)] 
+      
+      DT <- SOPARCObservations[record_id == id, .(record_id = id,
+                                                  record_id_aggregated = id,
+                                      activity = ifelse(snd_act_name == "Other", other_act_snd, snd_act_name),
+                                      children = num_child_snd, 
+                                      teen = num_teen_snd, 
+                                      adult = num_adult_snd, 
+                                      senior = num_senior_snd)]
+      SOPARCActivities <- rbindlist(list(SOPARCActivities, DT))
+    }
+    if(SOPARCObservations[record_id == id,]$yesno_spec == "Yes") {
+      # SOPARCActivities[record_id == id, `:=`(activity = ifelse(SOPARCObservations[record_id == id, ]$spec_act_name == "Other", SOPARCObservations[record_id == id, ]$other_act_spec, SOPARCObservations[record_id == id, ]$spec_act_name),
+      #                                        children = SOPARCObservations[record_id == id, ]$num_child_spec, 
+      #                                        teen = SOPARCObservations[record_id == id, ]$num_teen_spec, 
+      #                                        adult = SOPARCObservations[record_id == id, ]$num_adult_spec, 
+      #                                        senior = SOPARCObservations[record_id == id, ]$num_senior_spec)] 
+      DT <- SOPARCObservations[record_id == id, .(record_id = id,
+                                                  record_id_aggregated = id,
+                                activity = ifelse(spec_act_name == "Other", other_act_spec, spec_act_name),
+                                children = num_child_spec, 
+                                teen = num_teen_spec, 
+                                adult = num_adult_spec, 
+                                senior = num_senior_spec)]
+      SOPARCActivities <- rbindlist(list(SOPARCActivities, DT))
+    }
   }
-  if(SOPARCObservations[record_id == id,]$yesno_spec == "Yes") {
-    SOPARCActivities[record_id == id, `:=`(activity = ifelse(SOPARCObservations[record_id == id, ]$spec_act_name == "Other", SOPARCObservations[record_id == id, ]$other_act_spec, SOPARCObservations[record_id == id, ]$spec_act_name),
-                                           children = SOPARCObservations[record_id == id, ]$num_child_spec, 
-                                           teen = SOPARCObservations[record_id == id, ]$num_teen_spec, 
-                                           adult = SOPARCObservations[record_id == id, ]$num_adult_spec, 
-                                           senior = SOPARCObservations[record_id == id, ]$num_senior_spec)] 
-  }
-}
-write.csv(SOPARCActivities, here("2023/local_only/SOPARCActivities.csv"), row.names = FALSE)
-write.csv(SOPARCActivities, here("2023/outputs/data-metadata/SOPARCActivities.csv"), row.names = FALSE)
+  write.csv(SOPARCActivities, here("2023/local_only/SOPARCActivities.csv"), row.names = FALSE)
+  write.csv(SOPARCActivities, here("2023/outputs/data-metadata/SOPARCActivities.csv"), row.names = FALSE)
 } else {
   SOPARCActivities <-  fread(here("2023/local_only/SOPARCActivities.csv"))
 }
@@ -1161,9 +1195,6 @@ SOPARCAggregated <- SOPARCtoAggregate[,
 
 
 
-#add columns for each activity
-
-
 
 ```
 
@@ -1292,6 +1323,7 @@ The total number of users observed in the park across all observation periods.
 #       caption =  "Total Number of Attendees",
 #     booktabs = T) %>% kable_styling(latex_options = "striped")
 DT <- SOPARCAggregated[order(park_name_full),.("Users" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name_full)]
+
 
 
 WB$add_worksheet("User Counts")
@@ -2082,7 +2114,12 @@ for(park in unique(SOPARCtoAggregate$park_name_full)) {
 
 Notes:
 
--   user counts are subject to over and under counting due to
+-   user counts are subject to over and under counting due to how observations
+    were conducted and aggregated
+-   If an individual is observed doing a different activity in the second half
+    of a quarter than the first half, these will be counted as distincti
+    activities, and so not averaged. This can results in slightly higher counts
+    of people engaged in actities than the average user counts.
 
 ### rate of user activity
 
@@ -2440,3 +2477,16 @@ The analysis-ready files include:
     github
 -   Some package/visualization is preventing a non-html compilation of github
     markdown
+
+## Error identification and QA Work
+
+10/18 Seth identified that Chelsea Park has dramatically different numbers of
+users for the average users in activity compared to the average daily users. Why
+is this?
+
+This is due to two things. Primarily, there was an error in the code to extract
+the activity counts which resulted in some rows being dropped. This has been
+corrected. Second is an expected behavior. If people are performing a different
+activity in the second half of a period than the first, then those will be
+counted distinctly, instead of averaged together.
+

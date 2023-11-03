@@ -98,6 +98,8 @@ Ronald Buie
     management](#data-management)
   - [<span class="toc-section-number">6.3</span>
     Documentation](#documentation)
+  - [<span class="toc-section-number">6.4</span> Error identification
+    and QA Work](#error-identification-and-qa-work)
 
 # Front Matter
 
@@ -550,7 +552,13 @@ The number of users observed doing the activity in the park.
 
 Notes:
 
-- user counts are subject to over and under counting due to
+- user counts are subject to over and under counting due to how
+  observations were conducted and aggregated
+- If an individual is observed doing a different activity in the second
+  half of a quarter than the first half, these will be counted as
+  distincti activities, and so not averaged. This can results in
+  slightly higher counts of people engaged in actities than the average
+  user counts.
 
 ### rate of user activity
 
@@ -670,3 +678,16 @@ The analysis-ready files include:
   on github
 - Some package/visualization is preventing a non-html compilation of
   github markdown
+
+## Error identification and QA Work
+
+10/18 Seth identified that Chelsea Park has dramatically different
+numbers of users for the average users in activity compared to the
+average daily users. Why is this?
+
+This is due to two things. Primarily, there was an error in the code to
+extract the activity counts which resulted in some rows being dropped.
+This has been corrected. Second is an expected behavior. If people are
+performing a different activity in the second half of a period than the
+first, then those will be counted distinctly, instead of averaged
+together.
