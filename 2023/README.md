@@ -138,7 +138,7 @@ Quarto see \[https://quarto.org\].
 
 # Setup & Environment
 
-This script was last executed using R version 4.3.1 (2023-06-16 ucrt).
+This script was last executed using R version 4.3.2 (2023-10-31 ucrt).
 
 ## Secrets and tokens
 
