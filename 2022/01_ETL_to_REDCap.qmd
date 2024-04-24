@@ -35,4 +35,38 @@ if(!dir.exists(here("./2022/inputs"))) {
 }
 ```
 
-#
+# Load available 2022 data
+
+timestamps are not uniform across files. currently ignoring these to work on aligning other data.
+
+```{r}
+library(readxl)
+library(data.table)
+for(file in dir(here("./2022/inputs"), include.dirs = T, full.names = T)) {
+  message(paste("processing", file))
+  for(sheet in excel_sheets(file)) {
+    if(endsWith(sheet, "2022")){
+
+      message(paste("adding sheet:", sheet))
+      OldSheet <- as.data.table(read_xlsx(file, sheet = sheet))
+      OldSheet[,"Start Time":= NULL]
+      if(exists("OldDT")) {
+        #check name matches before merging
+        if(any(!(names(OldSheet) %in% names(OldDT)))){
+          warning("missmatch names found attempting patch based on column order: \n")
+          message(paste("the following columns will be renamed",list(names(OldSheet)[!(names(OldSheet) %in% names(OldDT))]),"\n"))
+          message(paste("the new names will be",list(names(OldDT)[!(names(OldSheet) %in% names(OldDT))]), "\n"))
+          names(OldSheet)[!(names(OldSheet) %in% names(OldDT))] <- names(OldDT)[!(names(OldSheet) %in% names(OldDT))]
+        }
+        OldDT <- rbind(OldDT, OldSheet)
+      } else {
+        OldDT <- OldSheet
+      }
+    } else {
+            message(paste("skipping sheet:", sheet))
+    }
+  }
+  
+
+}
+```
