@@ -53,7 +53,8 @@ secrets.txt
 .Rproj.user
 */local_only/*
 
-
+# data inputs
+*/inputs/*
 
 # final deliverables
 */outputs/*
