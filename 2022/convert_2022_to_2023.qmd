@@ -69,4 +69,33 @@ for(file in dir(here("./2022/inputs"), include.dirs = T, full.names = T)) {
   
 
 }
+
+remove(OldSheet)
+remove(file)
+remove(sheet)
+```
+
+# Create 2022 SOPARCActivities.csv
+
+```{r process SOPARCActivities}
+
+newActivitiesCols <- c("record_id",	"record_id_aggregated",	"activity",	"children",	"teen",	"adult",	"senior")
+
+```
+
+# Create 2022 SOPARCActivitiesExpanded.csv
+
+```{r process SOPARCActivitiesExpanded}
+c("record_id_aggregated",	"record_id", "activity",	"children",	"teen",	"adult",	"senior",	"park_name_full",	"period",	"target_area",	"datePOSIX")
+```
+
+# Create 2022 SOPARCAnalaysisSet
+
+```{r}
+c("park_name_full",	"park_name",	"record_id",	"redcap_survey_identifier",	"park_scan_data_collection_timestamp",	"obs_initial",	"start_time",	"tar_area",	"sub_area",	"accessible",	"usable",	"lit",	"occupied",	"supervised",	"organized",	"equipped",	"num_child_prim",	"num_child_snd",	"num_child_spec",	"num_teen_prim",	"num_teen_snd",	"num_teen_spec",	"num_adult_prim",	"num_adult_snd",	"num_adult_spec",	"num_senior_prim",	"num_senior_snd",	"num_senior_spec",	"prim_act_name",	"prim_act_other",	"yesno_snd",	"snd_act_name",	"other_act_snd",	"yesno_spec",	"spec_act_name",	"other_act_spec",	"comments",	"park_scan_data_collection_complete",	"timestampPOSIX",	"datePOSIX",	"day",	"month",	"weekend",	"periodBasedOnSequence",	"dayNumberBasedOnSequence",	"period",	"Park", "Address",	"City",	"Zip",	"Neighborhood",	"Images",	"Tract",	"Latitude",	"Longitude",	"Equity Score Priority", 	"Planned park changes?",	"Notes",	"censusYear",	"populationHalfMile",	"studyStartDate",	"studyDescription",	"study_count")
+```
+# Create 2022 SOPARCAnalysisSetAggregatedPeriods
+
+```{r}
+c("park_name_full",	"park_name",	"tar_area",	"dayNumberBasedOnSequence",	"period",	"datePOSIX",	"day",	"month",	"weekend",	"accessible",	"usable",	"lit",	"occupied",	"supervised",	"organized",	"equipped",	"num_child_prim",	"num_child_snd",	"num_child_spec",	"num_teen_prim",	"num_teen_snd",	"num_teen_spec",	"num_adult_prim",	"num_adult_snd",	"num_adult_spec",	"num_senior_prim",	"num_senior_snd",	"num_senior_spec",	"Park Address",	"City",	"Zip",	"Neighborhood",	"Images",	"Tract",	"Latitude",	"Longitude",	"Equity Score Priority", "Planned park changes?",	"Notes",	"censusYear",	"populationHalfMile",	"studyStartDate",	"studyDescription",	"study_count")
 ```
