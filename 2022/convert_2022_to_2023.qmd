@@ -49,7 +49,8 @@ for(file in dir(here("./2022/inputs"), include.dirs = T, full.names = T)) {
 
       message(paste("adding sheet:", sheet))
       OldSheet <- as.data.table(read_xlsx(file, sheet = sheet))
-      OldSheet[,"Start Time":= NULL]
+    #  OldSheet$`Start Time` <- NA
+      OldSheet[,"Start Time" := NULL]
       if(exists("OldDT")) {
         #check name matches before merging
         if(any(!(names(OldSheet) %in% names(OldDT)))){
@@ -70,9 +71,34 @@ for(file in dir(here("./2022/inputs"), include.dirs = T, full.names = T)) {
 
 }
 
+
+
 remove(OldSheet)
 remove(file)
 remove(sheet)
+```
+
+```{r cleaning varibales data}
+# removing (too) empty observations
+OldDT <- OldDT[!is.na(`Target #`),]
+
+
+# many park names need to be corrected and cleaned
+OldDT[Park == "Brighten Playfield ​",]$Park <- "Brighton Playfield"
+OldDT[Park == "Cascade View Community Park ​" | Park == "Cascade View",]$Park <- "Cascade View Community Park"
+OldDT[Park == "Marra Desimone Park ​",]$Park <- "Marra Desimone Park"
+OldDT[Park == "Midway Park ​",]$Park <-  "Midway Park"
+OldDT[Park == "Moshier Park ​",]$Park <- "Moshier Memorial Park"
+OldDT[Park == "Puget Sound Park  ​",]$Park <- "Puget Sound Park"
+OldDT[Park == "Roxhill Park ​",]$Park <- "Roxhill Park"
+OldDT[Park == "Steel Lake Park (south) ​",]$Park <- "Steel Lake Park"
+OldDT[Park == "Steve Cox Memorial Park ​",]$Park <- "Steve Cox Playfield"
+OldDT[Park == "Tukwila Community Center ​" | Park == "Tukwilla Community C",]$Park <- "Tukwila Community Center"
+
+
+# add ID
+OldDT$record_id <- 1:nrow(OldDT)
+
 ```
 
 # Create 2022 SOPARCActivities.csv
@@ -92,7 +118,24 @@ c("record_id_aggregated",	"record_id", "activity",	"children",	"teen",	"adult",	
 # Create 2022 SOPARCAnalaysisSet
 
 ```{r}
+ParkData <- read_xlsx(here("./2022/inputs/Parks_MASTER.xlsx"))
+
 c("park_name_full",	"park_name",	"record_id",	"redcap_survey_identifier",	"park_scan_data_collection_timestamp",	"obs_initial",	"start_time",	"tar_area",	"sub_area",	"accessible",	"usable",	"lit",	"occupied",	"supervised",	"organized",	"equipped",	"num_child_prim",	"num_child_snd",	"num_child_spec",	"num_teen_prim",	"num_teen_snd",	"num_teen_spec",	"num_adult_prim",	"num_adult_snd",	"num_adult_spec",	"num_senior_prim",	"num_senior_snd",	"num_senior_spec",	"prim_act_name",	"prim_act_other",	"yesno_snd",	"snd_act_name",	"other_act_snd",	"yesno_spec",	"spec_act_name",	"other_act_spec",	"comments",	"park_scan_data_collection_complete",	"timestampPOSIX",	"datePOSIX",	"day",	"month",	"weekend",	"periodBasedOnSequence",	"dayNumberBasedOnSequence",	"period",	"Park", "Address",	"City",	"Zip",	"Neighborhood",	"Images",	"Tract",	"Latitude",	"Longitude",	"Equity Score Priority", 	"Planned park changes?",	"Notes",	"censusYear",	"populationHalfMile",	"studyStartDate",	"studyDescription",	"study_count")
+
+
+# park_name_full
+
+
+
+OldDT.ParkData <- merge(OldDT, ParkData, by.x = "Park", by.y = "Park Name", all.x = T)
+
+park_name_full <- OldDT.ParkData$Park
+park_name <- OldDT.ParkData$`REDCap Name`
+record_id <- OldDT.ParkData$record_id
+redcap_survey_identifier <- NA
+park_scan_data_collection_timestamp <- 
+
+OldDT.ParkData[rowSums(is.na(OldDT.ParkData)) != ncol(OldDT.ParkData),]
 ```
 # Create 2022 SOPARCAnalysisSetAggregatedPeriods
 
