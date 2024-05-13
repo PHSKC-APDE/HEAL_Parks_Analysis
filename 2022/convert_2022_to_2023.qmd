@@ -16,6 +16,8 @@ execute:
   output: false
 ---
 
+#outstanding questions for Seth
+
 # Front Matter
 
 This document outlines procedures and technical details for the integration of data from 2022 HEAL Parks studies to align with 2023 and onward data. The code contained in this script reads prepared data and reformats it to the 2023 standard.
@@ -42,15 +44,19 @@ timestamps are not uniform across files. currently ignoring these to work on ali
 ```{r}
 library(readxl)
 library(data.table)
+remove(OldDT)
+remove(OldSheet)
 for(file in dir(here("./2022/inputs"), include.dirs = T, full.names = T)) {
   message(paste("processing", file))
   for(sheet in excel_sheets(file)) {
     if(endsWith(sheet, "2022")){
 
       message(paste("adding sheet:", sheet))
-      OldSheet <- as.data.table(read_xlsx(file, sheet = sheet))
-    #  OldSheet$`Start Time` <- NA
-      OldSheet[,"Start Time" := NULL]
+      OldSheet <- as.data.table(read_xlsx(file, sheet = sheet))#, col_types =  c(rep("guess", 6), "text", rep("guess",47))))
+      #OldSheet[,"Start Time" := NULL]
+      OldSheet$`Start Time` <- format(OldSheet$`Start Time`, format = "%H:%M")
+      OldSheet$`Start Time` <- trimws(ifelse(grepl(":", OldSheet$`Start Time`), gsub("^0","",OldSheet$`Start Time`), gsub("(.{2})$", "\\2:\\1", OldSheet$`Start Time`)))
+      
       if(exists("OldDT")) {
         #check name matches before merging
         if(any(!(names(OldSheet) %in% names(OldDT)))){
@@ -133,12 +139,85 @@ park_name_full <- OldDT.ParkData$Park
 park_name <- OldDT.ParkData$`REDCap Name`
 record_id <- OldDT.ParkData$record_id
 redcap_survey_identifier <- NA
-park_scan_data_collection_timestamp <- 
+park_scan_data_collection_timestamp <- NA
+obs_initial <- OldDT.ParkData$Initials
 
-OldDT.ParkData[rowSums(is.na(OldDT.ParkData)) != ncol(OldDT.ParkData),]
+SOPARCAnalysisSet <- OldDT.ParkData[, .(park_name_full = Park,
+                                        park_name = `REDCap Name`,
+                                        record_id,
+                                        redcap_survey_identifier = NA,
+                                        park_scan_data_collection_timestamp = NA,
+                                        obs_initial = Initials,
+                                        start_time = NA,
+                                        tar_area = `Target #`,
+                                        sub_area = Subarea,
+                                        accessible = Acc,
+                                        usable = Use,
+                                        lit = Lit,
+                                        occupied = Occ,
+                                        supervised = Sup,
+                                        organized = Org,
+                                        equipped = Equ,
+                                        num_child_prim = Youth...18,
+                                        num_child_snd = Youth...31,
+                                        num_child_spec = Youth...44,
+                                        num_teen_prim = NA,
+                                        num_teen_snd = NA,
+                                        num_teen_spec = NA,
+                                        num_adult_prim = Adu...19,
+                                        num_adult_snd = Adu...32,
+                                        num_adult_spec = Adu...45,
+                                        num_senior_prim = Sen...20,
+                                        num_senior_snd = Sen...33,
+                                        num_senior_spec = Sen...46,
+                                        prim_act_name = Activity1,
+                                        prim_act_other = NA,
+                                        yesno_snd = ifelse(is.na(Activity2), "No","Yes"),
+                                        snd_act_name = Activity2,
+                                        snd_act_other = NA,
+                                        yesno_spec = ifelse(is.na(Activity), "No","Yes"),
+                                        spec_act_name = Activity,
+                                        spec_act_other = NA,
+                                        comments = Comment,
+                                        park_scan_data_collection_complete = "Complete",
+                                        timestampPOSIX = NA,
+                                        datePOSIX = NA,
+                                        day = NA,
+                                        month = NA,
+                                        weekend = NA,
+                                        periodBasedOnSequence = NA,
+                                        dayNumberBasedOnSequence = NA,
+                                        period = Period,
+                                        `Park Address`,
+                                        City,
+                                        Zip,
+                                        Neighborhood,
+                                        Images,
+                                        Tract,
+                                        Latitude,
+                                        Longitude,
+                                        `Equity Score Priority`,
+                                        `Planned park changes?`,
+                                        Notes,
+                                        censusYear = 2022,
+                                        populationHalfMile = NA,
+                                        studyStartDate = "7/1/2022",
+                                        studyDescription = "2022 annual study",
+                                        study_count = 1)]
+
+
 ```
 # Create 2022 SOPARCAnalysisSetAggregatedPeriods
 
 ```{r}
 c("park_name_full",	"park_name",	"tar_area",	"dayNumberBasedOnSequence",	"period",	"datePOSIX",	"day",	"month",	"weekend",	"accessible",	"usable",	"lit",	"occupied",	"supervised",	"organized",	"equipped",	"num_child_prim",	"num_child_snd",	"num_child_spec",	"num_teen_prim",	"num_teen_snd",	"num_teen_spec",	"num_adult_prim",	"num_adult_snd",	"num_adult_spec",	"num_senior_prim",	"num_senior_snd",	"num_senior_spec",	"Park Address",	"City",	"Zip",	"Neighborhood",	"Images",	"Tract",	"Latitude",	"Longitude",	"Equity Score Priority", "Planned park changes?",	"Notes",	"censusYear",	"populationHalfMile",	"studyStartDate",	"studyDescription",	"study_count")
 ```
+
+# Analysis Notes
+
+## Missing "child" and "teen" counts
+
+The 2022 data counted all non adult or elder presenting persons as "youth". This creates a challenge in comparing to later years which divide apparant minors into "child" and "teen". Two strategies have been  proposed for harmonizing across years where analsis of age group is included:
+
+- aggregate later years to "youth". Undesirable because current metric development is focused on children and playgrounds.
+- calculate the proportion of children and teens observed in a given park for the metric for later years, and use this to re-weight the youth from 2022 into children and teens in the same proportion. Requires there to be later years of the same park, which might not always be available.
