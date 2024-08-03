@@ -26,9 +26,17 @@ For general information about the project please review the [git](https://github
 
 # Preparing 2022 Data
 
+```{r define constant and environment variables}
+
+REBUILDACTIVITYTABLE <- TRUE
+REBUILDANALYSISSET <- TRUE
+```
+
 2022 data were provided via email by Seth. APDE stores a copy of these and all data in the [DPH -APDEWork:ParkOBservationStudies library/2022 Annual Study/inputs](https://kc1.sharepoint.com/teams/DPH-APDEWork/ParkObservationStudies/Forms/AllItems.aspx)
 
 In order to run this script, you should copy the 2022 Annual Study/inputs folder into the 2022 folder of the HEAL_Parks_Analysis repository, and run this quarto file.
+
+
 
 ```{r check for data}
 library(here)
@@ -54,6 +62,7 @@ for(file in dir(here("./2022/inputs"), include.dirs = T, full.names = T)) {
       message(paste("adding sheet:", sheet))
       OldSheet <- as.data.table(read_xlsx(file, sheet = sheet))#, col_types =  c(rep("guess", 6), "text", rep("guess",47))))
       #OldSheet[,"Start Time" := NULL]
+      OldSheet$`Start Time` <- format(OldSheet$`Start Time`, format = "%H:%M")
       OldSheet$`Start Time` <- format(OldSheet$`Start Time`, format = "%H:%M")
       OldSheet$`Start Time` <- trimws(ifelse(grepl(":", OldSheet$`Start Time`), gsub("^0","",OldSheet$`Start Time`), gsub("(.{2})$", "\\2:\\1", OldSheet$`Start Time`)))
       
@@ -107,13 +116,206 @@ OldDT$record_id <- 1:nrow(OldDT)
 
 ```
 
+# Create 2022 SOPARCObservation Set
+
+```{r}
+if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALYSISSET){
+                           
+
+  SOPARCActivities <- data.table()
+
+
+  ParkData <- read_xlsx(here("./2022/inputs/Parks_MASTER.xlsx"))
+
+  c("park_name_full",	"park_name",	"record_id",	"redcap_survey_identifier",	"park_scan_data_collection_timestamp",	"obs_initial",	"start_time",	"tar_area",	"sub_area",	"accessible",	"usable",	"lit",	"occupied",	"supervised",	"organized",	"equipped",	"num_child_prim",	"num_child_snd",	"num_child_spec",	"num_teen_prim",	"num_teen_snd",	"num_teen_spec",	"num_adult_prim",	"num_adult_snd",	"num_adult_spec",	"num_senior_prim",	"num_senior_snd",	"num_senior_spec",	"prim_act_name",	"prim_act_other",	"yesno_snd",	"snd_act_name",	"other_act_snd",	"yesno_spec",	"spec_act_name",	"other_act_spec",	"comments",	"park_scan_data_collection_complete",	"timestampPOSIX",	"datePOSIX",	"day",	"month",	"weekend",	"periodBasedOnSequence",	"dayNumberBasedOnSequence",	"period",	"Park", "Address",	"City",	"Zip",	"Neighborhood",	"Images",	"Tract",	"Latitude",	"Longitude",	"Equity Score Priority", 	"Planned park changes?",	"Notes",	"censusYear",	"populationHalfMile",	"studyStartDate",	"studyDescription",	"study_count")
+
+
+  
+  OldDT.ParkData <- merge(OldDT, ParkData, by.x = "Park", by.y = "Park Name", all.x = T)
+  
+  park_name_full <- OldDT.ParkData$Park
+  park_name <- OldDT.ParkData$`REDCap Name`
+  record_id <- OldDT.ParkData$record_id
+  redcap_survey_identifier <- NA
+  park_scan_data_collection_timestamp <- NA
+  obs_initial <- OldDT.ParkData$Initials
+  
+  SOPARCAnalysisSet <- OldDT.ParkData[, .(park_name_full = Park,
+                                          park_name = `REDCap Name`,
+                                          record_id,
+                                          redcap_survey_identifier = NA,
+                                          park_scan_data_collection_timestamp = NA,
+                                          obs_initial = Initials,
+                                          start_time = NA,
+                                          tar_area = `Target #`,
+                                          sub_area = Subarea,
+                                          accessible = Acc,
+                                          usable = Use,
+                                          lit = Lit,
+                                          occupied = Occ,
+                                          supervised = Sup,
+                                          organized = Org,
+                                          equipped = Equ,
+                                          num_child_prim = Youth...18,
+                                          num_child_snd = Youth...31,
+                                          num_child_spec = Youth...44,
+                                          num_teen_prim = NA,
+                                          num_teen_snd = NA,
+                                          num_teen_spec = NA,
+                                          num_adult_prim = Adu...19,
+                                          num_adult_snd = Adu...32,
+                                          num_adult_spec = Adu...45,
+                                          num_senior_prim = Sen...20,
+                                          num_senior_snd = Sen...33,
+                                          num_senior_spec = Sen...46,
+                                          prim_act_name = Activity1,
+                                          prim_act_other = NA,
+                                          yesno_snd = ifelse(is.na(Activity2), "No","Yes"),
+                                          snd_act_name = Activity2,
+                                          snd_act_other = NA,
+                                          yesno_spec = ifelse(is.na(Activity), "No","Yes"),
+                                          spec_act_name = Activity,
+                                          spec_act_other = NA,
+                                          comments = Comment,
+                                          park_scan_data_collection_complete = "Complete",
+                                          timestampPOSIX = NA,
+                                          datePOSIX = Date,
+                                          day = NA,
+                                          month = NA,
+                                          weekend = NA,
+                                          periodBasedOnSequence = NA,
+                                          dayNumberBasedOnSequence = NA,
+                                          period = Period,
+                                          `Park Address`,
+                                          City,
+                                          Zip,
+                                          Neighborhood,
+                                          Images,
+                                          Tract,
+                                          Latitude,
+                                          Longitude,
+                                          `Equity Score Priority`,
+                                          `Planned park changes?`,
+                                          Notes,
+                                          censusYear = 2022,
+                                          populationHalfMile = NA,
+                                          studyStartDate = "7/1/2022",
+                                          studyDescription = "2022 annual study",
+                                          study_count = 1)]
+  
+  #assigning period based on sequence
+  #debugging, error catcher...
+  if(exists("catcher")) {
+    remove(catcher)
+  }
+  
+  for(park in unique(SOPARCAnalysisSet$park_name)) {
+    for(date in unique(SOPARCAnalysisSet[park_name == park,datePOSIX])) {
+      for(targetArea in unique(SOPARCAnalysisSet[park_name == park & datePOSIX == date, tar_area]))
+        for(selected_period in unique(SOPARCAnalysisSet[park_name == park & datePOSIX == date & tar_area == targetArea, period])) {
+          if(nrow(SOPARCAnalysisSet[park_name == park & datePOSIX == date & tar_area == targetArea & period == selected_period,]) != 2) {
+            warning("there should only be 2 rows here. temporary path is to remove extras or duplicate singleton")
+            
+            if(!exists("catcher")) {
+              catcher <- SOPARCAnalysisSet[park_name == park & datePOSIX == date & tar_area == targetArea & period == selected_period,]
+            } else {
+              catcher <- rbind(SOPARCAnalysisSet[park_name == park & datePOSIX == date & tar_area == targetArea & period == selected_period,], catcher)
+            }
+            #write.csv( SOPARCAnalysisSet[park_name == park & datePOSIX == date & tar_area == targetArea & period == selected_period,], paste0(here("2022/outputs/tofix/BROKEN_"),park,"_","",".csv"))
+          }
+        }
+    }
+    
+  }
+  if(exists("catcher")) {
+      write.csv(catcher, here("2022/outputs/data-metadata/ERRORED_OBSERVATIONS.csv"), row.names = FALSE)
+  }
+  
+  write.csv(SOPARCActivities, here("2022/local_only/SOPARCAnalysisSet.csv"), row.names = FALSE)
+  write.csv(SOPARCActivities, here("2022/outputs/data-metadata/SOPARCAnalysisSet.csv"), row.names = FALSE)
+} else {
+  SOPARCActivities <-  fread(here("2022/local_only/SOPARCAnalysisSet.csv"))
+}
+```
+
+
 # Create 2022 SOPARCActivities.csv
 
 ```{r process SOPARCActivities}
 
-newActivitiesCols <- c("record_id",	"record_id_aggregated",	"activity",	"children",	"teen",	"adult",	"senior")
+if( !(file.exists(here("2022/local_only/SOPARCActivities.csv"))) | REBUILDACTIVITYTABLE){
+# SOPARCActivities <- data.table("record_id" = SOPARCObservations[prim_act_name != "",]$record_id, 
+#                                "record_id_aggregated" = SOPARCObservations[prim_act_name != "",]$record_id, 
+#                                "activity" = "", 
+#                                "children" = 0, 
+#                                "teen" = 0, 
+#                                "adult" = 0, 
+#                                "senior" = 0)
+#                                
+#                                
+#                                
 
+SOPARCActivities <- data.table()
+
+  for(id in SOPARCObservations[prim_act_name != "",]$record_id) {
+
+      # SOPARCActivities[record_id == id, `:=`(activity = ifelse(SOPARCObservations[record_id == id, ]$prim_act_name == "Other", SOPARCObservations[record_id == id, ]$prim_act_other, SOPARCObservations[record_id == id, ]$prim_act_name),
+      #                                        children = SOPARCObservations[record_id == id, ]$num_child_prim, 
+      #                                        teen = SOPARCObservations[record_id == id, ]$num_teen_prim, 
+      #                                        adult = SOPARCObservations[record_id == id, ]$num_adult_prim, 
+      #                                        senior = SOPARCObservations[record_id == id, ]$num_senior_prim)] 
+    
+    DT <- SOPARCObservations[record_id == id, .(record_id = id,
+                                                record_id_aggregated = id,
+                                          activity = ifelse(prim_act_name == "Other", prim_act_other, prim_act_name),
+                                          children = num_child_prim, 
+                                          teen = num_teen_prim, 
+                                          adult = num_adult_prim, 
+                                          senior = num_senior_prim)]
+    
+    SOPARCActivities <- rbindlist(list(SOPARCActivities, DT))
+    
+    if(SOPARCObservations[record_id == id,]$yesno_snd == "Yes") {
+      # SOPARCActivities[record_id == id, `:=`(activity = ifelse(SOPARCObservations[record_id == id, ]$snd_act_name == "Other", SOPARCObservations[record_id == id, ]$other_act_snd, SOPARCObservations[record_id == id, ]$snd_act_name),
+      #                                        children = SOPARCObservations[record_id == id, ]$num_child_snd, 
+      #                                        teen = SOPARCObservations[record_id == id, ]$num_teen_snd, 
+      #                                        adult = SOPARCObservations[record_id == id, ]$num_adult_snd, 
+      #                                        senior = SOPARCObservations[record_id == id, ]$num_senior_snd)] 
+      
+      DT <- SOPARCObservations[record_id == id, .(record_id = id,
+                                                  record_id_aggregated = id,
+                                      activity = ifelse(snd_act_name == "Other", other_act_snd, snd_act_name),
+                                      children = num_child_snd, 
+                                      teen = num_teen_snd, 
+                                      adult = num_adult_snd, 
+                                      senior = num_senior_snd)]
+      SOPARCActivities <- rbindlist(list(SOPARCActivities, DT))
+    }
+    if(SOPARCObservations[record_id == id,]$yesno_spec == "Yes") {
+      # SOPARCActivities[record_id == id, `:=`(activity = ifelse(SOPARCObservations[record_id == id, ]$spec_act_name == "Other", SOPARCObservations[record_id == id, ]$other_act_spec, SOPARCObservations[record_id == id, ]$spec_act_name),
+      #                                        children = SOPARCObservations[record_id == id, ]$num_child_spec, 
+      #                                        teen = SOPARCObservations[record_id == id, ]$num_teen_spec, 
+      #                                        adult = SOPARCObservations[record_id == id, ]$num_adult_spec, 
+      #                                        senior = SOPARCObservations[record_id == id, ]$num_senior_spec)] 
+      DT <- SOPARCObservations[record_id == id, .(record_id = id,
+                                                  record_id_aggregated = id,
+                                activity = ifelse(spec_act_name == "Other", other_act_spec, spec_act_name),
+                                children = num_child_spec, 
+                                teen = num_teen_spec, 
+                                adult = num_adult_spec, 
+                                senior = num_senior_spec)]
+      SOPARCActivities <- rbindlist(list(SOPARCActivities, DT))
+    }
+  }
+  write.csv(SOPARCActivities, here("2022/local_only/SOPARCActivities.csv"), row.names = FALSE)
+  write.csv(SOPARCActivities, here("2022/outputs/data-metadata/SOPARCActivities.csv"), row.names = FALSE)
+} else {
+  SOPARCActivities <-  fread(here("2022/local_only/SOPARCActivities.csv"))
+}
 ```
+
+
+
 
 # Create 2022 SOPARCActivitiesExpanded.csv
 
@@ -121,92 +323,7 @@ newActivitiesCols <- c("record_id",	"record_id_aggregated",	"activity",	"childre
 c("record_id_aggregated",	"record_id", "activity",	"children",	"teen",	"adult",	"senior",	"park_name_full",	"period",	"target_area",	"datePOSIX")
 ```
 
-# Create 2022 SOPARCAnalaysisSet
 
-```{r}
-ParkData <- read_xlsx(here("./2022/inputs/Parks_MASTER.xlsx"))
-
-c("park_name_full",	"park_name",	"record_id",	"redcap_survey_identifier",	"park_scan_data_collection_timestamp",	"obs_initial",	"start_time",	"tar_area",	"sub_area",	"accessible",	"usable",	"lit",	"occupied",	"supervised",	"organized",	"equipped",	"num_child_prim",	"num_child_snd",	"num_child_spec",	"num_teen_prim",	"num_teen_snd",	"num_teen_spec",	"num_adult_prim",	"num_adult_snd",	"num_adult_spec",	"num_senior_prim",	"num_senior_snd",	"num_senior_spec",	"prim_act_name",	"prim_act_other",	"yesno_snd",	"snd_act_name",	"other_act_snd",	"yesno_spec",	"spec_act_name",	"other_act_spec",	"comments",	"park_scan_data_collection_complete",	"timestampPOSIX",	"datePOSIX",	"day",	"month",	"weekend",	"periodBasedOnSequence",	"dayNumberBasedOnSequence",	"period",	"Park", "Address",	"City",	"Zip",	"Neighborhood",	"Images",	"Tract",	"Latitude",	"Longitude",	"Equity Score Priority", 	"Planned park changes?",	"Notes",	"censusYear",	"populationHalfMile",	"studyStartDate",	"studyDescription",	"study_count")
-
-
-# park_name_full
-
-
-
-OldDT.ParkData <- merge(OldDT, ParkData, by.x = "Park", by.y = "Park Name", all.x = T)
-
-park_name_full <- OldDT.ParkData$Park
-park_name <- OldDT.ParkData$`REDCap Name`
-record_id <- OldDT.ParkData$record_id
-redcap_survey_identifier <- NA
-park_scan_data_collection_timestamp <- NA
-obs_initial <- OldDT.ParkData$Initials
-
-SOPARCAnalysisSet <- OldDT.ParkData[, .(park_name_full = Park,
-                                        park_name = `REDCap Name`,
-                                        record_id,
-                                        redcap_survey_identifier = NA,
-                                        park_scan_data_collection_timestamp = NA,
-                                        obs_initial = Initials,
-                                        start_time = NA,
-                                        tar_area = `Target #`,
-                                        sub_area = Subarea,
-                                        accessible = Acc,
-                                        usable = Use,
-                                        lit = Lit,
-                                        occupied = Occ,
-                                        supervised = Sup,
-                                        organized = Org,
-                                        equipped = Equ,
-                                        num_child_prim = Youth...18,
-                                        num_child_snd = Youth...31,
-                                        num_child_spec = Youth...44,
-                                        num_teen_prim = NA,
-                                        num_teen_snd = NA,
-                                        num_teen_spec = NA,
-                                        num_adult_prim = Adu...19,
-                                        num_adult_snd = Adu...32,
-                                        num_adult_spec = Adu...45,
-                                        num_senior_prim = Sen...20,
-                                        num_senior_snd = Sen...33,
-                                        num_senior_spec = Sen...46,
-                                        prim_act_name = Activity1,
-                                        prim_act_other = NA,
-                                        yesno_snd = ifelse(is.na(Activity2), "No","Yes"),
-                                        snd_act_name = Activity2,
-                                        snd_act_other = NA,
-                                        yesno_spec = ifelse(is.na(Activity), "No","Yes"),
-                                        spec_act_name = Activity,
-                                        spec_act_other = NA,
-                                        comments = Comment,
-                                        park_scan_data_collection_complete = "Complete",
-                                        timestampPOSIX = NA,
-                                        datePOSIX = NA,
-                                        day = NA,
-                                        month = NA,
-                                        weekend = NA,
-                                        periodBasedOnSequence = NA,
-                                        dayNumberBasedOnSequence = NA,
-                                        period = Period,
-                                        `Park Address`,
-                                        City,
-                                        Zip,
-                                        Neighborhood,
-                                        Images,
-                                        Tract,
-                                        Latitude,
-                                        Longitude,
-                                        `Equity Score Priority`,
-                                        `Planned park changes?`,
-                                        Notes,
-                                        censusYear = 2022,
-                                        populationHalfMile = NA,
-                                        studyStartDate = "7/1/2022",
-                                        studyDescription = "2022 annual study",
-                                        study_count = 1)]
-
-
-```
 # Create 2022 SOPARCAnalysisSetAggregatedPeriods
 
 ```{r}
