@@ -130,22 +130,41 @@ return(fxn)
 
 # Data Preperation
 
-## Extraction
-
-Data are extracted directly from REDCap via API.
+This analysis relies on park observations and park activity tables created in
+the annual SOPARC study
 
 ```{r import data}
 ParkObservations <- fread("./inputs/SOPARCAnalysisSetAggregatedPeriods.csv")
 ParksActivities <- fread("./inputs/SOPARCActivitiesExpanded.csv")
+ParkSupplamentalInfo <- read_xlsx("./inputs/Parks_MASTER.xlsx", sheet = "2024Supplemental")
+ParkFacilities <- read_xlsx("./inputs/Parks_MASTER.xlsx", sheet = "ParkFacility")
 ```
 
 # Analyses
 
+```{r merged tables}
+#these are tables used in most/all analyses
+
+ParkFull <- as.data.table(merge(ParkObservations, ParkSupplamentalInfo, by.x = "park_name_full", by.y = "Park Name"))
+```
+
 ## How does the observed use of playgrounds differ between parks of similar park categories?
 
-Chart of Average Playground Popularity, sorted by Park Category Chart of Average
-Playground Use, sorted by Park Category Chart of Peak Playground Use, sorted by
-Park Category
+### Chart of Average Playground Popularity, sorted by Park Category
+
+This is currently just of number of people per park category
+
+-   does not
+
+```{r}
+
+ggplot(ParkFull, aes(x= Park_Category, weights = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = T))) +
+  geom_bar()
+
+```
+
+Chart of Average Playground Use, sorted by Park Category Chart of Peak
+Playground Use, sorted by Park Category
 
 ## How does the observed use of playgrounds differ between playgrounds with different feature playground sizes?
 
