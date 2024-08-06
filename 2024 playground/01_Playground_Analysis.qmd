@@ -29,20 +29,15 @@ execute:
   output: false
 editor: 
   markdown: 
-    wrap: 80
+    wrap: none
     canonical: true
 ---
 
 # Front Matter
 
-This document outlines procedures, technical considerations, and analytic
-results for a 2024 analysis of playgrounds within parks participating in the
-HEAL Parks Study. The primary purpose of this PDF is technical review by analyst
-and project managers to confirm the process and data quality.
+This document outlines procedures, technical considerations, and analytic results for a 2024 analysis of playgrounds within parks participating in the HEAL Parks Study. The primary purpose of this PDF is technical review by analyst and project managers to confirm the process and data quality.
 
-For general information about the project please review the
-[git](https://github.com/PHSKC-APDE/HEAL_Parks_Analysis) or contact Seth
-Schromen-Wawrin.
+For general information about the project please review the [git](https://github.com/PHSKC-APDE/HEAL_Parks_Analysis) or contact Seth Schromen-Wawrin.
 
 ```{r setup}
 # First check if pacman is installed. If not, install it.
@@ -83,8 +78,7 @@ CHARTHEIGHT <- 2.3 #height of charts to generate for reproduction
 
 Inputs to this script are contained at ./inputs/*.* and include
 
--   A file of park meta data, including address, zip, city, neighborhood,
-    official name, and REDCap name for each park
+-   A file of park meta data, including address, zip, city, neighborhood, official name, and REDCap name for each park
 -   A file of collected SOPARC observations, aggregated to the period level
 -   An accompanying file of SOPARC activities
 
@@ -102,9 +96,7 @@ dir.create("./outputs/tables", recursive = TRUE, showWarnings = FALSE)
 
 ## This is a quarto generated document
 
-By rendering/knitting the qmd file, the analysis is re-executed, this document
-rebuilt, and new outputs are generated. To learn more about Quarto see
-\[https://quarto.org\].
+By rendering/knitting the qmd file, the analysis is re-executed, this document rebuilt, and new outputs are generated. To learn more about Quarto see \[https://quarto.org\].
 
 # Setup & Environment
 
@@ -130,8 +122,7 @@ return(fxn)
 
 # Data Preperation
 
-This analysis relies on park observations and park activity tables created in
-the annual SOPARC study
+This analysis relies on park observations and park activity tables created in the annual SOPARC study
 
 ```{r import data}
 ParkObservations <- fread("./inputs/SOPARCAnalysisSetAggregatedPeriods.csv")
@@ -148,73 +139,177 @@ ParkFacilities <- read_xlsx("./inputs/Parks_MASTER.xlsx", sheet = "ParkFacility"
 ParkFull <- as.data.table(merge(ParkObservations, ParkSupplamentalInfo, by.x = "park_name_full", by.y = "Park Name"))
 ```
 
+### How does the observed use of playgrounds differ between parks located in opportunity areas and parks not located in opportunity areas?
+
+## Chart of Park Catchment, sorted by Opportunity Area
+
+This is currently average daily children per park category
+
+Does not control for size or population surrounding (other factors?)
+
+```{r}
+DT <- copy(ParkFull)
+
+hist(DT$populationHalfMile ~ DT$Opportunity_Area)
+
+ggplot(DT) +
+  geom_histogram(alpha = 0.6, position = "identity", aes(x = populationHalfMile, fill = Opportunity_Area))
+
+
+```
+
+o Chart of Youth Park Catchment, sorted by Opportunity Area o Chart of Average Playground Use, sorted by Opportunity Area o Chart of Peak Playground Use, sorted by Opportunity Area • How does the observed use of playgrounds differ between parks of similar park categories? o Chart of Park Catchment, sorted by Park Category o Chart of Youth Park Catchment, sorted by Park Category o Chart of Average Playground Use, sorted by Park Category o Chart of Peak Playground Use, sorted by Park Category o Chart of Average Playground Popularity, sorted by Park Category • How does the observed use of playgrounds differ between playgrounds with different complexities of playgrounds? o Chart of Average Playground Use, sorted by Play Elements o Chart of Peak Playground Use, sorted by Play Elements o Chart of Average Playground Popularity, sorted by Play Elements • How does the observed use of playgrounds compare to the age of the playground? o Chart of Average Playground Use, sorted by Playground Installation Date o Chart of Peak Playground Use, sorted by Playground Installation Date o Chart of Playground Installation Date and Opportunity Area (denoting differences in Park Category) • How does the observed use of playgrounds differ when a park includes certain features? o Chart of Average Playground Use, based on if park contains a restroom, separated by park category o Chart of Average Playground Use, based on if park contains a picnic area, separated by park category o Chart of Average Playground Use, based on if park contains a sports field, separated by park category • How does the age of observed playground users differ between park groups (size, feature qualities, etc.)? o Chart of Average Playground Use, sorted by Play Element, separated by Primary Age Group o Chart of Peak Playground Use, sorted by Play Element, separated by Primary Age Group o Chart of Playground Popularity, sorted by Play Element, separated by Primary Age Group o Chart of Playground Popularity specifically of observed child and teen, sorted by Play Element, separated by Primary Age Group • How accessible is the park by transportation? o By walking:  Chart of Playground Use by Walkscore of park o By transit:  Chart of Playground Use by Transitscore of park
+
 ## How does the observed use of playgrounds differ between parks of similar park categories?
 
 ### Chart of Average Playground Popularity, sorted by Park Category
 
-This is currently just of number of people per park category
+How should playground popularity be defined?
 
--   does not
+### Chart of Average Playground Use, sorted by Park Category
+
+This is currently average daily children per park category
+
+Does not control for size or population surrounding (other factors?)
 
 ```{r}
+DT <- copy(ParkFull)
 
-ggplot(ParkFull, aes(x= Park_Category, weights = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = T))) +
-  geom_bar()
+DTplot <- DT[, .(avg_Daily_Children = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)), by = .(datePOSIX, Park_Category)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Children") ,by = .(Park_Category)]
+
+ggplot(DTplot) +
+  geom_bar(aes(weight = avg_Daily_Children, x = Park_Category))
 
 ```
 
-Chart of Average Playground Use, sorted by Park Category Chart of Peak
-Playground Use, sorted by Park Category
+### Chart of Peak Playground Use, sorted by Park Category
+
+currently max children from any day
+
+```{r}
+
+DT <- copy(ParkFull)
+
+DTplot <- DT[, .(max_Daily_Children = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)), by = .(datePOSIX, Park_Category)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Children") ,by = .(Park_Category)]
+
+ggplot(DTplot) +
+  geom_bar(aes(weight = max_Daily_Children, x = Park_Category))
+
+```
 
 ## How does the observed use of playgrounds differ between playgrounds with different feature playground sizes?
 
-Chart of Average Playground Popularity, sorted by Playground Complexity Chart of
-Average Playground Use, sorted by Playground Complexity Chart of Peak Playground
-Use, sorted by Playground Complexity
+Possible ideas for "complexity" a lower dimension (bring to 1 eigen value) of several variables, such as water, inclusive, structures, elements, variety_surfaces, natural_play_area, open_ended_struct, moveable, not_PaP_design
+
+Let's discuss a complexity score
+
+Q: what is the relationship of structures and elements?
+
+### Chart of Average Playground Popularity, sorted by Playground Complexity
+
+```{r}
+
+```
+
+### Chart of Average Playground Use, sorted by Playground Complexity
+
+### Chart of Peak Playground Use, sorted by Playground Complexity
 
 ## How does the observed use of playgrounds relate to the age of the playground?
 
-Is there a relationship between Playground Installation Date and Average
-Playground Popularity? Is there a relationship between Playground Installation
-Date and Average Playground Use? Is there a relationship between Playground
-Installation Date and Peak Playground Use?
+### Is there a relationship between Playground Installation Date and Average Playground Popularity?
+
+How should "popularity" be defined?
+
+### Is there a relationship between Playground Installation Date and Average Playground Use?
+
+```{r}
+
+DT <- copy(ParkFull)
+
+DT[, Playground_Age := 2024-as.numeric(DT$Playground_Age)]
+
+DTplot <- DT[, .(avg_Daily_Children = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)), by = .(datePOSIX, Playground_Age)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Children") ,by = .(Playground_Age)]
+
+ggplot(DTplot) +
+  geom_bar(aes(weight = avg_Daily_Children, x = Playground_Age))
+
+```
+
+### Is there a relationship between Playground Installation Date and Peak Playground Use?
+
+How should popularity be defined?
 
 ## How does the observed use of playgrounds differ when a park includes certain features?
 
-Chart of Average Playground Popularity, based on if park contains a restroom
-Chart of Average Playground Use, based on if park contains a picnic area Chart
-of Peak Playground Use, based on if park contains a sports field
+### Chart of Average Playground Popularity, based on if park contains a restroom
+
+how is popularity defined?
+
+### Chart of Average Playground Use, based on if park contains a restroom
+
+Using this instead
+
+```{r}
+
+DT <- copy(ParkFull)
+
+DTplot <- DT[, .(avg_Daily_Children = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)), by = .(datePOSIX, Restroom)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Children") ,by = .(Restroom)]
+
+ggplot(DTplot) +
+  geom_bar(aes(weight = avg_Daily_Children, x = Restroom))
+
+```
+
+### Chart of Average Playground Use, based on if park contains a picnic area
+
+```{r}
+
+DT <- copy(ParkFull)
+
+DTplot <- DT[, .(avg_Daily_Children = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)), by = .(datePOSIX, PicnicArea)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Children") ,by = .(PicnicArea)]
+
+ggplot(DTplot) +
+  geom_bar(aes(weight = avg_Daily_Children, x = PicnicArea))
+
+```
+
+### Chart of Peak Playground Use, based on if park contains a sports field
+
+```{r}
+
+DT <- copy(ParkFull)
+
+DTplot <- DT[, .(avg_Daily_Children = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)), by = .(datePOSIX, SportsField)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Children") ,by = .(SportsField)]
+
+ggplot(DTplot) +
+  geom_bar(aes(weight = avg_Daily_Children, x = SportsField))
+
+```
 
 ## How does the age of observed playground users differ between park groups (size, feature qualities, etc.)?
 
-Is there a relationship between Primary Age Group and Average Playground
-Popularity? Is there a relationship between Primary Age Group and Average
-Playground Use? Is there a relationship between Primary Age Group and Peak
-Playground Use? Is there a relationship between Primary Age Group and Average
-Playground Popularity of children and youth? Is there a relationship between
-Primary Age Group and Average Playground Use of children and youth? Is there a
-relationship between Primary Age Group and Peak Playground Use of children and
-youth?
+Is there a relationship between Primary Age Group and Average Playground Popularity?
+
+Is there a relationship between Primary Age Group and Average Playground Use?
+
+Is there a relationship between Primary Age Group and Peak Playground Use?
+
+Is there a relationship between Primary Age Group and Average Playground Popularity of children and youth?
+
+Is there a relationship between Primary Age Group and Average Playground Use of children and youth? Is there a relationship between Primary Age Group and Peak Playground Use of children and youth?
 
 ## How does the observed use of playgrounds relate to the surrounding population?
 
-Is there a relationship between Average Playground Popularity and the population
-less than 15 years old within ½ mile? Is there a relationship between Average
-Playground Use and the population less than 15 years old within ½ mile? Is there
-a relationship between Peak Playground Use and the population less than 15 years
-old within ½ mile?
+Is there a relationship between Average Playground Popularity and the population less than 15 years old within ½ mile? Is there a relationship between Average Playground Use and the population less than 15 years old within ½ mile? Is there a relationship between Peak Playground Use and the population less than 15 years old within ½ mile?
 
 ## How does the observed use of playgrounds differ between parks located in opportunity areas and parks not located in opportunity areas?
 
-Chart of Average Playground Popularity, sorted by Opportunity Area Chart of
-Average Playground Use, sorted by Opportunity Area Chart of Peak Playground Use,
-sorted by Opportunity Area
+Chart of Average Playground Popularity, sorted by Opportunity Area Chart of Average Playground Use, sorted by Opportunity Area Chart of Peak Playground Use, sorted by Opportunity Area
 
 ## How does the proximity to a school impact playground use?
 
-Chart of Average Playground Popularity, sorted by elementary school Chart of
-Average Playground Use, sorted by elementary school Chart of Peak Playground
-Use, sorted by distance to nearest elementary school
+Chart of Average Playground Popularity, sorted by elementary school Chart of Average Playground Use, sorted by elementary school Chart of Peak Playground Use, sorted by distance to nearest elementary school
 
 ## How accessible is the park by transportation?
 
@@ -230,10 +325,8 @@ Chart of Playground Use by Transitscore of park
 
 Results are saved in multiple locations:
 
--   an excel workbook that contains a separate page for each table of analysis
-    results
--   folders with charts and tables of results designed to be integrated into
-    documents
+-   an excel workbook that contains a separate page for each table of analysis results
+-   folders with charts and tables of results designed to be integrated into documents
 -   outputs of various steps of the metadata, QA, and final analysis ready sets
 
 ```{r create excel workbook data structure for export}
@@ -271,15 +364,9 @@ kbl(SOPARCAggregated[order(park_name), .("Park Name" = unique(park_name_full))],
 
 ## Utilization
 
-The following metrics rely on counts of people observed. The underlying data are
-of people observed within an observation period (e.g. "morning1") and target
-area. It is possible that the same people may be observed across multiple blocks
-of time and multiple target areas.
+The following metrics rely on counts of people observed. The underlying data are of people observed within an observation period (e.g. "morning1") and target area. It is possible that the same people may be observed across multiple blocks of time and multiple target areas.
 
-Because of this user counts are more accurately understood as "person time of
-use per target area" and represents a target area being used by a person within
-the observation period. This explanation accounts for people being counted
-multiple times by crossing target areas during the observation period.
+Because of this user counts are more accurately understood as "person time of use per target area" and represents a target area being used by a person within the observation period. This explanation accounts for people being counted multiple times by crossing target areas during the observation period.
 
 ### number of park users
 
@@ -366,10 +453,8 @@ print(target = paste0("./outputs/tables/num_users/num_users.docx"))
 
 Notes:
 
--   Due to the study design, user counts are subject to both over and under
-    counting
--   User counts are more accurately understood as "person time of use per target
-    area"
+-   Due to the study design, user counts are subject to both over and under counting
+-   User counts are more accurately understood as "person time of use per target area"
 
 ### average number of daily park users
 
@@ -445,12 +530,9 @@ $$
 \text{(Average Park Users By Period)} = \frac{\sum_{d=1}^{3}{(\text{People}_p)_d}}{3}
 $$
 
-where $_d$ is the day of study and $(\text{People}_p)$ are the sum of number of
-people observed in a time period of a given day.
+where $_d$ is the day of study and $(\text{People}_p)$ are the sum of number of people observed in a time period of a given day.
 
-The people within a given time period and day is defined as the average (rounded
-up) of people observed in a time period of a given day and target area $_t$,
-summed across across all target areas.
+The people within a given time period and day is defined as the average (rounded up) of people observed in a time period of a given day and target area $_t$, summed across across all target areas.
 
 $$
 \text{People}_p = \sum_{t=1}^{n}{\left( \lceil\frac{\text{(people observed first half of period)}+\text{(people observed second half of period)}}{2}\rceil\right) _t}
@@ -553,17 +635,11 @@ if(!SUPPRESS_TABLES){
 
 Notes:
 
--   User counts are more accurately understood as "person time of use per target
-    area"
+-   User counts are more accurately understood as "person time of use per target area"
     -   "Person using target area during the observation"
--   If taken strictly as "people using a park" then this may be an over or under
-    count
-    -   If in the first morning observation 2 people are observed, and the
-        second 3, this may be 3 unique people, or as many as 5, but we calculate
-        this as 2.5 and round up to 3.
-    -   If two people walk across all target areas during an observation period,
-        they would be counted each time. With 10 target areas, this would be 20
-        people observed.
+-   If taken strictly as "people using a park" then this may be an over or under count
+    -   If in the first morning observation 2 people are observed, and the second 3, this may be 3 unique people, or as many as 5, but we calculate this as 2.5 and round up to 3.
+    -   If two people walk across all target areas during an observation period, they would be counted each time. With 10 target areas, this would be 20 people observed.
 
 ### rate of park use by time period
 
@@ -575,19 +651,15 @@ $$
 \text{(Rate of Park Use By Period)} = \frac{\sum_{d=1}^{3}{(\text{People}_p)_d}}{\sum_{d=1}^{3}{\text{People}_d}}
 $$
 
-where $_d$ is the day of study and $(\text{People}_p)$ are the sum of number of
-people observed in a time period of a given day.
+where $_d$ is the day of study and $(\text{People}_p)$ are the sum of number of people observed in a time period of a given day.
 
-The people within a given time period and day is defined as the average (rounded
-up) of people observed in a time period of a given day and target area $_t$,
-summed across across all target areas.
+The people within a given time period and day is defined as the average (rounded up) of people observed in a time period of a given day and target area $_t$, summed across across all target areas.
 
 $$
 \text{People}_p = \sum_{t=1}^{n}{\left( \lceil\frac{\text{(people observed first half of period)}+\text{(people observed second half of period)}}{2}\rceil\right) _t}
 $$
 
-The total number of people in a day, $\text{People}_d$, is defined as the sum of
-all $\text{People}_p$ within a day.
+The total number of people in a day, $\text{People}_d$, is defined as the sum of all $\text{People}_p$ within a day.
 
 ```{r rate of park use by period, fig.cap="Rate Of Park Use By Period"}
 #| output: true
@@ -683,17 +755,14 @@ if(!SUPPRESS_TABLES) {
 Notes:
 
 -   This is accurately understood as the rate of park use during the period
--   There is likely still some error from the under and overcounting of the
-    underlying counts, but the more true that over and under counting is
-    randomly distributed across all time periods, the less true this is.
+-   There is likely still some error from the under and overcounting of the underlying counts, but the more true that over and under counting is randomly distributed across all time periods, the less true this is.
 -   Rate is within-park (each park totals to 100%)
 
 ### average number of daily park users by age
 
 The daily average number of users observed in each age group.
 
-Computationally this measure is similar to the average users by time period
-above.
+Computationally this measure is similar to the average users by time period above.
 
 ```{r average park users by age, fig.cap="Average Park Users By Age"}
 #| output: true
@@ -805,16 +874,10 @@ if(!SUPPRESS_TABLES){
 
 Notes:
 
--   User counts are more accurately understood as "person time of use per target
-    area"
--   If taken strictly as "people using a park" then this may be an over or under
-    count
-    -   If in the first morning observation 2 people are observed, and the
-        second 3, this may be 3 unique people, or as many as 5, but we calculate
-        this as 2.5 and round up to 3.
-    -   If two people walk across all target areas during an observation period,
-        they would be counted each time. With 10 target areas, this would be 20
-        people observed.
+-   User counts are more accurately understood as "person time of use per target area"
+-   If taken strictly as "people using a park" then this may be an over or under count
+    -   If in the first morning observation 2 people are observed, and the second 3, this may be 3 unique people, or as many as 5, but we calculate this as 2.5 and round up to 3.
+    -   If two people walk across all target areas during an observation period, they would be counted each time. With 10 target areas, this would be 20 people observed.
 
 ### rate of park use by age
 
@@ -916,9 +979,7 @@ if(!SUPPRESS_TABLES) {
 Notes:
 
 -   This is accurately understood as the rate of park use by each age group
--   There is likely still some error from the under and over counting of the
-    underlying counts, but the more true that over and under counting is
-    randomly distributed across all time periods, the less true this is.
+-   There is likely still some error from the under and over counting of the underlying counts, but the more true that over and under counting is randomly distributed across all time periods, the less true this is.
 -   Rate is within-park (each park totals to 100%)
 
 ## Occupancy
@@ -927,8 +988,7 @@ Notes:
 
 The percentage of observations where at least one user was observed in the park.
 
-For each park, the number of observation periods with any target area in
-occupied status is divided by the total number of observation periods (24)
+For each park, the number of observation periods with any target area in occupied status is divided by the total number of observation periods (24)
 
 ```{r analysis of occupancy rate}
 #| output: true
@@ -1083,19 +1143,14 @@ for(park in unique(SOPARCtoAggregate$park_name_full)) {
 
 Notes:
 
--   user counts are subject to over and under counting due to how observations
-    were conducted and aggregated
--   If an individual is observed doing a different activity in the second half
-    of a quarter than the first half, these will be counted as distincti
-    activities, and so not averaged. This can results in slightly higher counts
-    of people engaged in actities than the average user counts.
+-   user counts are subject to over and under counting due to how observations were conducted and aggregated
+-   If an individual is observed doing a different activity in the second half of a quarter than the first half, these will be counted as distincti activities, and so not averaged. This can results in slightly higher counts of people engaged in actities than the average user counts.
 
 ### rate of user activity
 
 The percentage users observed doing the activity in the park.
 
-For each park, the number of users engaged in an activity is divided by the
-total number of users observed in the park throughout the study duration.
+For each park, the number of users engaged in an activity is divided by the total number of users observed in the park throughout the study duration.
 
 ```{r Rate of User Activity}
 #| output: true
@@ -1183,20 +1238,15 @@ for(park in unique(SOPARCtoAggregate$park_name_full)) {
 
 Notes:
 
--   All activities listed have at least 1 participant, but some may show 0 in
-    the prepared tables due to being less than 0.01%
--   The total rate of all user activities listed will equal 100%, the total
-    amount of activity observed.
+-   All activities listed have at least 1 participant, but some may show 0 in the prepared tables due to being less than 0.01%
+-   The total rate of all user activities listed will equal 100%, the total amount of activity observed.
 -   This is calculated on the non aggregated population counts.
 
 ### rate of activity observed
 
-The percentage of observations where at least one user was observed doing the
-activity in the park.
+The percentage of observations where at least one user was observed doing the activity in the park.
 
-For each park, the total the number of periods the activity was observed is
-divided by 24, the total number of observations periods possible for any
-particular activity.
+For each park, the total the number of periods the activity was observed is divided by 24, the total number of observations periods possible for any particular activity.
 
 ```{r Rate of Activity Observed}
 #| output: true
@@ -1259,19 +1309,13 @@ for(park in unique(SOPARCtoAggregate$park_name_full)) {
 
 Notes:
 
--   Unlike many of the other measures provided, these rates are mostly
-    independent of each other and do not have an additive meaning. This is
-    because multiple activities may be observed in a single observation period.
-    E..g "walking" may be observed in all 24 periods, and so have an observation
-    rate of 100%, and "sitting" may be observed in 6 periods and so have a rate
-    of 25%.
+-   Unlike many of the other measures provided, these rates are mostly independent of each other and do not have an additive meaning. This is because multiple activities may be observed in a single observation period. E..g "walking" may be observed in all 24 periods, and so have an observation rate of 100%, and "sitting" may be observed in 6 periods and so have a rate of 25%.
 
 ## Spatial analysees
 
 ### ratio of use to half-mile catchment area
 
-The ratio of how many users were observed per day on average relative to how
-many people live within 0.5 miles of the park.
+The ratio of how many users were observed per day on average relative to how many people live within 0.5 miles of the park.
 
 This is provided per 1,000 residents to improve readability.
 
@@ -1337,11 +1381,7 @@ dir.create(here("./2023/outputs/tables/ratio_use_catch"), recursive = T)
 
 Notes:
 
--   The ratios are calculated on non-rounded data, and then rounded. The average
-    number of users and populations provided in the formatted word document are
-    rounded. This causes a rounding error where you wouldn't get the exact ratio
-    if you were to divide these users and populations. For accurate results use
-    the numbers provided in the pivot ready tables.
+-   The ratios are calculated on non-rounded data, and then rounded. The average number of users and populations provided in the formatted word document are rounded. This causes a rounding error where you wouldn't get the exact ratio if you were to divide these users and populations. For accurate results use the numbers provided in the pivot ready tables.
 
 ```{r save workbooks}
 #create project wide workbooks
@@ -1385,76 +1425,41 @@ write.csv(merge(SOPARCActivities,SOPARCtoAggregate[,.(park_name_full, record_id,
 
 ## REDCap maintanence
 
-Project has been in "development" status throughout the study period. It has now
-been moved into "analysis/cleanup". It is recommended to keep it in this stage
-until finished with any future studies and analyses in this line of work, e.g.
-if planing to use the data from this study in the future, it is good to keep
-this REDCap project in analysis mode for review. There is an additional
-"completed" status, which should generally only be used when completely finished
-with the body of work. This status makes the project largely inaccessible.
-Notably, changing the project to "complete" status would also break this script
-(or require it to be fed a different data source rather than pulling from the
-REDCap API.)
+Project has been in "development" status throughout the study period. It has now been moved into "analysis/cleanup". It is recommended to keep it in this stage until finished with any future studies and analyses in this line of work, e.g. if planing to use the data from this study in the future, it is good to keep this REDCap project in analysis mode for review. There is an additional "completed" status, which should generally only be used when completely finished with the body of work. This status makes the project largely inaccessible. Notably, changing the project to "complete" status would also break this script (or require it to be fed a different data source rather than pulling from the REDCap API.)
 
-As currently envisioned, these data are part of a longitudinal study, and so
-this and future REDCap projects would ideally remain accessible.
+As currently envisioned, these data are part of a longitudinal study, and so this and future REDCap projects would ideally remain accessible.
 
-I recommend conducting future data collection efforts in their own REDCap
-projects, naming them similarly, such as "Public Health - Seattle & King County
-Park Observations: title_of_study"
+I recommend conducting future data collection efforts in their own REDCap projects, naming them similarly, such as "Public Health - Seattle & King County Park Observations: title_of_study"
 
-The project used for this analysis has been renamed to: Public Health - Seattle
-& King County Park Observations: 2023 Annual Study
+The project used for this analysis has been renamed to: Public Health - Seattle & King County Park Observations: 2023 Annual Study
 
 ### recommended changes to future surveys instruments
 
--   variable for capturing other primary activities is inconsistent to secondary
-    and special ones
--   modify instrument to have observers indicate the time of their data
-    collection
+-   variable for capturing other primary activities is inconsistent to secondary and special ones
+-   modify instrument to have observers indicate the time of their data collection
 -   add a study name to data (hidden value)
--   include additional testing and possibly consultation with ITHS REDCap staff
-    for issues with data upload from cell phones. This cause problems for
-    observers. It is unclear if this is a problem with the cell phone
-    application or due to the study being executed with the project in
-    "development" status.
+-   include additional testing and possibly consultation with ITHS REDCap staff for issues with data upload from cell phones. This cause problems for observers. It is unclear if this is a problem with the cell phone application or due to the study being executed with the project in "development" status.
 
 ## Data management
 
-Files in the provided data-metadata directory should be retained. These include
-QA information, updated metadata, and observational data at different stages of
-data preperation.
+Files in the provided data-metadata directory should be retained. These include QA information, updated metadata, and observational data at different stages of data preperation.
 
-Most critical is the maintenance of the version of the data used for the above
-analysis. Over the years, these would be the ones expected for use in further
-analytic work and for comparing year-over-year results.
+Most critical is the maintenance of the version of the data used for the above analysis. Over the years, these would be the ones expected for use in further analytic work and for comparing year-over-year results.
 
 The analysis-ready files include:
 
 -   SOPARCAnalysisSet.csv (fully cleaned park observation)
--   SOPARCAnalysisSetAggregatedPeriods.csv (analysis set with observations
-    aggregated by period, the level of analysis most commonly used)
--   SOPARCActivities.csv & SOPARCActivitiesExpanded.csv (all activity data at
-    the individual record level. The expanded version includes some park
-    information already attached for human readability)
+-   SOPARCAnalysisSetAggregatedPeriods.csv (analysis set with observations aggregated by period, the level of analysis most commonly used)
+-   SOPARCActivities.csv & SOPARCActivitiesExpanded.csv (all activity data at the individual record level. The expanded version includes some park information already attached for human readability)
 
 ## Documentation
 
--   Latex math chunks do not render correctly when the README.me is viewed on
-    github
--   Latex in-line math does not render at all when the README.me is viewed on
-    github
--   Some package/visualization is preventing a non-html compilation of github
-    markdown
+-   Latex math chunks do not render correctly when the README.me is viewed on github
+-   Latex in-line math does not render at all when the README.me is viewed on github
+-   Some package/visualization is preventing a non-html compilation of github markdown
 
 ## Error identification and QA Work
 
-10/18 Seth identified that Chelsea Park has dramatically different numbers of
-users for the average users in activity compared to the average daily users. Why
-is this?
+10/18 Seth identified that Chelsea Park has dramatically different numbers of users for the average users in activity compared to the average daily users. Why is this?
 
-This is due to two things. Primarily, there was an error in the code to extract
-the activity counts which resulted in some rows being dropped. This has been
-corrected. Second is an expected behavior. If people are performing a different
-activity in the second half of a period than the first, then those will be
-counted distinctly, instead of averaged together.
+This is due to two things. Primarily, there was an error in the code to extract the activity counts which resulted in some rows being dropped. This has been corrected. Second is an expected behavior. If people are performing a different activity in the second half of a period than the first, then those will be counted distinctly, instead of averaged together.
