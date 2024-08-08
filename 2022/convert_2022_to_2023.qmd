@@ -114,6 +114,11 @@ OldDT[Park == "Tukwila Community Center ​" | Park == "Tukwilla Community C",]$
 # add ID
 OldDT$record_id <- 1:nrow(OldDT)
 
+# fixing missmatched period names
+OldDT[Period == "lunch"]$Period <- "Lunch"
+OldDT[Period == "morning"]$Period <- "Morning"
+OldDT[Period == "AfterNoon"]$Period <- "Afternoon"
+
 ```
 
 # Create 2022 SOPARCObservation Set
