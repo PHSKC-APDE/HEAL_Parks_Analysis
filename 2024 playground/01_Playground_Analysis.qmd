@@ -15,8 +15,8 @@ format:
     toc: true
     number-sections: true
     df-print: kable
-    fig-height: 12
-    fig-width: 16
+    fig-height: 8
+    fig-width: 10
   html:
     toc: true
     number-sections: true
@@ -26,7 +26,7 @@ format:
 execute: 
   echo: false
   warning: false
-  output: false
+  output: true
 editor: 
   markdown: 
     wrap: none
@@ -129,8 +129,17 @@ This analysis relies on park observations and park activity tables created in th
 
 ```{r import data}
 ParkObservations <- fread("./inputs/SOPARCAnalysisSetAggregatedPeriods.csv")
+
+
+
 ParksActivities <- fread("./inputs/SOPARCActivitiesExpanded.csv")
+
+
 ParkSupplamentalInfo <- read_xlsx("./inputs/Parks_MASTER.xlsx", sheet = "2024Supplemental")
+ParkSupplamentalInfo[ParkSupplamentalInfo$Restroom == "Yes ",]$Restroom <- "Yes"
+ParkSupplamentalInfo[ParkSupplamentalInfo$`Primary_Age_Group_2-5` == "Yes ",]$`Primary_Age_Group_2-5` <- "Yes"
+
+
 ParkFacilities <- read_xlsx("./inputs/Parks_MASTER.xlsx", sheet = "ParkFacility")
 
 
@@ -246,6 +255,11 @@ ParkFull <- merge(ParkFull, ChildParkPopulationTable, by = "park_name_full")
 
 # Analyses
 
+Notes:
+
+-   Analyses of "average park use" aggregate all playground within the park (effectively calculated as one large playground)
+-   Multiple park characteristics in the supplamental information file have n/a or tbd for parks that, including for parks that have playgrounds. Depending on the analysis, these may show up as NA, tbd, or 0
+
 ### How does the observed use of playgrounds differ between parks located in opportunity areas and parks not located in opportunity areas?
 
 ## Chart of Park Catchment, sorted by Opportunity Area
@@ -253,7 +267,9 @@ ParkFull <- merge(ParkFull, ChildParkPopulationTable, by = "park_name_full")
 ```{r}
 DT <- copy(ParkFull)
 
-ggplot(DT) +
+DTplot <- unique(DT[, Playground_Age := (2024-as.numeric(DT$Playground_Age)) +1][, .(park_name_full, populationHalfMile, Opportunity_Area)])
+
+ggplot(DTplot) +
   geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = populationHalfMile)) +
   facet_wrap(~Opportunity_Area, scales = "free_y") +
   xlab("Population Within 1/2 Mile") +
@@ -269,13 +285,13 @@ ggplot(DT) +
 
 ## Chart of Youth Park Catchment, sorted by Opportunity Area
 
-youth is \<= 18 yo pop
-
 ```{r}
 
 DT <- copy(ParkFull)
 
-ggplot(DT) +
+DTplot <- unique(DT[, Playground_Age := (2024-as.numeric(DT$Playground_Age)) +1][, .(park_name_full, childPopulationHalfMile, Opportunity_Area)])
+
+ggplot(DTplot) +
   geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = childPopulationHalfMile)) +
   facet_wrap(~Opportunity_Area, scales = "free_y") +
   xlab("0-14 Population Within 1/2 Mile") +
@@ -288,10 +304,6 @@ ggplot(DT) +
 ```
 
 ### Chart of Average Playground Use, sorted by Opportunity Area
-
-Notes:
-
--   Aggregates all playground within the park (effectively calculated as one large playground)
 
 ```{r}
 DT <- copy(ParkFull)
@@ -338,7 +350,9 @@ ggplot(DTplot) +
 ```{r}
 DT <- copy(ParkFull)
 
-ggplot(DT) +
+DTplot <- unique(DT[, Playground_Age := (2024-as.numeric(DT$Playground_Age)) +1][, .(park_name_full, populationHalfMile, Park_Category_Local)])
+
+ggplot(DTplot) +
   geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = populationHalfMile)) +
   facet_wrap(~Park_Category_Local, scales = "free_y") +
   xlab("Population Within 1/2 Mile") +
@@ -355,7 +369,9 @@ ggplot(DT) +
 
 DT <- copy(ParkFull)
 
-ggplot(DT) +
+DTplot <- unique(DT[, Playground_Age := (2024-as.numeric(DT$Playground_Age)) +1][, .(park_name_full, childPopulationHalfMile, Park_Category_Local)])
+
+ggplot(DTplot) +
   geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = childPopulationHalfMile)) +
   facet_wrap(~Park_Category_Local, scales = "free_y") +
   xlab("0-14 Population Within 1/2 Mile") +
@@ -412,9 +428,11 @@ ggplot(DTplot) +
 Average Popularity is the average of the daily popularity rate, where popularity rate is the proportion of park users (in a day) who were in the playground
 
 ```{r}
+
 DT <- copy(ParkFull[occupied == "Yes"])
 
-DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, Park_Category_Local, park_name_full, playground)][, max := lapply(.SD, sum, na.rm = TRUE), .SDcols = c("users") ,by = .( Park_Category_Local, park_name_full)][playground == 1, popularity := users/max][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("popularity") ,by = .( Park_Category_Local, park_name_full)]
+DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, park_name_full, Park_Category_Local, playground)][, .(users = sum(users)),by = .(park_name_full,  Park_Category_Local, playground)][,allusers := sum(users), by = .(park_name_full, Park_Category_Local)][playground == 1, popularity := users/allusers][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("popularity") ,by = .(park_name_full, Park_Category_Local)]
+
 
 ggplot(DTplot) +
   geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = popularity)) +
@@ -431,107 +449,182 @@ ggplot(DTplot) +
 
 ### Chart of Average Playground Use, sorted by Play Elements
 
-note, there is a fair amount of missingness for this
+Notes:
+
+-   Garfield is missing a value
 
 ```{r}
 DT <- copy(ParkFull)
 
-DTplot <- DT[, .(avg_Daily_Children = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)), by = .(datePOSIX, Elements)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Children") ,by = .(Elements)]
+DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, Elements, park_name_full)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Elements, park_name_full)][, Elements := as.numeric(Elements)]
 
 ggplot(DTplot) +
-  geom_bar(aes(weight = avg_Daily_Children, x = Elements))
+  geom_bar(stat = "identity", position = "stack", aes(x = Elements, fill = avg_Daily_Users, y = reorder(park_name_full, Elements))) +
+  xlab("Number of Elements") +
+  ylab("Park Name") +
+  guides(fill=guide_legend(title="Average Daily Users")) +
+  ggtitle("Average Daily Number of Playground Users Given \n Number of Elements") +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
+
 
 ```
 
 ### Chart of Peak Playground Use, sorted by Play Elements
 
 ```{r}
-
 DT <- copy(ParkFull)
 
-DTplot <- DT[, .(max_Daily_Children = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)), by = .(datePOSIX, Elements)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Children") ,by = .(Elements)]
+DTplot <- DT[playground == 1, .(max_Daily_Users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, Elements, park_name_full)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Users") ,by = .( Elements, park_name_full)][, Elements := as.numeric(Elements)]
 
 ggplot(DTplot) +
-  geom_bar(aes(weight = max_Daily_Children, x = Elements))
-
+  geom_bar(stat = "identity", position = "stack", aes(x = Elements, fill = max_Daily_Users, y = reorder(park_name_full, Elements))) +
+  xlab("Number of Elements") +
+  ylab("Park Name") +
+  guides(fill=guide_legend(title="Max Daily Users")) +
+  ggtitle("Max Daily Number of Playground Users Given \n Number of Elements") +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
 ```
 
 ### Chart of Average Playground Popularity, sorted by Play Elements
 
-Average of all observations for the percentage of observed users in the park who are located in the playground area. Include only observations where park is occupied.
+```{r}
+
+DT <- copy(ParkFull[occupied == "Yes"])
+
+DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, park_name_full, Elements, playground)][, .(users = sum(users)),by = .(park_name_full,  Elements, playground)][,allusers := sum(users), by = .(park_name_full, Elements)][playground == 1, popularity := users/allusers][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("popularity") ,by = .(park_name_full, Elements)][, Elements := as.numeric(Elements)]
+
+ggplot(DTplot) +
+  geom_bar(stat = "identity", position = "stack", aes(x = Elements, fill = popularity, y = reorder(park_name_full, Elements))) +
+  xlab("Number of Elements") +
+  ylab("Park Name") +
+  guides(fill=guide_legend(title="Average Popularity Rate")) +
+  ggtitle("Playground Popularity Given \n Number of Elements") +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
+```
 
 ## How does the observed use of playgrounds compare to the age of the playground?
 
 ### Chart of Average Playground Use, sorted by Playground Installation Date
 
-```{r}
+garfield is missing data
 
+```{r}
 DT <- copy(ParkFull)
 
-DT[, Playground_Age := 2024-as.numeric(DT$Playground_Age)]
-
-DTplot <- DT[, .(avg_Daily_Children = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)), by = .(datePOSIX, Playground_Age)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Children") ,by = .(Playground_Age)]
+DTplot <- DT[, Playground_Age := (2024-as.numeric(DT$Playground_Age)) +1][playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, Playground_Age, park_name_full)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Playground_Age, park_name_full)]
 
 ggplot(DTplot) +
-  geom_bar(aes(weight = avg_Daily_Children, x = Playground_Age))
+  geom_bar(stat = "identity", position = "stack", aes(x = as.numeric(Playground_Age), fill = avg_Daily_Users, y = reorder(park_name_full, Playground_Age))) +
+  xlab("Years Age of Playground (1 = Built in 2024)") +
+  ylab("Park Name") +
+  guides(fill=guide_legend(title="Average Daily Users")) +
+  ggtitle("Average Daily Number of Playground Users Given \n Playground Age") +
+  scale_y_discrete(limits = rev) #+
+  scale_x_continuous(labels = scales::comma)
+
 
 ```
 
 ### Chart of Peak Playground Use, sorted by Playground Installation Date
 
 ```{r}
-
 DT <- copy(ParkFull)
 
-DT[, Playground_Age := 2024-as.numeric(DT$Playground_Age)]
-
-DTplot <- DT[, .(max_Daily_Children = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)), by = .(datePOSIX, Playground_Age)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Children") ,by = .(Playground_Age)]
+DTplot <- DT[, Playground_Age := (2024-as.numeric(DT$Playground_Age)) +1][playground == 1, .(max_Daily_Users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, Playground_Age, park_name_full)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Users") ,by = .( Playground_Age, park_name_full)]
 
 ggplot(DTplot) +
-  geom_bar(aes(weight = max_Daily_Children, x = Playground_Age))
+  geom_bar(stat = "identity", position = "stack", aes(x = as.numeric(Playground_Age), fill = max_Daily_Users, y = reorder(park_name_full, Playground_Age))) +
+  xlab("Years Age of Playground (1 = Built in 2024)") +
+  ylab("Park Name") +
+  guides(fill=guide_legend(title="Max Daily Users")) +
+  ggtitle("Max Number of Playground Users Given \n Playground Age") +
+  scale_y_discrete(limits = rev) #+
+  scale_x_continuous(labels = scales::comma)
+
 
 ```
 
 ### Chart of Playground Installation Date and Opportunity Area (denoting differences in Park Category)
+
+```{r}
+DT <- copy(ParkFull)
+
+DTplot <- unique(DT[, Playground_Age := (2024-as.numeric(DT$Playground_Age)) +1][, .(park_name_full, Playground_Age, Opportunity_Area)])
+
+ggplot(DTplot) +
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = Playground_Age)) +
+  facet_wrap(~Opportunity_Area, scales = "free_y") +
+  xlab("Years Age of Playground (1 = Built in 2024)") +
+  ylab("Park Name") +
+  ggtitle("Playground Age Given Opportunity Area Status") +
+  scale_y_discrete(limits = rev)
+
+
+
+```
 
 ## How does the observed use of playgrounds differ when a park includes certain features?
 
 ### Chart of Average Playground Use, based on if park contains a restroom, separated by park category
 
 ```{r}
-
 DT <- copy(ParkFull)
 
-DTplot <- DT[, .(avg_Daily_Children = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)), by = .(datePOSIX, Restroom)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Children") ,by = .(Restroom)]
+DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, Park_Category_Local, Restroom, park_name_full)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Park_Category_Local, Restroom,park_name_full)]
 
 ggplot(DTplot) +
-  geom_bar(aes(weight = avg_Daily_Children, x = Restroom))
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = avg_Daily_Users)) +
+  facet_grid(Restroom~Park_Category_Local, scales = "free_y") +
+  xlab("Average Daily number of playground users") +
+  ylab("Park Name") +
+  ggtitle("Average Daily Number of Playground Users Given \n Category and Restroom") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
+
 
 ```
 
 ### Chart of Average Playground Use, based on if park contains a picnic area, separated by park category
 
 ```{r}
-
 DT <- copy(ParkFull)
 
-DTplot <- DT[, .(avg_Daily_Children = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)), by = .(datePOSIX, PicnicArea)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Children") ,by = .(PicnicArea)]
+DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, Park_Category_Local, PicnicArea, park_name_full)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Park_Category_Local, PicnicArea,park_name_full)]
 
 ggplot(DTplot) +
-  geom_bar(aes(weight = avg_Daily_Children, x = PicnicArea))
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = avg_Daily_Users)) +
+  facet_grid(PicnicArea~Park_Category_Local, scales = "free_y") +
+  xlab("Average Daily number of playground users") +
+  ylab("Park Name") +
+  ggtitle("Average Daily Number of Playground Users Given \n Category and Picnic Area") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
+
 
 ```
 
 ### Chart of Average Playground Use, based on if park contains a sports field, separated by park category
 
 ```{r}
-
 DT <- copy(ParkFull)
 
-DTplot <- DT[, .(avg_Daily_Children = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)), by = .(datePOSIX, SportsField, Park_Category, park_name_full)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Children") ,by = .(SportsField, Park_Category, park_name_full)]
+DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, Park_Category_Local, SportsField, park_name_full)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Park_Category_Local, SportsField, park_name_full)]
 
-ggplot(DTplot[Park_Category == "Community"]) +
-  geom_bar(position = "dodge",aes(weight = avg_Daily_Children, y = park_name_full, fill = SportsField))
+ggplot(DTplot) +
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = avg_Daily_Users)) +
+  facet_grid(SportsField~Park_Category_Local, scales = "free_y") +
+  xlab("Average Daily number of playground users") +
+  ylab("Park Name") +
+  ggtitle("Average Daily Number of Playground Users Given \n Category and SportsField") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
+
 
 ```
 
@@ -539,1140 +632,134 @@ ggplot(DTplot[Park_Category == "Community"]) +
 
 ### Chart of Average Playground Use, sorted by Play Element, separated by Primary Age Group
 
-thinking thorugh this.... latice of the above?
+garfield is missing, not actually "no"
+
+```{r}
+DT <- copy(ParkFull)
+
+DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, Elements, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name_full)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Elements,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name_full)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "No")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "No")]
+
+ggplot(DTplot) +
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = avg_Daily_Users, fill = Elements)) +
+  facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y") +
+  xlab("Average Daily number of playground users") +
+  ylab("Park Name") +
+  ggtitle("Average Daily Number of Playground Users Given \n Primary Age Group and Elements") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
+
+
+```
 
 ### Chart of Peak Playground Use, sorted by Play Element, separated by Primary Age Group
 
+garfield is missing, not actually "no"
+
+```{r}
+DT <- copy(ParkFull)
+
+DTplot <- DT[playground == 1, .(max_Daily_Users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, Elements, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name_full)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Users") ,by = .( Elements,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name_full)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "No")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "No")]
+
+ggplot(DTplot) +
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = max_Daily_Users, fill = Elements)) +
+  facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y") +
+  xlab("Max Daily number of playground users") +
+  ylab("Park Name") +
+  ggtitle("Max Daily Number of Playground Users Given \n Primary Age Group and Elements") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
+
+
+```
+
 ### Chart of Playground Popularity, sorted by Play Element, separated by Primary Age Group
+
+```{r}
+
+DT <- copy(ParkFull[occupied == "Yes"])
+
+DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, Elements, park_name_full,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, playground)][, .(users = sum(users)),by = .(Elements, park_name_full,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, playground)][,allusers := sum(users), by = .( Elements, park_name_full,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`)][playground == 1, popularity := users/allusers][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("popularity") ,by = .(Elements, park_name_full, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "No")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "No")]
+
+
+ggplot(DTplot) +
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = popularity, fill = Elements)) +
+  facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y") +
+  xlab("Popularity") +
+  ylab("Park Name") +
+  ggtitle("Playground Popularity Given \n Primary Age Group and Elements") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
+
+```
 
 ### Chart of Playground Popularity specifically of observed child and teen, sorted by Play Element, separated by Primary Age Group
 
+Here, popularity is parameterized as
+
+$\frac{\text{num of children and teens in playground}} {\text{num of children and teens in park}}$
+
+```{r}
+
+DT <- copy(ParkFull[occupied == "Yes"])
+
+DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, na.rm = TRUE)), by = .(datePOSIX, Elements, park_name_full,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, playground)][, .(users = sum(users)),by = .(Elements, park_name_full,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, playground)][,allusers := sum(users), by = .( Elements, park_name_full,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`)][playground == 1, popularity := users/allusers][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("popularity") ,by = .(Elements, park_name_full, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "No")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "No")]
+
+
+ggplot(DTplot) +
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = popularity, fill = Elements)) +
+  facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y") +
+  xlab("Popularity") +
+  ylab("Park Name") +
+  ggtitle("Playground Popularity Among Children Given \n Primary Age Group and Elements") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
+
+```
+
 ## How accessible is the park by transportation?
 
-## By walking:  Chart of Playground Use by Walkscore of park o
+## By walking: Chart of Playground Use by Walkscore of park
 
 ```{r}
 
 DT <- copy(ParkFull)
 
-DTplot <- DT[, .(avg_Daily_Children = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)), by = .(datePOSIX, WalkScore)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Children") ,by = .(WalkScore)]
+DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, WalkScore, park_name_full)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( WalkScore, park_name_full)]
+
 
 ggplot(DTplot) +
-  geom_point(aes(y = avg_Daily_Children, x = WalkScore))
+  geom_bar(stat = "identity", position = "stack", aes(x = as.numeric(WalkScore), fill = avg_Daily_Users, y = reorder(park_name_full, WalkScore))) +
+  xlab("Walkability Score") +
+  ylab("Park Name") +
+  guides(fill=guide_legend(title="Average Daily Users")) +
+  ggtitle("Average Daily Number of Playground Users Given \n Playground Age") +
+  scale_y_discrete(limits = rev) #+
+  scale_x_continuous(labels = scales::comma)
+
 
 ```
 
-## By transit:  Chart of Playground Use by Transitscore of park
+## By transit: Chart of Playground Use by Transitscore of park
 
 ```{r}
 
 DT <- copy(ParkFull)
 
-DTplot <- DT[, .(avg_Daily_Children = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)), by = .(datePOSIX, TransitScore)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Children") ,by = .(TransitScore)]
+DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, TransitScore, park_name_full)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( TransitScore, park_name_full)][, TransitScore := as.numeric(TransitScore)]
+
 
 ggplot(DTplot) +
-  geom_point(aes(y = avg_Daily_Children, x = TransitScore))
-
-```
-
-# Results
-
-Results are saved in multiple locations:
-
--   an excel workbook that contains a separate page for each table of analysis results
--   folders with charts and tables of results designed to be integrated into documents
--   outputs of various steps of the metadata, QA, and final analysis ready sets
-
-```{r create excel workbook data structure for export}
-WB <- openxlsx2::wb_workbook()
-
-
-#WBs <- sapply(unique(SOPARCAggregated[,park_name_full]), assign, value = openxlsx::createWorkbook())
-
-#WBs2 <- sapply(unique(SOPARCAggregated[,park_name_full]), assign, value = openxlsx2::wb_workbook())
-
-dir.create(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/")), recursive = T, showWarnings = FALSE)
-for (i in unique(SOPARCAggregated$park_name_full)) {
-  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))){
-    file.remove(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-  }
-}
-
-```
-
-```{r create word doc data structure for export}
-
-```
-
-## Included parks
-
-```{r report included parks}
-#| output: true
-
-kbl(SOPARCAggregated[order(park_name), .("Park Name" = unique(park_name_full))], 
-    caption = "Parks Included In Analysis",
-    booktabs = TRUE,
-    longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
-
-```
-
-## Utilization
-
-The following metrics rely on counts of people observed. The underlying data are of people observed within an observation period (e.g. "morning1") and target area. It is possible that the same people may be observed across multiple blocks of time and multiple target areas.
-
-Because of this user counts are more accurately understood as "person time of use per target area" and represents a target area being used by a person within the observation period. This explanation accounts for people being counted multiple times by crossing target areas during the observation period.
-
-### number of park users
-
-The total number of users observed in the park across all observation periods.
-
-```{r number of users}
-#| output: true
-
-# kbl(SOPARCtoAggregate[order(park_name),.("Number of Attendees" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name)], 
-#       caption =  "Total Number of Attendees",
-#     booktabs = T) %>% kable_styling(latex_options = "striped")
-DT <- SOPARCAggregated[order(park_name_full),.("Users" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name_full)]
-
-
-
-WB$add_worksheet("User Counts")
-WB$add_data(sheet = "User Counts", DT)
-i <- unique(DT$`Park Name`)[3]
-
-for(i in unique(DT$`Park Name`)) {
-  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
-    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-    if("User Counts" %in% wb$sheet_names){
-      wb$remove_worksheet("User Counts")
-    }
-    
-    
-  } else {
-    wb <- openxlsx2::wb_workbook()
-  }
-  wb$add_worksheet("User Counts")
-  wb$add_data(sheet = "User Counts", DT[`Park Name` == i,])
-  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-}
-
-# WBs$`Annex Park`
-# WBs[i]
-# openxlsx2::wb_add_worksheet(WBs[[i]], "User Counts")
-# openxlsx2::wb_add_data(WBs[[i]],sheet = "User Counts", DT[`Park Name` == i])
-# WBs <- sapply(unique(SOPARCAggregated[,park_name_full]), assign, value = openxlsx2::wb_workbook())
-# WBs$i
-# 
-# WBs <- sapply(unique(SOPARCAggregated[,park_name_full]), assign, value = openxlsx2::wb_workbook())
-# 
-# WBs$add_worksheet("User Counts")
-# for (i in names(WBs)) {
-#   eval(paste0("WBs$",i))
-#   wb_add_worksheet(WBs$, "User Counts")
-#   wb$add_worksheet("User Counts")
-#   WBs[i]$add_data(sheet = "User Counts", DT[`Park Name` == i])
-# 
-# }
-
-#this is a bit wonky, as worksheets get created across all workbooks in the list. So we create these outside of the loop, calling a member of the list arbitrarily
-# openxlsx::addWorksheet(WBs[[1]], sheetName = "User Counts")
-# for (i in names(WBs)) {
-#   openxlsx::writeData(wb = WBs[[i]], sheet = "User Counts",DT[`Park Name` == i,])
-# }
-# openxlsx::writeData(WBs$`White Center Heights Park`,sheet = "User Counts", DT[`Park Name` == i,])
-# 
-# if(!SUPPRESS_TABLES){
-#   kbl(DT, 
-#         caption =  "Total Number of Users",
-#       booktabs = TRUE,
-#       longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
-# }
-
-#export charts for use
-#save charts as individual files
-#cleanup old images of this chart
-if(file.exists(here("./2023/outputs/tables/num_users/"))) {
-  unlink(here("./2023/outputs/tables/num_users/"), recursive = T)
-}
-dir.create(here("./2023/outputs/tables/num_users"), recursive = T)
-write.csv(DT, here("2023/outputs/tables/num_users/num_users.csv"), row.names = FALSE)
-FT <- DT %>% regulartable() %>% autofit()
-
-read_docx() %>%
-body_add_flextable(FT) %>%
-print(target = paste0("./outputs/tables/num_users/num_users.docx"))  
+  geom_bar(stat = "identity", position = "stack", aes(x = as.numeric(TransitScore), fill = avg_Daily_Users, y = reorder(park_name_full, TransitScore))) +
+  xlab("Transit Score") +
+  ylab("Park Name") +
+  guides(fill=guide_legend(title="Average Daily Users")) +
+  ggtitle("Average Daily Number of Playground Users Given \n Playground Age") +
+  scale_y_discrete(limits = rev) #+
+  scale_x_continuous(labels = scales::comma)
 
 
 ```
-
-Notes:
-
--   Due to the study design, user counts are subject to both over and under counting
--   User counts are more accurately understood as "person time of use per target area"
-
-### average number of daily park users
-
-The daily average number of users observed in the park.
-
-```{r average number of daily users}
-#| output: true
-
-DT <- SOPARCAggregated[order(park_name_full),.("Users" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3), by = .("Park Name" = park_name_full)]
-
-
-WB$add_worksheet("Avg Users")
-WB$add_data(sheet = "Avg Users", DT)
-# 
-# for (i in names(WBs)) {
-#   wb = WBs[[i]]
-#   wb$add_worksheet("Avg Users")
-#   wb$add_data(sheet = "Avg Users", DT[`Park Name` == i])
-# }
-
-wsName <- "Avg Users"
-
-for(i in unique(DT$`Park Name`)) {
-  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
-    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-    if(wsName %in% wb$sheet_names){
-      wb$remove_worksheet(wsName)
-    }
-    
-    
-  } else {
-    wb <- openxlsx2::wb_workbook()
-  }
-  wb$add_worksheet(wsName)
-  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
-  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-}
-
-
-if(!SUPPRESS_TABLES){
-  kbl(DT, 
-        caption =  "Daily Average Users",
-      booktabs = TRUE,
-      longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
-}
-
-
-
-#export charts for use
-#save charts as individual files
-#cleanup old images of this chart
-if(file.exists(here("./2023/outputs/tables/avg_users/"))) {
-  unlink(here("./2023/outputs/tables/avg_users/"), recursive = T)
-}
-dir.create(here("./2023/outputs/tables/avg_users"), recursive = T)
-write.csv(DT, here("2023/outputs/tables/avg_users/avg_users.csv"), row.names = FALSE)
-FT <- DT[, .(`Park Name`,"Users" = round(Users,0))] %>% regulartable() %>% autofit()
-
-read_docx() %>%
-body_add_flextable(FT) %>%
-print(target = paste0("./outputs/tables/avg_users/avg_users.docx"))  
-
-
-```
-
-### average number of daily park users by time period
-
-The daily average number of users within each time period.
-
-For each park:
-
-$$
-\text{(Average Park Users By Period)} = \frac{\sum_{d=1}^{3}{(\text{People}_p)_d}}{3}
-$$
-
-where $_d$ is the day of study and $(\text{People}_p)$ are the sum of number of people observed in a time period of a given day.
-
-The people within a given time period and day is defined as the average (rounded up) of people observed in a time period of a given day and target area $_t$, summed across across all target areas.
-
-$$
-\text{People}_p = \sum_{t=1}^{n}{\left( \lceil\frac{\text{(people observed first half of period)}+\text{(people observed second half of period)}}{2}\rceil\right) _t}
-$$
-
-```{r average park users by period, fig.cap = "Average Park Users By Period"}
-#| output: true
-
-DT <- SOPARCAggregated[order(park_name_full),.("Users" = round(sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3 ,0)), by = .("Park Name" = park_name_full, "Time Period" = period)]
-
-DT$`Time Period` <- factor(DT$`Time Period`, level = c("Morning","Lunch","Afternoon","Evening"))
-
-WB$add_worksheet("Avg Users x Period")
-WB$add_data(sheet = "Avg Users x Period", DT)
-
-wsName <- "Avg Users x Period"
-
-for(i in unique(DT$`Park Name`)) {
-  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
-    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-    if(wsName %in% wb$sheet_names){
-      wb$remove_worksheet(wsName)
-    }
-    
-    
-  } else {
-    wb <- openxlsx2::wb_workbook()
-  }
-  wb$add_worksheet(wsName)
-  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
-  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-}
-
-
-if(!SUPPRESS_CHARTS) {
-PT <- ggplot(DT, (aes(x = `Time Period`, y = Users))) +
-  geom_col() +
-  facet_wrap(vars(DT$"Park Name"), scales = "free")
-  
-
-  print(PT)
-}
-
-#save charts as individual files
-#cleanup old images of this chart
-if(file.exists(here("./2023/outputs/charts/avg_users_x_period/"))) {
-  unlink(here("./2023/outputs/charts/avg_users_x_period/"), recursive = T)
-}
-dir.create(here("./2023/outputs/charts/avg_users_x_period"), recursive = T)
-
-for(park in unique(SOPARCAggregated$park_name_full)) {
-  if(max(DT[`Park Name` %in% park]$Users) < 11) {
-    topOfY <- 10
-  } else if(max(DT[`Park Name` %in% park]$Users) < 26){
-    topOfY <- 25
-  } else if(max(DT[`Park Name` %in% park]$Users) < 51){
-    topOfY <- 50
-  } else if(max(DT[`Park Name` %in% park]$Users) < 101){
-    topOfY <- 100
-  } else if(max(DT[`Park Name` %in% park]$Users) < 251){
-    topOfY <- 250
-  } else if(max(DT[`Park Name` %in% park]$Users) < 501){
-    topOfY <- 500
-  } else if(max(DT[`Park Name` %in% park]$Users) < 1001) {
-    topOfY <- 1000
-  } else {
-    topOfY <- max(DT[`Park Name` %in% park]$Users)
-  }
-  tooLow <- topOfY *.30
-  cityName <- first(SOPARCAggregated[park_name_full == park, City])
-  
-  PTExport <- ggplot(DT[`Park Name` %in% park], (aes(x = `Time Period`, y = `Users`))) +
-  geom_col()  +
-  #labs(title = paste0(park,"\n", cityName,"\n", "2023"), subtitle = paste("Average Users Per Period")) +
-  labs(title = paste0(park," ", cityName," ", "2023"), subtitle = paste("Average Users Per Period")) +
-  geom_label(aes(label = `Users`, colour = "#000000", vjust =  ifelse(`Users` > tooLow, 1.5, 0) )) +
-  scale_color_manual(values=c("#000000")) +
-  scale_y_continuous(limits=c(0,topOfY), breaks = integer_breaks()) +
-  theme(plot.title = element_text(size = 8),
-        plot.subtitle = element_text(size = 14,),
-        #axis.title.x = element_text(size = 12))
-        axis.title.x = element_blank(),
-        legend.position = "none")
-
-  ggsave(paste0(park,"_avg_users_x_period.pdf"), plot = PTExport, path = paste0("./outputs/charts/avg_users_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
-  ggsave(paste0(park,"_avg_users_x_period.png"), plot = PTExport, path = paste0("./outputs/charts/avg_users_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
-  
-}
-
-
-
-if(!SUPPRESS_TABLES){
-  kbl(DT,
-      caption = "Daily Average Number of Users Per Time Period",
-      booktabs = TRUE,
-      longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
-}
-
-```
-
-Notes:
-
--   User counts are more accurately understood as "person time of use per target area"
-    -   "Person using target area during the observation"
--   If taken strictly as "people using a park" then this may be an over or under count
-    -   If in the first morning observation 2 people are observed, and the second 3, this may be 3 unique people, or as many as 5, but we calculate this as 2.5 and round up to 3.
-    -   If two people walk across all target areas during an observation period, they would be counted each time. With 10 target areas, this would be 20 people observed.
-
-### rate of park use by time period
-
-The proportion of the total users observed within each time period.
-
-For each park:
-
-$$
-\text{(Rate of Park Use By Period)} = \frac{\sum_{d=1}^{3}{(\text{People}_p)_d}}{\sum_{d=1}^{3}{\text{People}_d}}
-$$
-
-where $_d$ is the day of study and $(\text{People}_p)$ are the sum of number of people observed in a time period of a given day.
-
-The people within a given time period and day is defined as the average (rounded up) of people observed in a time period of a given day and target area $_t$, summed across across all target areas.
-
-$$
-\text{People}_p = \sum_{t=1}^{n}{\left( \lceil\frac{\text{(people observed first half of period)}+\text{(people observed second half of period)}}{2}\rceil\right) _t}
-$$
-
-The total number of people in a day, $\text{People}_d$, is defined as the sum of all $\text{People}_p$ within a day.
-
-```{r rate of park use by period, fig.cap="Rate Of Park Use By Period"}
-#| output: true
-
-
-DT <- SOPARCAggregated[order(park_name_full), sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3 , by = .(park_name_full, period)][,.("Time Period" = period, "Rate of Use" = (V1/ sum(V1))), by = .("Park Name" = park_name_full) ]
-
-
-DT$`Time Period` <- factor(DT$`Time Period`, level = c("Morning","Lunch","Afternoon","Evening"))
-
-
-WB$add_worksheet("Rate Use x Period")
-WB$add_data(sheet = "Rate Use x Period", DT)
-
-wsName <- "Rate Use x Period"
-
-for(i in unique(DT$`Park Name`)) {
-  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
-    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-    if(wsName %in% wb$sheet_names){
-      wb$remove_worksheet(wsName)
-    }
-    
-    
-  } else {
-    wb <- openxlsx2::wb_workbook()
-  }
-  wb$add_worksheet(wsName)
-  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
-  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-}
-
-
-if(!SUPPRESS_CHARTS) {
-  PT <- ggplot(DT, (aes(x = `Time Period`, y = `Rate of Use`))) +
-    geom_col() +
-    facet_wrap(vars(`Park Name`), scales = "free") +
-    scale_y_continuous(limits = c(0,1),labels = scales::percent) +
-     theme(axis.text.x = element_text(angle = 0, vjust = 0, hjust=0))
-  print(PT)
-}
-
-#save charts as individual files
-#cleanup old images of this chart
-if(file.exists(here("./2023/outputs/charts/rate_use_x_period/"))) {
-  unlink(here("./2023/outputs/charts/rate_use_x_period/"), recursive = T)
-}
-dir.create(here("./2023/outputs/charts/rate_use_x_period"), recursive = T)
-
-for(park in unique(SOPARCAggregated$park_name_full)) {
-  
-  cityName <- first(SOPARCAggregated[park_name_full == park, City])
-  
-  # PTExport <- ggplot(DT[`Park Name` %in% park], (aes(label = paste0(`Time Period`," \n \n",round(`Rate of Use`*100),"%"), area = `Rate of Use`))) +
-  # geom_treemap()  +
-  #  geom_treemap_text(color = "white",
-  #                    place = "centre",
-  #                    size = 6) +
-  # labs(title = paste0(park, " ", cityName," ","2023"), subtitle = paste("Rate of Park Use Per Period")) +
-  # theme(plot.title = element_text(size = 8),
-  #       plot.subtitle = element_text(size = 14,),
-  #       axis.title.x = element_text(size = 12))
-    
-  PTExport <-  ggplot(DT[`Park Name` %in% park]) +
-    theme_bw() +
-    scale_fill_grey(labels = c(paste0("Morning", " (",label_percent()(DT[`Park Name` %in% park & `Time Period` %in% "Morning",`Rate of Use`]),")"),
-                                  paste0("Lunch", " (",label_percent()(DT[`Park Name` %in% park & `Time Period` %in% "Lunch",`Rate of Use`]),")"),
-                                  paste0("Afternoon", " (",label_percent()(DT[`Park Name` %in% park & `Time Period` %in% "Afternoon",`Rate of Use`]),")"),
-                                  paste0("Evening", " (",label_percent()(DT[`Park Name` %in% park & `Time Period` %in% "Evening",`Rate of Use`]),")")))  +
-    geom_bar(position = "stack", stat = "identity",  aes(x =`Park Name`, y = `Rate of Use`, fill = `Time Period`)) +
-    labs(title = paste0(park, " ", cityName," ","2023"), subtitle = paste("Rate of Park Use Per Period"))  +
-    theme(plot.title = element_text(size = 8),
-          plot.subtitle = element_text(size = 14,),
-          axis.title.x = element_blank(),
-          axis.text.x = element_blank(),
-          axis.ticks.x = element_blank())+
-    scale_y_continuous(labels=percent) 
-      
-  ggsave(paste0(park,"_rate_use_x_period.pdf"), plot = PTExport, path = paste0("./outputs/charts/rate_use_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
-  ggsave(paste0(park,"_rate_use_x_period.png"), plot = PTExport, path = paste0("./outputs/charts/rate_use_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
-}
-
-if(!SUPPRESS_TABLES) {
-  kbl(DT,
-      caption = "Daily Rate Of Park Use By Time Period",
-      booktabs = TRUE,
-      longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
-}
-
-
-```
-
-Notes:
-
--   This is accurately understood as the rate of park use during the period
--   There is likely still some error from the under and overcounting of the underlying counts, but the more true that over and under counting is randomly distributed across all time periods, the less true this is.
--   Rate is within-park (each park totals to 100%)
-
-### average number of daily park users by age
-
-The daily average number of users observed in each age group.
-
-Computationally this measure is similar to the average users by time period above.
-
-```{r average park users by age, fig.cap="Average Park Users By Age"}
-#| output: true
-
-DT <- SOPARCAggregated[order(park_name_full), .( "Age Group" = rep(c("child","teen","adult","senior")), 
-                                           "Users" = round(c(sum(num_child_prim, 
-                                                                                    num_child_snd,
-                                                                                    num_child_spec, 
-                                                                                    na.rm = TRUE)/3,
-                                                                                sum(num_teen_prim, 
-                                                                                    num_teen_snd, 
-                                                                                    num_teen_spec, 
-                                                                                    na.rm = TRUE)/3,
-                                                                                sum(num_adult_prim, 
-                                                                                    num_adult_snd, 
-                                                                                    num_adult_spec, 
-                                                                                    na.rm = TRUE)/3,
-                                                                                sum(num_senior_prim, 
-                                                                                    num_senior_snd, 
-                                                                                    num_senior_spec, 
-                                                                                    na.rm = TRUE)/3))), by = .("Park Name" = park_name_full)]
-
-DT$`Age Group` <- factor(DT$`Age Group`, level = c("child", "teen", "adult", "senior"))
-
-WB$add_worksheet("Avg Users x Age")
-WB$add_data(sheet = "Avg Users x Age", DT)
-
-wsName <- "Avg Users x Age"
-
-for(i in unique(DT$`Park Name`)) {
-  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
-    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-    if(wsName %in% wb$sheet_names){
-      wb$remove_worksheet(wsName)
-    }
-    
-    
-  } else {
-    wb <- openxlsx2::wb_workbook()
-  }
-  wb$add_worksheet(wsName)
-  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
-  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-}
-
-
-if(!SUPPRESS_CHARTS) {
-  PT <- ggplot(DT, (aes(x = `Age Group`, y = `Users`))) +
-    geom_col() +
-    facet_wrap(vars(`Park Name`), scales = "free") +
-     theme(axis.text.x = element_text(angle = 0, vjust = 0, hjust=0))
-    
-  print(PT)
-}
-
-#save charts as individual files
-#cleanup old images of this chart
-if(file.exists(here("./2023/outputs/charts/avg_users_x_age/"))) {
-  unlink(here("./2023/outputs/charts/avg_users_x_age/"), recursive = T)
-}
-dir.create(here("./2023/outputs/charts/avg_users_x_age"), recursive = T)
-
-for(park in unique(SOPARCAggregated$park_name_full)) {
-  if(max(DT[`Park Name` %in% park]$Users) < 11) {
-    topOfY <- 10
-  } else if(max(DT[`Park Name` %in% park]$Users) < 26){
-    topOfY <- 25
-  } else if(max(DT[`Park Name` %in% park]$Users) < 51){
-    topOfY <- 50
-  } else if(max(DT[`Park Name` %in% park]$Users) < 101){
-    topOfY <- 100
-  } else if(max(DT[`Park Name` %in% park]$Users) < 251){
-    topOfY <- 250
-  } else if(max(DT[`Park Name` %in% park]$Users) < 501){
-    topOfY <- 500
-  } else if(max(DT[`Park Name` %in% park]$Users) < 1001) {
-    topOfY <- 1000
-  } else {
-    topOfY <- max(DT[`Park Name` %in% park]$Users)
-  }
-  tooLow <- topOfY *.30
-  cityName <- first(SOPARCAggregated[park_name_full == park, City])
-  
-  PTExport <- ggplot(DT[`Park Name` %in% park,], (aes(x = `Age Group`, y = `Users`))) +
-  geom_col()  +
-  labs(title = paste0(park," ", cityName," ", "2023"), subtitle = paste("Average Users Per Age")) +
-  geom_label(aes(label = `Users`, colour = "#000000", vjust =  ifelse(`Users` > tooLow, 1.5, 0))) +
-  scale_color_manual(values=c("#000000")) +
-  scale_y_continuous(limits=c(0,topOfY), breaks = integer_breaks()) +
-  theme(plot.title = element_text(size = 8),
-        plot.subtitle = element_text(size = 14,),
-        #axis.title.x = element_text(size = 12))
-        axis.title.x = element_blank(),
-        legend.position = "none")
-
-  ggsave(paste0(park,"_avg_users_x_age.pdf"), plot = PTExport, path = paste0("./outputs/charts/avg_users_x_age"),width = CHARTWIDTH, height = CHARTHEIGHT)
-  ggsave(paste0(park,"_avg_users_x_age.png"), plot = PTExport, path = paste0("./outputs/charts/avg_users_x_age"),width = CHARTWIDTH, height = CHARTHEIGHT)
-}
-
-if(!SUPPRESS_TABLES){
-  kbl(DT,
-    caption = "Daily Average Number of Users Per Age Group",
-    booktabs = TRUE,
-    longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
-
-}
-
-```
-
-Notes:
-
--   User counts are more accurately understood as "person time of use per target area"
--   If taken strictly as "people using a park" then this may be an over or under count
-    -   If in the first morning observation 2 people are observed, and the second 3, this may be 3 unique people, or as many as 5, but we calculate this as 2.5 and round up to 3.
-    -   If two people walk across all target areas during an observation period, they would be counted each time. With 10 target areas, this would be 20 people observed.
-
-### rate of park use by age
-
-The proportion of the total users observed within each age group.
-
-```{r rate of park use by age, fig.cap="Rate of Park Use By Age"}
-#| output: true
-
-DT <- SOPARCAggregated[order(park_name_full), .("Age Group" = rep(c("child","teen","adult","senior")),
-                                         "Rate of Use" = 
-                                           c(
-                                             sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
-                                             sum(num_teen_prim, num_teen_snd, num_teen_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
-                                             sum(num_adult_prim, num_adult_snd, num_adult_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE),
-                                             sum(num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE) / sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE))), by = .("Park Name" = park_name_full)]
-
-
-DT$`Age Group` <- factor(DT$`Age Group`, level = c("child", "teen", "adult", "senior"))
-
-WB$add_worksheet("Rate Use x Age")
-WB$add_data(sheet = "Rate Use x Age", DT)
-
-wsName <- "Rate Use x Age"
-
-for(i in unique(DT$`Park Name`)) {
-  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
-    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-    if(wsName %in% wb$sheet_names){
-      wb$remove_worksheet(wsName)
-    }
-    
-    
-  } else {
-    wb <- openxlsx2::wb_workbook()
-  }
-  wb$add_worksheet(wsName)
-  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
-  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-}
-
-
-if(!SUPPRESS_CHARTS) {
-  PT <- ggplot(DT, (aes(x = factor(`Age Group`, levels = c("child","teen","adult","senior")), y = `Rate of Use`))) +
-    xlab("Age Group") +
-    geom_col() +
-    facet_wrap(vars(`Park Name`)) +
-     theme(axis.text.x = element_text(angle = 0, vjust = 0, hjust=0))
-  print(PT)
-}
-
-#save charts as individual files
-#cleanup old images of this chart
-if(file.exists(here("./2023/outputs/charts/rate_use_x_age/"))) {
-  unlink(here("./2023/outputs/charts/rate_use_x_age/"), recursive = T)
-}
-dir.create(here("./2023/outputs/charts/rate_use_x_age"), recursive = T)
-
-for(park in unique(SOPARCAggregated$park_name_full)) {
-  cityName <- first(SOPARCAggregated[park_name_full == park, City])
-  # PTExport <- ggplot(DT[`Park Name` %in% park], (aes(label = paste0(factor(`Age Group`, levels = c("child","teen","adult","senior"))," \n",round(`Rate of Use`*100),"%"), area = `Rate of Use`))) +
-  # geom_treemap()  +
-  # geom_treemap_text(color = "white",
-  #                   place = "centre",
-  #                   size = 6) +
-  # labs(title = paste0(park, " ", cityName, " ","2023"), subtitle = paste("Rate of Park Use Per Age")) +
-  # theme(plot.title = element_text(size = 8),
-  #       plot.subtitle = element_text(size = 14,),
-  #       axis.title.x = element_text(size = 12))
-
-    PTExport <-  ggplot(DT[`Park Name` %in% park]) +
-    theme_bw() +
-    scale_fill_grey(,labels = c(paste0("Child", " (",label_percent()(DT[`Park Name` %in% park & `Age Group` %in% "child",`Rate of Use`]),")"),
-                                  paste0("Teen", " (",label_percent()(DT[`Park Name` %in% park & `Age Group` %in% "teen",`Rate of Use`]),")"),
-                                  paste0("Adult", " (",label_percent()(DT[`Park Name` %in% park & `Age Group` %in% "adult",`Rate of Use`]),")"),
-                                  paste0("Senior", " (",label_percent()(DT[`Park Name` %in% park & `Age Group` %in% "senior",`Rate of Use`]),")")))  +
-    geom_bar(position = "stack", stat = "identity",  aes(x =`Park Name`, y = `Rate of Use`, fill = `Age Group`)) +
-    labs(title = paste0(park, " ", cityName," ","2023"), subtitle = paste("Rate of Park Use Per Age"))  +
-    theme(plot.title = element_text(size = 8),
-          plot.subtitle = element_text(size = 14,),
-          axis.title.x = element_blank(),
-          axis.text.x = element_blank(),
-          axis.ticks.x = element_blank())+
-    scale_y_continuous(labels=percent) 
-    
-  PTExport  
-  ggsave(paste0(park,"_rate_use_x_age.pdf"), plot = PTExport, path = paste0("./outputs/charts/rate_use_x_age"),width = CHARTWIDTH, height = CHARTHEIGHT)
-  ggsave(paste0(park,"_rate_use_x_age.png"), plot = PTExport, path = paste0("./outputs/charts/rate_use_x_age"),width = CHARTWIDTH, height = CHARTHEIGHT)
-}
-
-if(!SUPPRESS_TABLES) {
-  kbl(DT,
-      caption = "Rate of Park Use by Age Group",
-      booktabs = TRUE,
-      longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
-}
-
-```
-
-Notes:
-
--   This is accurately understood as the rate of park use by each age group
--   There is likely still some error from the under and over counting of the underlying counts, but the more true that over and under counting is randomly distributed across all time periods, the less true this is.
--   Rate is within-park (each park totals to 100%)
-
-## Occupancy
-
-### occupancy rate
-
-The percentage of observations where at least one user was observed in the park.
-
-For each park, the number of observation periods with any target area in occupied status is divided by the total number of observation periods (24)
-
-```{r analysis of occupancy rate}
-#| output: true
-
-
-DT <- SOPARCtoAggregate[order(park_name_full), ifelse(any(occupied %in% "Yes"), 1, 0), by = .(park_name_full, periodBasedOnSequence,dayNumberBasedOnSequence)][, .( "Rate" =sum(V1)/24 ),by=.("Park Name" = park_name_full)]
-
-WB$add_worksheet("Rate Occupied")
-WB$add_data(sheet = "Rate Occupied", DT)
-
-wsName <- "Rate Occupied"
-
-for(i in unique(DT$`Park Name`)) {
-  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
-    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-    if(wsName %in% wb$sheet_names){
-      wb$remove_worksheet(wsName)
-    }
-    
-    
-  } else {
-    wb <- openxlsx2::wb_workbook()
-  }
-  wb$add_worksheet(wsName)
-  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
-  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-}
-
-
-if(!SUPPRESS_TABLES) {
-kbl(DT,
-    caption = "Occupancy Rate",
-    booktabs = TRUE,
-    longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
-}
-
-#export charts for use
-#save charts as individual files
-#cleanup old images of this chart
-if(file.exists(here("./2023/outputs/tables/rate_occupied/"))) {
-  unlink(here("./2023/outputs/tables/rate_occupied/"), recursive = T)
-}
-dir.create(here("./2023/outputs/tables/rate_occupied"), recursive = T)
-write.csv(DT, here("2023/outputs/tables/rate_occupied/rate_occupied.csv"), row.names = FALSE)
-FT <- DT[, .(`Park Name`, "Rate" = percent(Rate))] %>% regulartable() %>% autofit()
-
-read_docx() %>%
-body_add_flextable(FT) %>%
-print(target = paste0("./outputs/tables/rate_occupied/rate_occupied.docx"))  
-```
-
-Notes:
-
-## Activities
-
-### number of users per activity
-
-The number of users observed doing the activity in the park.
-
-```{r users doing an activity}
-#| output: true
-
-# #construct an activity table from the non aggregated activity list to align record_ids
-# DT <- merge(SOPARCActivities, SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full, tar_area, dayNumberBasedOnSequence, period, datePOSIX, day, month, weekend)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
-# #merge(SOPARCActivities, SOPARCtoAggregate[,.("record_id" = as.numeric(record_id), park_name_full)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
-# 
-# # repeat aggregation steps for people counts
-# DT <- DT[, .(children = ceiling(mean(children, na.rm = T)), 
-#              teen = ceiling(mean(teen, na.rm = T)), 
-#              adult = ceiling(mean(adult, na.rm = T)), 
-#              senior = ceiling(mean(senior, na.rm = T))), by = .(park_name_full, dayNumberBasedOnSequence,tar_area,  period, activity )]
-# 
-# DT <- DT[,.("Users" = sum(children, teen, adult, senior)) , by = .("Park Name" = park_name_full, "Activity" = activity)]
-
-#construct an activity table from the non agrgeagted activity list to align record_ids
-DT <- merge(SOPARCActivities, SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full, tar_area, sub_area, dayNumberBasedOnSequence, period, periodBasedOnSequence,datePOSIX, day, month, weekend)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
-#merge(SOPARCActivities, SOPARCtoAggregate[,.("record_id" = as.numeric(record_id), park_name_full)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
-# repeat aggregation steps for people counts
-# 
-#create target area level aggregation by adding together observations of poeple doing the same activity at the same sub-period in the same target area but different sub areas
-DT <- DT[, .(children = sum(children, na.rm = T), 
-             teen = sum(teen, na.rm = T), 
-             adult = sum(adult, na.rm = T), 
-             senior = sum(senior, na.rm = T)), by = .(park_name_full, dayNumberBasedOnSequence, tar_area, period, periodBasedOnSequence,activity )]
-#aggregate first and second half of each period such that people doing the same activity in the same target area are averaged rounding up
-DT <- DT[, .(children = ceiling(mean(children, na.rm = T)), 
-             teen = ceiling(mean(teen, na.rm = T)), 
-             adult = ceiling(mean(adult, na.rm = T)), 
-             senior = ceiling(mean(senior, na.rm = T))), by = .(park_name_full, dayNumberBasedOnSequence, tar_area, period, activity )]
-
-DT <- DT[,.("Users" = sum(children, teen, adult, senior)) , by = .("Park Name" = park_name_full, "Activity" = activity)]
-
-DT <- DT[order(`Park Name`, Activity),]
-
-
-WB$add_worksheet("Users per Activity")
-WB$add_data(sheet = "Users per Activity", DT)
-
-wsName <- "Users per Activity"
-
-for(i in unique(DT$`Park Name`)) {
-  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
-    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-    if(wsName %in% wb$sheet_names){
-      wb$remove_worksheet(wsName)
-    }
-    
-    
-  } else {
-    wb <- openxlsx2::wb_workbook()
-  }
-  wb$add_worksheet(wsName)
-  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
-  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-}
-
-
-if(!SUPPRESS_TABLES) {
-  kbl(DT[`Park Name` == park,],
-      caption = "Number of Users Observed in Park Activities",
-      booktabs = TRUE,
-      longtable = TRUE) %>% 
-    kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
-}
-
-
-#export charts for use
-#save charts as individual files
-#cleanup old images of this chart
-if(file.exists(here("./2023/outputs/tables/num_user_activity/"))) {
-  unlink(here("./2023/outputs/tables/num_user_activity/"), recursive = T)
-}
-dir.create(here("./2023/outputs/tables/num_user_activity"), recursive = T)
-
-for(park in unique(SOPARCtoAggregate$park_name_full)) {
-  # KBObject <- kbl(DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)],
-  #     caption = "Rate of User Activy",
-  #     booktabs = TRUE,
-  #     longtable = TRUE) %>%
-  #   kable_styling(latex_options = c("striped", "repeat_header"))
-  # 
-  #   save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_user_activity/",park,"rate_user_activity.pdf")))
-  
-  FT <- DT[order(Users, decreasing = TRUE)][`Park Name` == park,.(Activity, Users)]%>% regulartable() %>% autofit()
-
-  read_docx() %>%
-  body_add_flextable(FT) %>%
-  print(target = paste0("./outputs/tables/num_user_activity/",park,"_num_user_activity.docx"))  
-
-}
-```
-
-Notes:
-
--   user counts are subject to over and under counting due to how observations were conducted and aggregated
--   If an individual is observed doing a different activity in the second half of a quarter than the first half, these will be counted as distincti activities, and so not averaged. This can results in slightly higher counts of people engaged in actities than the average user counts.
-
-### rate of user activity
-
-The percentage users observed doing the activity in the park.
-
-For each park, the number of users engaged in an activity is divided by the total number of users observed in the park throughout the study duration.
-
-```{r Rate of User Activity}
-#| output: true
-
-#construct an activity table from the non agrgeagted activity list to align record_ids
-DT <- merge(SOPARCActivities, SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full, tar_area, sub_area, dayNumberBasedOnSequence, period, periodBasedOnSequence,datePOSIX, day, month, weekend)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
-#merge(SOPARCActivities, SOPARCtoAggregate[,.("record_id" = as.numeric(record_id), park_name_full)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
-# repeat aggregation steps for people counts
-# 
-#create target area level aggregation by adding together observations of poeple doing the same activity at the same sub-period in the same target area but different sub areas
-DT <- DT[, .(children = sum(children, na.rm = T), 
-             teen = sum(teen, na.rm = T), 
-             adult = sum(adult, na.rm = T), 
-             senior = sum(senior, na.rm = T)), by = .(park_name_full, dayNumberBasedOnSequence, tar_area, period, periodBasedOnSequence,activity )]
-#aggregate first and second half of each period such that people doing the same activity in the same target area are averaged rounding up
-DT <- DT[, .(children = ceiling(mean(children, na.rm = T)), 
-             teen = ceiling(mean(teen, na.rm = T)), 
-             adult = ceiling(mean(adult, na.rm = T)), 
-             senior = ceiling(mean(senior, na.rm = T))), by = .(park_name_full, dayNumberBasedOnSequence, tar_area, period, activity )]
-
-DT[,"Num" := sum(children, teen, adult, senior) , by = .(park_name_full, activity)]
-DT[,"Denom" := sum(children, teen, adult, senior) , by = .(park_name_full)]
-
-DT <- DT[!duplicated(DT[,.(park_name_full, activity,Num,Denom)]), .(park_name_full, activity, Num, Denom)]
-DT <- DT[,"Rate" := Num/Denom, by = .(park_name_full, activity)][,.("Park Name" = park_name_full, "Activity" = activity, "Rate" = Rate)]
-DT <- DT[order(`Park Name`, Activity),]
-
-
-WB$add_worksheet("Rate User Activity")
-WB$add_data(sheet = "Rate User Activity", DT)
-
-wsName <- "Rate User Activity"
-
-for(i in unique(DT$`Park Name`)) {
-  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
-    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-    if(wsName %in% wb$sheet_names){
-      wb$remove_worksheet(wsName)
-    }
-    
-    
-  } else {
-    wb <- openxlsx2::wb_workbook()
-  }
-  wb$add_worksheet(wsName)
-  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
-  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-}
-
-
-if(!SUPPRESS_TABLES) {
-  kbl(DT[`Park Name` == park,],
-      caption = "Rate of Users Observed in Park Activities",
-      booktabs = TRUE,
-      longtable = TRUE) %>% 
-    kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
-}
-
-
-#export charts for use
-#save charts as individual files
-#cleanup old images of this chart
-if(file.exists(here("./2023/outputs/tables/rate_user_activity/"))) {
-  unlink(here("./2023/outputs/tables/rate_user_activity/"), recursive = T)
-}
-dir.create(here("./2023/outputs/tables/rate_user_activity"), recursive = T)
-
-for(park in unique(SOPARCtoAggregate$park_name_full)) {
-  # KBObject <- kbl(DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)],
-  #     caption = "Rate of User Activy",
-  #     booktabs = TRUE,
-  #     longtable = TRUE) %>%
-  #   kable_styling(latex_options = c("striped", "repeat_header"))
-  # 
-  #   save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_user_activity/",park,"rate_user_activity.pdf")))
-  
-  FT <- DT[order(Rate, decreasing = TRUE)][`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100, 2), "%"))]%>% regulartable() %>% autofit()
-
-  read_docx() %>%
-  body_add_flextable(FT) %>%
-  print(target = paste0("./outputs/tables/rate_user_activity/",park,"_rate_user_activity.docx"))  
-
-}
-```
-
-Notes:
-
--   All activities listed have at least 1 participant, but some may show 0 in the prepared tables due to being less than 0.01%
--   The total rate of all user activities listed will equal 100%, the total amount of activity observed.
--   This is calculated on the non aggregated population counts.
-
-### rate of activity observed
-
-The percentage of observations where at least one user was observed doing the activity in the park.
-
-For each park, the total the number of periods the activity was observed is divided by 24, the total number of observations periods possible for any particular activity.
-
-```{r Rate of Activity Observed}
-#| output: true
-
-#construct an activity table from the activity list
-DT <- merge(SOPARCActivities[,.(record_id_aggregated,activity)], SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full, periodBasedOnSequence,dayNumberBasedOnSequence)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
-
-DT <- DT[,.N, by = .(park_name_full,activity,periodBasedOnSequence,dayNumberBasedOnSequence)]
-
-DT <- DT[order(park_name_full, activity), .("Rate" = .N/24), by = .("Park Name" = park_name_full, "Activity" = activity)]
-
-WB$add_worksheet("Rate Activity Observed")
-WB$add_data(sheet = "Rate Activity Observed", DT)
-
-wsName <- "Rate Activity Observed"
-
-for(i in unique(DT$`Park Name`)) {
-  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
-    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-    if(wsName %in% wb$sheet_names){
-      wb$remove_worksheet(wsName)
-    }
-    
-    
-  } else {
-    wb <- openxlsx2::wb_workbook()
-  }
-  wb$add_worksheet(wsName)
-  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
-  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-}
-
-
-
-#export charts for use
-#save charts as individual files
-#cleanup old images of this chart
-if(file.exists(here("./2023/outputs/tables/rate_activity_observed/"))) {
-  unlink(here("./2023/outputs/tables/rate_activity_observed/"), recursive = T)
-}
-dir.create(here("./2023/outputs/tables/rate_activity_observed"), recursive = T)
-
-for(park in unique(SOPARCtoAggregate$park_name_full)) {
-  # KBObject <- kbl(DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)],
-  #     caption = "Rate of User Activy",
-  #     booktabs = TRUE,
-  #     longtable = TRUE) %>%
-  #   kable_styling(latex_options = c("striped", "repeat_header"))
-  # 
-  #   save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_user_activity/",park,"rate_user_activity.pdf")))
-  
-  FT <- DT[order(Rate, decreasing = TRUE)][`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100, 2), "%"))]%>% regulartable() %>% autofit()
-
-  read_docx() %>%
-  body_add_flextable(FT) %>%
-  print(target = paste0("./outputs/tables/rate_activity_observed/",park,"_rate_activity_observed.docx"))  
-
-}
-```
-
-Notes:
-
--   Unlike many of the other measures provided, these rates are mostly independent of each other and do not have an additive meaning. This is because multiple activities may be observed in a single observation period. E..g "walking" may be observed in all 24 periods, and so have an observation rate of 100%, and "sitting" may be observed in 6 periods and so have a rate of 25%.
-
-## Spatial analysees
-
-### ratio of use to half-mile catchment area
-
-The ratio of how many users were observed per day on average relative to how many people live within 0.5 miles of the park.
-
-This is provided per 1,000 residents to improve readability.
-
-```{r ratio of use to catchment}
-#| output: true
-#calculate average users
-DT <- SOPARCAggregated[order(park_name_full),.("Users" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3), by = .("Park Name" = park_name_full)]
-
-#attac
-DT <- merge(DT, ParkPopulationTable, by.x =  "Park Name", by.y = "parkNameFull")
-
-DT <- DT[order(`Park Name`), .("Ratio" = Users / populationHalfMile, "Population in Half Mile" = populationHalfMile, Users), by = `Park Name`][, .("Ratio Per 1000" = Ratio *1000,"Average Daily Users" = Users, `Population in Half Mile`), by = "Park Name"]
-
-
-
-WB$add_worksheet("Ratio Use Catchment")
-WB$add_data(sheet = "Ratio Use Catchment", DT)
-
-wsName <- "Ratio Use catchment"
-
-for(i in unique(DT$`Park Name`)) {
-  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
-    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-    if(wsName %in% wb$sheet_names){
-      wb$remove_worksheet(wsName)
-    }
-    
-    
-  } else {
-    wb <- openxlsx2::wb_workbook()
-  }
-  wb$add_worksheet(wsName)
-  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
-  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-}
-
-#export charts for use
-#save charts as individual files
-#cleanup old images of this chart
-if(file.exists(here("./2023/outputs/tables/ratio_use_catch/"))) {
-  unlink(here("./2023/outputs/tables/ratio_use_catch/"), recursive = T)
-}
-dir.create(here("./2023/outputs/tables/ratio_use_catch"), recursive = T)
-  write.csv(DT, here("2023/outputs/tables/ratio_use_catch/ratio_use_catch.csv"), row.names = FALSE)
-
-  # KBObject <- kbl(DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)],
-  #     caption = "Rate of User Activy",
-  #     booktabs = TRUE,
-  #     longtable = TRUE) %>%
-  #   kable_styling(latex_options = c("striped", "repeat_header"))
-  # 
-  #   save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_user_activity/",park,"rate_user_activity.pdf")))
-  
-  FT <- DT[, .(`Park Name`, "Ratio Per 1000" = round(`Ratio Per 1000`,2),"Average Daily Users" = round(`Average Daily Users`,0), "Population in Half Mile" = round(`Population in Half Mile`,0))] %>% regulartable() %>% autofit()
-
-  read_docx() %>%
-  body_add_flextable(FT) %>%
-  print(target = paste0("./outputs/tables/ratio_use_catch/ratio_use_catch.docx"))
-
-
-
-```
-
-Notes:
-
--   The ratios are calculated on non-rounded data, and then rounded. The average number of users and populations provided in the formatted word document are rounded. This causes a rounding error where you wouldn't get the exact ratio if you were to divide these users and populations. For accurate results use the numbers provided in the pivot ready tables.
-
-```{r save workbooks}
-#create project wide workbooks
-dir.create(here("./2023/outputs/tables/pivot_ready"), recursive = T, showWarnings = FALSE)
-if(file.exists(here("2023/outputs/tables/pivot_ready/analysis_tables.xlsx"))){
-  file.remove(here("2023/outputs/tables/pivot_ready/analysis_tables.xlsx"))
-}
-openxlsx2::wb_save(WB, file = "./outputs/tables/pivot_ready/analysis_tables.xlsx")
-
-#create park speciifc workbooks
-# dir.create(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/")), recursive = T, showWarnings = FALSE)
-# for (i in names(WBs)) {
-#   wb = WBs[[i]]
-#   
-#   if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))){
-#     file.remove(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))
-#   }
-#   #wb$save(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))
-#   openxlsx2::wb_save(wb, file = paste0("./outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx"))
-# }
-
-# dir.create(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/")), recursive = T, showWarnings = FALSE)
-# for (i in names(WBs)) {
-#   if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))){
-#     file.remove(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))
-#   } 
-#   
-#   openxlsx::saveWorkbook(WBs[[i]], paste0("./outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx"), overwrite = T)
-# }
-
-
-
-```
-
-```{r save expanded activity table}
-write.csv(merge(SOPARCActivities,SOPARCtoAggregate[,.(park_name_full, record_id, period, target_area, datePOSIX)], by.x = "record_id_aggregated", by.y = "record_id"), here("2023/outputs/data-metadata/SOPARCActivitiesExpanded.csv"), row.names = FALSE)
- 
-```
-
-# Closure and Next Steps
