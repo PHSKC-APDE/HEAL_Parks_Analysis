@@ -73,7 +73,7 @@ options(knitr.table.format = "latex")
 #constants
 #CHARTWIDTH <- 3.5 #width for charts to generate for reproduciton
 #CHARTHEIGHT <- 2.3 #height of charts to generate for reproduction
-RECALCULATEPOPULATIONS <- TRUE
+RECALCULATEPOPULATIONS <- FALSE
 PARALLEL_PROCESS <- TRUE
 ```
 
