@@ -71,9 +71,9 @@ pacman::p_load(doParallel,  #parallalize loops, including geography calculation
 options(knitr.table.format = "latex") 
 
 #constants
-CHARTWIDTH <- 3.5 #width for charts to generate for reproduciton
-CHARTHEIGHT <- 2.3 #height of charts to generate for reproduction
-RECALCULATEPOPULATIONS <- FALSE
+#CHARTWIDTH <- 3.5 #width for charts to generate for reproduciton
+#CHARTHEIGHT <- 2.3 #height of charts to generate for reproduction
+RECALCULATEPOPULATIONS <- TRUE
 PARALLEL_PROCESS <- TRUE
 ```
 
@@ -132,6 +132,8 @@ ParkObservations <- fread("./inputs/SOPARCAnalysisSetAggregatedPeriods.csv")
 ParksActivities <- fread("./inputs/SOPARCActivitiesExpanded.csv")
 ParkSupplamentalInfo <- read_xlsx("./inputs/Parks_MASTER.xlsx", sheet = "2024Supplemental")
 ParkFacilities <- read_xlsx("./inputs/Parks_MASTER.xlsx", sheet = "ParkFacility")
+
+
 ParkMetadata <- as.data.table(read_xlsx("./inputs/Parks_MASTER.xlsx", sheet = "ParkList"))
 
 
@@ -141,6 +143,28 @@ ParkMetadata <- as.data.table(read_xlsx("./inputs/Parks_MASTER.xlsx", sheet = "P
 #these are tables used in most/all analyses
 
 ParkFull <- as.data.table(merge(ParkObservations, ParkSupplamentalInfo, by.x = "park_name_full", by.y = "Park Name"))
+
+
+```
+
+```{r merging facility info}
+
+
+ParkFull <- merge(ParkFull, ParkFacilities, by.x = c("park_name_full", "tar_area"), by.y = c("Park Name", "Scan Area"))
+
+
+
+```
+
+```{r keeping on parks with playgrounds}
+
+for(park in unique(ParkFull$park_name_full)) {
+  if(nrow(ParkFull[park_name_full == park & playground == 1,]) == 0) {
+    ParkFull <- ParkFull[park_name_full != park,]
+  }
+}
+
+
 ```
 
 ## retrieving child populations within .5 mile radius
@@ -148,11 +172,12 @@ ParkFull <- as.data.table(merge(ParkObservations, ParkSupplamentalInfo, by.x = "
 ```{r calculate population of children}
 #this chunk is very slow, so if the data already exists, do not rerun.
 skip <- FALSE
-if(file.exists("./inputs/Child Park Populations.csv")) {
+if(file.exists("./inputs/Child Park Populations.csv")){
   ChildParkPopulationTable <- fread("./inputs/Child Park Populations.csv")
   if("childPopulationHalfMile" %in% names(ChildParkPopulationTable) &
      all(unique(ParkFull$park_name_full) %in% ChildParkPopulationTable[censusYear == 2022,]$park_name_full)) {
-    skip <- TRUE #yay no need to calculate }
+    skip <- TRUE #yay no need to calculate 
+  }
 }
 if(!skip | RECALCULATEPOPULATIONS) {
   
@@ -177,7 +202,7 @@ if(!skip | RECALCULATEPOPULATIONS) {
   if(file.exists("./inputs/KCChildPops.csv")) {
     KCPops <- read.csv("./inputs/KCChildPops.csv")
   } else {
-    KCPops <- get_population(geo_type = "blk", kingco = T, year = 2022, ages = 0:15)
+    KCPops <- get_population(geo_type = "blk", kingco = T, year = 2022, ages = 0:14)
     write.csv(x = KCPops, "./inputs/KCChildPops.csv", row.names = F)
   }
   
@@ -229,7 +254,15 @@ ParkFull <- merge(ParkFull, ChildParkPopulationTable, by = "park_name_full")
 DT <- copy(ParkFull)
 
 ggplot(DT) +
-  geom_histogram(alpha = 0.6, position = "identity", aes(x = populationHalfMile, fill = Opportunity_Area))
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = populationHalfMile)) +
+  facet_wrap(~Opportunity_Area, scales = "free_y") +
+  xlab("Population Within 1/2 Mile") +
+  ylab("Park Name") +
+  ggtitle("Catchment Given Opportunity Area Status") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
+
 
 
 ```
@@ -243,22 +276,60 @@ youth is \<= 18 yo pop
 DT <- copy(ParkFull)
 
 ggplot(DT) +
-  geom_histogram(alpha = 0.6, position = "identity", aes(x = childPopulationHalfMile, fill = Opportunity_Area))
-
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = childPopulationHalfMile)) +
+  facet_wrap(~Opportunity_Area, scales = "free_y") +
+  xlab("0-14 Population Within 1/2 Mile") +
+  ylab("Park Name") +
+  ggtitle("0-14 Year Old Catchment Given Opportunity Area Status") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
 
 ```
 
 ### Chart of Average Playground Use, sorted by Opportunity Area
 
-Need to know which target areas are playgrounds
+Notes:
 
-Is use population?
+-   Aggregates all playground within the park (effectively calculated as one large playground)
 
-What average? daily?
+```{r}
+DT <- copy(ParkFull)
+
+DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, Opportunity_Area, park_name_full)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Opportunity_Area, park_name_full)]
+
+ggplot(DTplot) +
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = avg_Daily_Users)) +
+  facet_wrap(~Opportunity_Area, scales = "free_y") +
+  xlab("Average Daily number of playground users") +
+  ylab("Park Name") +
+  ggtitle("Average Daily Number of Playground Users Given \n Opportunity Area Status") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
+
+
+```
 
 ### Chart of Peak Playground Use, sorted by Opportunity Area
 
-Need to know which target areas are playgrounds
+```{r}
+DT <- copy(ParkFull)
+
+DTplot <- DT[playground == 1, .(max_Daily_Users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, Opportunity_Area, park_name_full)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Users") ,by = .( Opportunity_Area, park_name_full)]
+
+ggplot(DTplot) +
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = max_Daily_Users)) +
+  facet_wrap(~Opportunity_Area, scales = "free_y") +
+  xlab("Max Daily number of playground users") +
+  ylab("Park Name") +
+  ggtitle("Max Daily number of Playground Users Given \n Opportunity Area Status") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
+
+
+```
 
 ## How does the observed use of playgrounds differ between parks of similar park categories?
 
@@ -268,56 +339,93 @@ Need to know which target areas are playgrounds
 DT <- copy(ParkFull)
 
 ggplot(DT) +
-  geom_histogram(alpha = 0.6, position = "identity", aes(x = populationHalfMile, fill = Park_Category))
-
-
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = populationHalfMile)) +
+  facet_wrap(~Park_Category_Local, scales = "free_y") +
+  xlab("Population Within 1/2 Mile") +
+  ylab("Park Name") +
+  ggtitle("Catchment Given Park Category") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
 ```
 
 ### Chart of Youth Park Catchment, sorted by Park Category
 
 ```{r}
+
 DT <- copy(ParkFull)
 
 ggplot(DT) +
-  geom_histogram(alpha = 0.6, position = "identity", aes(x = childPopulationHalfMile, fill = Park_Category))
-
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = childPopulationHalfMile)) +
+  facet_wrap(~Park_Category_Local, scales = "free_y") +
+  xlab("0-14 Population Within 1/2 Mile") +
+  ylab("Park Name") +
+  ggtitle("0-14 Year Old Catchment Given Park Category") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
 
 ```
 
 ### Chart of Average Playground Use, sorted by Park Category
 
-Use all ages daily average
-
-playground target area probably needed
-
 ```{r}
 DT <- copy(ParkFull)
 
-DTplot <- DT[, .(avg_Daily_Children = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)), by = .(datePOSIX, Park_Category)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Children") ,by = .(Park_Category)]
+DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, Park_Category_Local, park_name_full)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Park_Category_Local, park_name_full)]
 
 ggplot(DTplot) +
-  geom_bar(aes(weight = avg_Daily_Children, x = Park_Category))
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = avg_Daily_Users)) +
+  facet_wrap(~Park_Category_Local, scales = "free_y") +
+  xlab("Average Daily number of playground users") +
+  ylab("Park Name") +
+  ggtitle("Average Daily Number of Playground Users Given \n Park Category") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
+
 
 ```
 
 ### Chart of Peak Playground Use, sorted by Park Category
 
-currently max children from any day
-
 ```{r}
-
 DT <- copy(ParkFull)
 
-DTplot <- DT[, .(max_Daily_Children = sum(num_child_prim, num_child_snd, num_child_spec, na.rm = TRUE)), by = .(datePOSIX, Park_Category)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Children") ,by = .(Park_Category)]
+DTplot <- DT[playground == 1, .(max_Daily_Users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, Park_Category_Local, park_name_full)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Users") ,by = .( Park_Category_Local, park_name_full)]
 
 ggplot(DTplot) +
-  geom_bar(aes(weight = max_Daily_Children, x = Park_Category))
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = max_Daily_Users)) +
+  facet_wrap(~Park_Category_Local, scales = "free_y") +
+  xlab("Max Daily number of playground users") +
+  ylab("Park Name") +
+  ggtitle("Max Daily number of Playground Users Given \n Park Category") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
+
 
 ```
 
 ### Chart of Average Playground Popularity, sorted by Park Category
 
-average of
+Average Popularity is the average of the daily popularity rate, where popularity rate is the proportion of park users (in a day) who were in the playground
+
+```{r}
+DT <- copy(ParkFull[occupied == "Yes"])
+
+DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_prim, na.rm = TRUE)), by = .(datePOSIX, Park_Category_Local, park_name_full, playground)][, max := lapply(.SD, sum, na.rm = TRUE), .SDcols = c("users") ,by = .( Park_Category_Local, park_name_full)][playground == 1, popularity := users/max][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("popularity") ,by = .( Park_Category_Local, park_name_full)]
+
+ggplot(DTplot) +
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = popularity)) +
+  facet_wrap(~Park_Category_Local, scales = "free_y") +
+  xlab("Average Playground Popularity") +
+  ylab("Park Name") +
+  ggtitle("Playground Popularity Given Category") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma)
+```
 
 ## How does the observed use of playgrounds differ between playgrounds with different complexities of playgrounds?
 
