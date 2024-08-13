@@ -419,7 +419,7 @@ DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_spec, num_
 ggplot(DTplot) +
   geom_bar(stat = "identity", position = "stack", aes(y = park_name_full, x = popularity)) +
   facet_wrap(~Park_Category_Local, scales = "free_y") +
-  xlab("Average Playground Popularity") +
+  xlab("Average Playground Popularity Rate") +
   ylab("Park Name") +
   ggtitle("Playground Popularity Given Category") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
