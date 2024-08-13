@@ -165,7 +165,7 @@ ParkFull <- merge(ParkFull, ParkFacilities, by.x = c("park_name_full", "tar_area
 
 ```
 
-```{r keeping on parks with playgrounds}
+```{r keeping only parks with playgrounds}
 
 for(park in unique(ParkFull$park_name_full)) {
   if(nrow(ParkFull[park_name_full == park & playground == 1,]) == 0) {
