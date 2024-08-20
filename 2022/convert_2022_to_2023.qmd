@@ -36,8 +36,6 @@ REBUILDANALYSISSET <- TRUE
 
 In order to run this script, you should copy the 2022 Annual Study/inputs folder into the 2022 folder of the HEAL_Parks_Analysis repository, and run this quarto file.
 
-
-
 ```{r check for data}
 library(here)
 if(!dir.exists(here("./2022/inputs"))) {
@@ -50,11 +48,14 @@ if(!dir.exists(here("./2022/inputs"))) {
 timestamps are not uniform across files. currently ignoring these to work on aligning other data.
 
 ```{r}
+#| echo: false
+
+
 library(readxl)
 library(data.table)
 remove(OldDT)
 remove(OldSheet)
-for(file in dir(here("./2022/inputs"), include.dirs = T, full.names = T)) {
+for(file in dir(here("./2022/inputs/observations"), include.dirs = T, full.names = T)) {
   message(paste("processing", file))
   for(sheet in excel_sheets(file)) {
     if(endsWith(sheet, "2022")){
@@ -184,7 +185,7 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
                                           comments = Comment,
                                           park_scan_data_collection_complete = "Complete",
                                           timestampPOSIX = NA,
-                                          datePOSIX = Date,
+                                          datePOSIX = as.POSIXct(Date, "", "%m/%d/%Y"),
                                           day = NA,
                                           month = NA,
                                           weekend = NA,
@@ -207,6 +208,15 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
                                           studyStartDate = "7/1/2022",
                                           studyDescription = "2022 annual study",
                                           study_count = 1)]
+  
+  
+  #load corrections
+  Corrections <- fread("./inputs/ERRORED_OBSERVATIONS-correctionsv2.csv")
+  SOPARCAnalysisSet <- SOPARCAnalysisSet[!(record_id %in% Corrections$record_id),]
+  Corrections$datePOSIX <- as.POSIXct(Corrections$datePOSIX, "", "%m/%d/%Y")
+  #SOPARCAnalysisSet[,40]
+  #Corrections[,40]
+  SOPARCAnalysisSet <- rbind(SOPARCAnalysisSet, Corrections)
   
   #assigning period based on sequence
   #debugging, error catcher...
@@ -242,7 +252,6 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
   SOPARCActivities <-  fread(here("2022/local_only/SOPARCAnalysisSet.csv"))
 }
 ```
-
 
 # Create 2022 SOPARCActivities.csv
 
@@ -319,15 +328,11 @@ SOPARCActivities <- data.table()
 }
 ```
 
-
-
-
 # Create 2022 SOPARCActivitiesExpanded.csv
 
 ```{r process SOPARCActivitiesExpanded}
 c("record_id_aggregated",	"record_id", "activity",	"children",	"teen",	"adult",	"senior",	"park_name_full",	"period",	"target_area",	"datePOSIX")
 ```
-
 
 # Create 2022 SOPARCAnalysisSetAggregatedPeriods
 
@@ -339,7 +344,7 @@ c("park_name_full",	"park_name",	"tar_area",	"dayNumberBasedOnSequence",	"period
 
 ## Missing "child" and "teen" counts
 
-The 2022 data counted all non adult or elder presenting persons as "youth". This creates a challenge in comparing to later years which divide apparant minors into "child" and "teen". Two strategies have been  proposed for harmonizing across years where analsis of age group is included:
+The 2022 data counted all non adult or elder presenting persons as "youth". This creates a challenge in comparing to later years which divide apparant minors into "child" and "teen". Two strategies have been proposed for harmonizing across years where analsis of age group is included:
 
-- aggregate later years to "youth". Undesirable because current metric development is focused on children and playgrounds.
-- calculate the proportion of children and teens observed in a given park for the metric for later years, and use this to re-weight the youth from 2022 into children and teens in the same proportion. Requires there to be later years of the same park, which might not always be available.
+-   aggregate later years to "youth". Undesirable because current metric development is focused on children and playgrounds.
+-   calculate the proportion of children and teens observed in a given park for the metric for later years, and use this to re-weight the youth from 2022 into children and teens in the same proportion. Requires there to be later years of the same park, which might not always be available.
