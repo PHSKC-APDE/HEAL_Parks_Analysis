@@ -28,8 +28,12 @@ For general information about the project please review the [git](https://github
 
 ```{r define constant and environment variables}
 
+library(readxl)
+library(data.table)
+library(here)
+
 REBUILDACTIVITYTABLE <- TRUE
-REBUILDANALYSISSET <- TRUE
+REBUILDANALYSISSET <- FALSE
 ```
 
 2022 data were provided via email by Seth. APDE stores a copy of these and all data in the [DPH -APDEWork:ParkOBservationStudies library/2022 Annual Study/inputs](https://kc1.sharepoint.com/teams/DPH-APDEWork/ParkObservationStudies/Forms/AllItems.aspx)
@@ -51,75 +55,75 @@ timestamps are not uniform across files. currently ignoring these to work on ali
 #| echo: false
 
 
-library(readxl)
-library(data.table)
-remove(OldDT)
-remove(OldSheet)
-for(file in dir(here("./2022/inputs/observations"), include.dirs = T, full.names = T)) {
-  message(paste("processing", file))
-  for(sheet in excel_sheets(file)) {
-    if(endsWith(sheet, "2022")){
-
-      message(paste("adding sheet:", sheet))
-      OldSheet <- as.data.table(read_xlsx(file, sheet = sheet))#, col_types =  c(rep("guess", 6), "text", rep("guess",47))))
-      #OldSheet[,"Start Time" := NULL]
-      OldSheet$`Start Time` <- format(OldSheet$`Start Time`, format = "%H:%M")
-      OldSheet$`Start Time` <- format(OldSheet$`Start Time`, format = "%H:%M")
-      OldSheet$`Start Time` <- trimws(ifelse(grepl(":", OldSheet$`Start Time`), gsub("^0","",OldSheet$`Start Time`), gsub("(.{2})$", "\\2:\\1", OldSheet$`Start Time`)))
-      
-      if(exists("OldDT")) {
-        #check name matches before merging
-        if(any(!(names(OldSheet) %in% names(OldDT)))){
-          warning("missmatch names found attempting patch based on column order: \n")
-          message(paste("the following columns will be renamed",list(names(OldSheet)[!(names(OldSheet) %in% names(OldDT))]),"\n"))
-          message(paste("the new names will be",list(names(OldDT)[!(names(OldSheet) %in% names(OldDT))]), "\n"))
-          names(OldSheet)[!(names(OldSheet) %in% names(OldDT))] <- names(OldDT)[!(names(OldSheet) %in% names(OldDT))]
+if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALYSISSET){
+  for(file in dir(here("./2022/inputs/observations"), include.dirs = T, full.names = T)) {
+    message(paste("processing", file))
+    for(sheet in excel_sheets(file)) {
+      if(endsWith(sheet, "2022")){
+  
+        message(paste("adding sheet:", sheet))
+        OldSheet <- as.data.table(read_xlsx(file, sheet = sheet))#, col_types =  c(rep("guess", 6), "text", rep("guess",47))))
+        #OldSheet[,"Start Time" := NULL]
+        OldSheet$`Start Time` <- format(OldSheet$`Start Time`, format = "%H:%M")
+        OldSheet$`Start Time` <- format(OldSheet$`Start Time`, format = "%H:%M")
+        OldSheet$`Start Time` <- trimws(ifelse(grepl(":", OldSheet$`Start Time`), gsub("^0","",OldSheet$`Start Time`), gsub("(.{2})$", "\\2:\\1", OldSheet$`Start Time`)))
+        
+        if(exists("OldDT")) {
+          #check name matches before merging
+          if(any(!(names(OldSheet) %in% names(OldDT)))){
+            warning("missmatch names found attempting patch based on column order: \n")
+            #message(paste("the following columns will be renamed",list(names(OldSheet)[!(names(OldSheet) %in% names(OldDT))]),"\n"))
+            #message(paste("the new names will be",list(names(OldDT)[!(names(OldSheet) %in% names(OldDT))]), "\n"))
+            names(OldSheet)[!(names(OldSheet) %in% names(OldDT))] <- names(OldDT)[!(names(OldSheet) %in% names(OldDT))]
+          }
+          OldDT <- rbind(OldDT, OldSheet)
+        } else {
+          OldDT <- OldSheet
         }
-        OldDT <- rbind(OldDT, OldSheet)
       } else {
-        OldDT <- OldSheet
+              message(paste("skipping sheet:", sheet))
       }
-    } else {
-            message(paste("skipping sheet:", sheet))
     }
+    
+  
   }
   
-
+  
+  
+  remove(OldSheet)
+  remove(file)
+  remove(sheet)
 }
-
-
-
-remove(OldSheet)
-remove(file)
-remove(sheet)
 ```
 
 ```{r cleaning varibales data}
-# removing (too) empty observations
-OldDT <- OldDT[!is.na(`Target #`),]
 
-
-# many park names need to be corrected and cleaned
-OldDT[Park == "Brighten Playfield ​",]$Park <- "Brighton Playfield"
-OldDT[Park == "Cascade View Community Park ​" | Park == "Cascade View",]$Park <- "Cascade View Community Park"
-OldDT[Park == "Marra Desimone Park ​",]$Park <- "Marra Desimone Park"
-OldDT[Park == "Midway Park ​",]$Park <-  "Midway Park"
-OldDT[Park == "Moshier Park ​",]$Park <- "Moshier Memorial Park"
-OldDT[Park == "Puget Sound Park  ​",]$Park <- "Puget Sound Park"
-OldDT[Park == "Roxhill Park ​",]$Park <- "Roxhill Park"
-OldDT[Park == "Steel Lake Park (south) ​",]$Park <- "Steel Lake Park"
-OldDT[Park == "Steve Cox Memorial Park ​",]$Park <- "Steve Cox Playfield"
-OldDT[Park == "Tukwila Community Center ​" | Park == "Tukwilla Community C",]$Park <- "Tukwila Community Center"
-
-
-# add ID
-OldDT$record_id <- 1:nrow(OldDT)
-
-# fixing missmatched period names
-OldDT[Period == "lunch"]$Period <- "Lunch"
-OldDT[Period == "morning"]$Period <- "Morning"
-OldDT[Period == "AfterNoon"]$Period <- "Afternoon"
-
+if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALYSISSET){
+  # removing (too) empty observations
+  OldDT <- OldDT[!is.na(`Target #`),]
+  
+  
+  # many park names need to be corrected and cleaned
+  OldDT[Park == "Brighten Playfield ​",]$Park <- "Brighton Playfield"
+  OldDT[Park == "Cascade View Community Park ​" | Park == "Cascade View",]$Park <- "Cascade View Community Park"
+  OldDT[Park == "Marra Desimone Park ​",]$Park <- "Marra Desimone Park"
+  OldDT[Park == "Midway Park ​",]$Park <-  "Midway Park"
+  OldDT[Park == "Moshier Park ​",]$Park <- "Moshier Memorial Park"
+  OldDT[Park == "Puget Sound Park  ​",]$Park <- "Puget Sound Park"
+  OldDT[Park == "Roxhill Park ​",]$Park <- "Roxhill Park"
+  OldDT[Park == "Steel Lake Park (south) ​",]$Park <- "Steel Lake Park"
+  OldDT[Park == "Steve Cox Memorial Park ​",]$Park <- "Steve Cox Playfield"
+  OldDT[Park == "Tukwila Community Center ​" | Park == "Tukwilla Community C",]$Park <- "Tukwila Community Center"
+  
+  
+  # add ID
+  OldDT$record_id <- 1:nrow(OldDT)
+  
+  # fixing missmatched period names
+  OldDT[Period == "lunch"]$Period <- "Lunch"
+  OldDT[Period == "morning"]$Period <- "Morning"
+  OldDT[Period == "AfterNoon"]$Period <- "Afternoon"
+}
 ```
 
 # Create 2022 SOPARCObservation Set
@@ -186,6 +190,7 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
                                           park_scan_data_collection_complete = "Complete",
                                           timestampPOSIX = NA,
                                           datePOSIX = as.POSIXct(Date, "", "%m/%d/%Y"),
+                                          #datePOSIX = Date,
                                           day = NA,
                                           month = NA,
                                           weekend = NA,
@@ -209,20 +214,21 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
                                           studyDescription = "2022 annual study",
                                           study_count = 1)]
   
-  
+  SOPARCAnalysisSet <- as.data.table(SOPARCAnalysisSet)
   #load corrections
-  Corrections <- fread("./inputs/ERRORED_OBSERVATIONS-correctionsv2.csv")
-  SOPARCAnalysisSet <- SOPARCAnalysisSet[!(record_id %in% Corrections$record_id),]
-  Corrections$datePOSIX <- as.POSIXct(Corrections$datePOSIX, "", "%m/%d/%Y")
+  #Corrections <- fread("./inputs/ERRORED_OBSERVATIONS-correctionsv2.csv")
+  #SOPARCAnalysisSet <- SOPARCAnalysisSet[!(record_id %in% Corrections$record_id),]
+  #Corrections$datePOSIX <- as.POSIXct(Corrections$datePOSIX, "", "%m/%d/%Y")
   #SOPARCAnalysisSet[,40]
   #Corrections[,40]
-  SOPARCAnalysisSet <- rbind(SOPARCAnalysisSet, Corrections)
+  #SOPARCAnalysisSet <- rbind(SOPARCAnalysisSet, Corrections)
   
   #assigning period based on sequence
   #debugging, error catcher...
   if(exists("catcher")) {
     remove(catcher)
   }
+  
   
   for(park in unique(SOPARCAnalysisSet$park_name)) {
     for(date in unique(SOPARCAnalysisSet[park_name == park,datePOSIX])) {
@@ -236,7 +242,6 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
             } else {
               catcher <- rbind(SOPARCAnalysisSet[park_name == park & datePOSIX == date & tar_area == targetArea & period == selected_period,], catcher)
             }
-            #write.csv( SOPARCAnalysisSet[park_name == park & datePOSIX == date & tar_area == targetArea & period == selected_period,], paste0(here("2022/outputs/tofix/BROKEN_"),park,"_","",".csv"))
           }
         }
     }
@@ -251,6 +256,7 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
 } else {
   SOPARCActivities <-  fread(here("2022/local_only/SOPARCAnalysisSet.csv"))
 }
+
 ```
 
 # Create 2022 SOPARCActivities.csv
