@@ -58,7 +58,7 @@ pacman::p_load(data.table, #data structure and analytics framework used througho
 library(rads) #access apde data
 
 REBUILDACTIVITYTABLE <- TRUE
-REBUILDANALYSISSET <- FALSE
+REBUILDANALYSISSET <- TRUE
 RECALCULATEPOPULATIONS <- FALSE
 ```
 
@@ -162,7 +162,7 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
 
   ParkData <- read_xlsx(here("2022/inputs/Parks_MASTER.xlsx"))
 
-  c("park_name_full",	"park_name",	"record_id",	"redcap_survey_identifier",	"park_scan_data_collection_timestamp",	"obs_initial",	"start_time",	"tar_area",	"sub_area",	"accessible",	"usable",	"lit",	"occupied",	"supervised",	"organized",	"equipped",	"num_child_prim",	"num_child_snd",	"num_child_spec",	"num_teen_prim",	"num_teen_snd",	"num_teen_spec",	"num_adult_prim",	"num_adult_snd",	"num_adult_spec",	"num_senior_prim",	"num_senior_snd",	"num_senior_spec",	"prim_act_name",	"prim_act_other",	"yesno_snd",	"snd_act_name",	"other_act_snd",	"yesno_spec",	"spec_act_name",	"other_act_spec",	"comments",	"park_scan_data_collection_complete",	"timestampPOSIX",	"datePOSIX",	"day",	"month",	"weekend",	"periodBasedOnSequence",	"dayNumberBasedOnSequence",	"period",	"Park", "Address",	"City",	"Zip",	"Neighborhood",	"Images",	"Tract",	"Latitude",	"Longitude",	"Equity Score Priority", 	"Planned park changes?",	"Notes",	"censusYear",	"populationHalfMile",	"studyStartDate",	"studyDescription",	"study_count")
+  # c("park_name_full",	"park_name",	"record_id",	"redcap_survey_identifier",	"park_scan_data_collection_timestamp",	"obs_initial",	"start_time",	"tar_area",	"sub_area",	"accessible",	"usable",	"lit",	"occupied",	"supervised",	"organized",	"equipped",	"num_child_prim",	"num_child_snd",	"num_child_spec",	"num_teen_prim",	"num_teen_snd",	"num_teen_spec",	"num_adult_prim",	"num_adult_snd",	"num_adult_spec",	"num_senior_prim",	"num_senior_snd",	"num_senior_spec",	"prim_act_name",	"prim_act_other",	"yesno_snd",	"snd_act_name",	"other_act_snd",	"yesno_spec",	"spec_act_name",	"other_act_spec",	"comments",	"park_scan_data_collection_complete",	"timestampPOSIX",	"datePOSIX",	"day",	"month",	"weekend",	"periodBasedOnSequence",	"dayNumberBasedOnSequence",	"period",	"Park", "Address",	"City",	"Zip",	"Neighborhood",	"Images",	"Tract",	"Latitude",	"Longitude",	"Equity Score Priority", 	"Planned park changes?",	"Notes",	"censusYear",	"populationHalfMile",	"studyStartDate",	"studyDescription",	"study_count")
 
 
   
@@ -219,7 +219,7 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
                                           day = NA,
                                           month = NA,
                                           weekend = NA,
-                                          periodBasedOnSequence = NA,
+                                          periodBasedOnSequence = "",
                                           dayNumberBasedOnSequence = NA,
                                           period = Period,
                                           `Park Address`,
@@ -265,7 +265,7 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
               catcher <- SOPARCAnalysisSet[park_name == park & datePOSIX == date & tar_area == targetArea & period == selected_period,]
             } else {
               catcher <- rbind(SOPARCAnalysisSet[park_name == park & datePOSIX == date & tar_area == targetArea & period == selected_period,], catcher)
-            }
+            } 
           }
         }
     }
@@ -273,8 +273,30 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
   }
   if(exists("catcher")) {
       write.csv(catcher, here("2022/outputs/data-metadata/ERRORED_OBSERVATIONS.csv"), row.names = FALSE)
-  }
-  
+  } else {
+    #create period based on sequence
+      for(park in unique(SOPARCAnalysisSet$park_name)) {
+        for(date in unique(SOPARCAnalysisSet[park_name == park,datePOSIX])) {
+          for(targetArea in unique(SOPARCAnalysisSet[park_name == park & datePOSIX == date, tar_area]))
+            for(selected_period in unique(SOPARCAnalysisSet[park_name == park & datePOSIX == date & tar_area == targetArea, period])) {
+              if(selected_period == "Morning") {
+                    SOPARCAnalysisSet[park_name == park & datePOSIX == date & tar_area == targetArea & period == selected_period,]$periodBasedOnSequence <- c("Morning1", "Morning2")
+              }
+              if(selected_period == "Lunch") {
+                SOPARCAnalysisSet[park_name == park & datePOSIX == date & tar_area == targetArea & period == selected_period,]$periodBasedOnSequence <- c("Lunch1", "Lunch2")
+              }
+              if(selected_period == "Afternoon") {
+                SOPARCAnalysisSet[park_name == park & datePOSIX == date & tar_area == targetArea & period == selected_period,]$periodBasedOnSequence <- c("Afternoon1", "Afternoon2")
+              }
+              if(selected_period == "Evening") {
+                SOPARCAnalysisSet[park_name == park & datePOSIX == date & tar_area == targetArea & period == selected_period,]$periodBasedOnSequence <- c("Evening1", "Evening2")
+              }
+            }
+          }
+        }
+    }
+        
+
   write.csv(SOPARCAnalysisSet, here("2022/local_only/SOPARCAnalysisSetExtract.csv"), row.names = FALSE)
 } else {
   SOPARCAnalysisSet <-  fread(here("2022/local_only/SOPARCAnalysisSetExtract.csv"))
@@ -431,18 +453,62 @@ SOPARCActivities <- data.table()
 ```{r process SOPARCActivitiesExpanded}
 # c("record_id_aggregated",	"record_id", "activity",	"children",	"teen",	"adult",	"senior",	"park_name_full",	"period",	"target_area",	"datePOSIX")
 
-SOPARCAnalysisSet[,.(record_id,	park_name_full,	period,	tar_area,	datePOSIX)]
-
 SOPARCActivitiesExpanded <- merge(SOPARCActivities, SOPARCAnalysisSet[,.(record_id,	park_name_full,	period,	tar_area,	datePOSIX)], by = "record_id", all.x = TRUE)
 
-  write.csv(SOPARCActivitiesExpanded, here("2022/outputs/data-metadata/SOPARCActivitiesExpanded.csv"), row.names = FALSE)
+write.csv(SOPARCActivitiesExpanded, here("2022/outputs/data-metadata/SOPARCActivitiesExpanded.csv"), row.names = FALSE)
 ```
 
 # Create 2022 SOPARCAnalysisSetAggregatedPeriods
 
 ```{r}
 c("park_name_full",	"park_name",	"tar_area",	"dayNumberBasedOnSequence",	"period",	"datePOSIX",	"day",	"month",	"weekend",	"accessible",	"usable",	"lit",	"occupied",	"supervised",	"organized",	"equipped",	"num_child_prim",	"num_child_snd",	"num_child_spec",	"num_teen_prim",	"num_teen_snd",	"num_teen_spec",	"num_adult_prim",	"num_adult_snd",	"num_adult_spec",	"num_senior_prim",	"num_senior_snd",	"num_senior_spec",	"Park Address",	"City",	"Zip",	"Neighborhood",	"Images",	"Tract",	"Latitude",	"Longitude",	"Equity Score Priority", "Planned park changes?",	"Notes",	"censusYear",	"populationHalfMile",	"studyStartDate",	"studyDescription",	"study_count")
+SOPARCtoAggregate <-copy(SOPARCAnalysisSet)
 
+#create single periodname for aggregating first and second of each period using sequence periods
+SOPARCtoAggregate[periodBasedOnSequence %in% c("morning1","morning2"), period := "Morning"]
+SOPARCtoAggregate[periodBasedOnSequence %in% c("lunch1","lunch2"), period := "Lunch"]
+SOPARCtoAggregate[periodBasedOnSequence %in% c("afternoon1","afternoon2"), period := "Afternoon"]
+SOPARCtoAggregate[periodBasedOnSequence %in% c("evening1","evening2"), period := "Evening"]
+
+SOPARCtoAggregate$period <-  factor(SOPARCtoAggregate$period, level = c("Morning","Lunch","Afternoon","Evening"))
+
+
+SOPARCAggregated <- SOPARCtoAggregate[,
+                                      .("accessible" = ifelse(any(accessible %in% "Yes"), "Yes", "No"),
+                                        "usable" = ifelse(any(usable %in% "Yes"), "Yes", "No"),
+                                        "lit" = ifelse(any(lit %in% "Yes"), "Yes", "No"),
+                                        "occupied" = ifelse(any(occupied %in% "Yes"), "Yes", "No"),
+                                        "supervised" = ifelse(any(supervised %in% "Yes"), "Yes", "No"),
+                                        "organized" = ifelse(any(organized %in% "Yes"), "Yes", "No"),
+                                        "equipped" = ifelse(any(organized %in% "Yes"), "Yes", "No"),
+                                        "num_child_prim" = ceiling(mean(num_child_prim, na.rm = T, )),
+                                        "num_child_snd" = ceiling(mean(num_child_snd, na.rm = T)),
+                                        "num_child_spec" = ceiling(mean(num_child_spec, na.rm = T)),
+                                        "num_teen_prim"= ceiling(mean(num_teen_prim, na.rm = T)),
+                                        "num_teen_snd" = ceiling(mean(num_teen_snd, na.rm = T)),
+                                        "num_teen_spec" = ceiling(mean(num_teen_spec, na.rm = T)),
+                                        "num_adult_prim" = ceiling(mean(num_adult_prim, na.rm = T)),
+                                        "num_adult_snd" = ceiling(mean(num_adult_snd, na.rm = T)),
+                                        "num_adult_spec" = ceiling(mean(num_adult_spec, na.rm = T)),
+                                        "num_senior_prim" = ceiling(mean(num_senior_prim, na.rm = T)),
+                                        "num_senior_snd" = ceiling(mean(num_senior_snd, na.rm = T)),
+                                        "num_senior_spec" = ceiling(mean(num_senior_spec, na.rm = T))), 
+                                      by = .(park_name, tar_area, dayNumberBasedOnSequence, period, datePOSIX, day, month, weekend )]
+
+
+write.csv(SOPARCtoAggregate, here("2022/outputs/data-metadata/SOPARCAnalysisSetAggregatedPeriods.csv"), row.names = FALSE)
+
+
+```
+
+```{r add metadata and save analysis sets}
+
+
+#consider if this is necessary, sampled from 2023 work
+
+##generate study count and append this to aggregated and non aggregated analysis ready sets
+#SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParksStudyRecord[,.("study_count" = .N) , by = parkName], by.x = "park_name_full", by.y = "parkName", all.x = T)
+#SOPARCAggregated <- merge(SOPARCAggregated, ParksStudyRecord[,.("study_count" = .N) , by = parkName], by.x = "park_name_full", by.y = "parkName", all.x = T)
 
 
 ```
