@@ -30,7 +30,10 @@ Ronald Buie
     - [<span class="toc-section-number">4.2.1</span> Chart of Average
       Playground Use, sorted by Opportunity
       Area](#chart-of-average-playground-use-sorted-by-opportunity-area)
-    - [<span class="toc-section-number">4.2.2</span> Chart of Peak
+    - [<span class="toc-section-number">4.2.2</span> Chart of Median
+      Playground Use, sorted by Opportunity
+      Area](#chart-of-median-playground-use-sorted-by-opportunity-area)
+    - [<span class="toc-section-number">4.2.3</span> Chart of Peak
       Playground Use, sorted by Opportunity
       Area](#chart-of-peak-playground-use-sorted-by-opportunity-area)
   - [<span class="toc-section-number">4.3</span> How does the observed
@@ -161,6 +164,12 @@ This script was last executed using R version 4.4.1 (2024-06-14 ucrt).
 This analysis relies on park observations and park activity tables
 created in the annual SOPARC study
 
+Some parks were included in the data set because observers practiced
+there. However these are not part of the playground study
+
+Remove garfield Remove brighton \*no playgrounds Remoev steel lake
+Remove midway
+
 ## retrieving child populations within .5 mile radius
 
 # Analyses
@@ -188,27 +197,43 @@ Notes:
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-3-1.png)
 
-### Chart of Peak Playground Use, sorted by Opportunity Area
+### Chart of Median Playground Use, sorted by Opportunity Area
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-4-1.png)
+
+### Chart of Peak Playground Use, sorted by Opportunity Area
+
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-5-1.png)
 
 ## How does the observed use of playgrounds differ between parks of similar park categories?
 
 ### Chart of Park Catchment, sorted by Park Category
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-5-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-6-1.png)
+
+Notes:
+
+The following parks were excluded for not having category status: Dick
+Thurnau Memorial Park, North Shorewood Park, Skyway Park
 
 ### Chart of Youth Park Catchment, sorted by Park Category
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-6-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-7-1.png)
+
+Notes:
+
+The following parks were excluded for not having category status: Dick
+Thurnau Memorial Park, North Shorewood Park, Skyway Park
 
 ### Chart of Average Playground Use, sorted by Park Category
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-7-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-8-1.png)
+
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-9-1.png)
 
 ### Chart of Peak Playground Use, sorted by Park Category
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-8-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-10-1.png)
 
 ### Chart of Average Playground Popularity, sorted by Park Category
 
@@ -216,7 +241,7 @@ Average Popularity is the average of the daily popularity rate, where
 popularity rate is the proportion of park users (in a day) who were in
 the playground
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-9-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-11-1.png)
 
 ## How does the observed use of playgrounds differ between playgrounds with different complexities of playgrounds?
 
@@ -226,15 +251,15 @@ Notes:
 
 - Garfield is missing a value
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-10-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-12-1.png)
 
 ### Chart of Peak Playground Use, sorted by Play Elements
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-11-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-13-1.png)
 
 ### Chart of Average Playground Popularity, sorted by Play Elements
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-12-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-14-1.png)
 
 ## How does the observed use of playgrounds compare to the age of the playground?
 
@@ -242,7 +267,7 @@ Notes:
 
 garfield is missing data
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-13-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-15-1.png)
 
     <ScaleContinuousPosition>
      Range:  
@@ -250,7 +275,7 @@ garfield is missing data
 
 ### Chart of Peak Playground Use, sorted by Playground Installation Date
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-14-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-16-1.png)
 
     <ScaleContinuousPosition>
      Range:  
@@ -258,21 +283,21 @@ garfield is missing data
 
 ### Chart of Playground Installation Date and Opportunity Area (denoting differences in Park Category)
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-15-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-17-1.png)
 
 ## How does the observed use of playgrounds differ when a park includes certain features?
 
 ### Chart of Average Playground Use, based on if park contains a restroom, separated by park category
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-16-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-18-1.png)
 
 ### Chart of Average Playground Use, based on if park contains a picnic area, separated by park category
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-17-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-19-1.png)
 
 ### Chart of Average Playground Use, based on if park contains a sports field, separated by park category
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-18-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-20-1.png)
 
 ## How does the age of observed playground users differ between park groups (size, feature qualities, etc.)?
 
@@ -280,17 +305,17 @@ garfield is missing data
 
 garfield is missing, not actually “no”
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-19-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-21-1.png)
 
 ### Chart of Peak Playground Use, sorted by Play Element, separated by Primary Age Group
 
 garfield is missing, not actually “no”
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-20-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-22-1.png)
 
 ### Chart of Playground Popularity, sorted by Play Element, separated by Primary Age Group
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-21-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-23-1.png)
 
 ### Chart of Playground Popularity specifically of observed child and teen, sorted by Play Element, separated by Primary Age Group
 
@@ -298,13 +323,13 @@ Here, popularity is parameterized as
 
 $\frac{\text{num of children and teens in playground}} {\text{num of children and teens in park}}$
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-22-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-24-1.png)
 
 ## How accessible is the park by transportation?
 
 ## By walking: Chart of Playground Use by Walkscore of park
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-23-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-25-1.png)
 
     <ScaleContinuousPosition>
      Range:  
@@ -312,7 +337,7 @@ $\frac{\text{num of children and teens in playground}} {\text{num of children an
 
 ## By transit: Chart of Playground Use by Transitscore of park
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-24-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-26-1.png)
 
     <ScaleContinuousPosition>
      Range:  
