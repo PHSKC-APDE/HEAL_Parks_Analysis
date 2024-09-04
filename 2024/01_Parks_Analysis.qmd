@@ -1,5 +1,5 @@
 ---
-title: "HEAL Parks 2023 Analysis"
+title: "HEAL Parks 2024 Analysis"
 author: "Ronald Buie"
 date-modified: "`r Sys.Date()`"
 
@@ -36,24 +36,28 @@ editor:
 # Front Matter
 
 This document outlines procedures, technical considerations, and analytic
-results for the 2023 analysis of data from the HEAL Parks Study. The primary
+results for the 2024 analysis of data from the HEAL Parks Study. The primary
 purpose of this PDF is technical review by analyst and project managers to
 confirm the process and data quality.
 
 For general information about the project please review the
-[git](https://github.com/PHSKC-APDE/HEAL_Parks_Analysis) or contact Seth
-Schromen-Wawrin.
+[git](https://github.com/PHSKC-APDE/HEAL_Parks_Analysis), the project
+[sharepoint](https://kc1.sharepoint.com/teams/DPH-APDEWork/ParkObservationStudies/Forms/AllItems.aspx)
+or contact Seth Schromen-Wawrin and Ronald W. Buie
 
 ## Major inputs
 
 Inputs to this script are contained at ./inputs/*.* and include
 
 -   Access to the [ITHS REDCap](https://redcap.iths.org/) project: "Public
-    Health - Seattle & King County Park Observations"
--   or data extracted from that project
+    Health - Seattle & King County Park Observations", or data extracted from
+    that project
+-   Final versions of non aggregated 2022 and 2023 park activities and park
+    observations (2 files per year)
 -   file of park meta data, including address, zip, city, neighborhood, official
     name, and REDCap name for each park
 -   (optional) file containing record ids to redact
+-   (optional) file containing record ids to correct
 
 ## Output categories
 
@@ -80,8 +84,10 @@ rebuilt, and new outputs are generated. To learn more about Quarto see
 This script was last executed using `r version$version.string`.
 
 ```{r define constant and environment variables}
-SECRETS_LOCALE <- "./2023/local_only/secrets.txt" #REDCap project API access information goes here
-DATA_LOCALE <- "./2023/local_only/data.csv" #use this if REDCap is not accessable
+SECRETS_LOCALE <- "./2024/inputs/secrets.txt" #REDCap project API access information goes here
+INPUTS_LOCALE <- "./2024/inputs/"
+OUPUTS_LOCALE <- "./2024/outputs/"
+
 
 REBUILDACTIVITYTABLE <- TRUE
 RECALCULATEPOPULATIONS <- FALSE
@@ -185,7 +191,7 @@ if (file.exists(here(SECRETS_LOCALE))) {
   source(here(SECRETS_LOCALE))
 } else {
   warning("secrets not found. checking for data.csv")
-  if(!file.exists(here(DATA_LOCALE))){
+  if(!file.exists(here(paste0(DATA_LOCALE,"REDCapSOPARCObservations.csv")))){
     stop("data not found")
   }
 }
@@ -204,12 +210,12 @@ result <- postForm(
     exportSurveyFields='true',
     exportDataAccessGroups='false',
     returnFormat='json',
-    dateRangeBegin='2023-07-01 01:01:01'
+    dateRangeBegin='2024-07-01 01:01:01'
 )
 
 RawSOPARCObservations <- as.data.table(fromJSON(result), )
 
-write.csv(RawSOPARCObservations,here("2023/outputs/data-metadata/REDCapSOPARCObservations.csv"), row.names = FALSE)
+write.csv(RawSOPARCObservations,here(paste0(DATA_LOCALE,"REDCapSOPARCObservations.csv")), row.names = FALSE)
 
 ```
 
@@ -225,53 +231,20 @@ RawSOPARCObservations$record_id <- as.numeric(RawSOPARCObservations$record_id)
 RawSOPARCObservations$tar_area <- as.numeric(RawSOPARCObservations$tar_area)
 RawSOPARCObservations$num_child_prim <- as.numeric(RawSOPARCObservations$num_child_prim)
 RawSOPARCObservations$num_child_snd <- as.numeric(RawSOPARCObservations$num_child_snd)
-RawSOPARCObservations$num_child_spec <- as.numeric(RawSOPARCObservations$num_child_spec)
+RawSOPARCObservations$num_child_tert <- as.numeric(RawSOPARCObservations$num_child_tert)
+RawSOPARCObservations$num_child_quat <- as.numeric(RawSOPARCObservations$num_child_quat)
 RawSOPARCObservations$num_teen_prim <- as.numeric(RawSOPARCObservations$num_teen_prim)
 RawSOPARCObservations$num_teen_snd <- as.numeric(RawSOPARCObservations$num_teen_snd)
-RawSOPARCObservations$num_teen_spec <- as.numeric(RawSOPARCObservations$num_teen_spec)
+RawSOPARCObservations$num_teen_tert <- as.numeric(RawSOPARCObservations$num_teen_tert)
+RawSOPARCObservations$num_teen_uat <- as.numeric(RawSOPARCObservations$num_teen_quat)
 RawSOPARCObservations$num_adult_prim <- as.numeric(RawSOPARCObservations$num_adult_prim)
 RawSOPARCObservations$num_adult_snd <- as.numeric(RawSOPARCObservations$num_adult_snd)
-RawSOPARCObservations$num_adult_spec <- as.numeric(RawSOPARCObservations$num_adult_spec)
+RawSOPARCObservations$num_adult_tert <- as.numeric(RawSOPARCObservations$num_adult_tert)
+RawSOPARCObservations$num_adult_quat <- as.numeric(RawSOPARCObservations$num_adult_quat)
 RawSOPARCObservations$num_senior_prim <- as.numeric(RawSOPARCObservations$num_senior_prim)
 RawSOPARCObservations$num_senior_snd <- as.numeric(RawSOPARCObservations$num_senior_snd)
-RawSOPARCObservations$num_senior_spec <- as.numeric(RawSOPARCObservations$num_senior_spec)
-
-#NOT NEEDED #properly type all text fields and turn "" to NA
-# chcols = names(RawSOPARCObservations)[sapply(RawSOPARCObservations, is.character)]
-# RawSOPARCObservations[, (chcols) := lapply(.SD, type.convert, as.is=TRUE), .SDcols=chcols]
-
-
-
-
-#some saved work
-                #accessible_check <- SOPARCObservations$accessible
-                # usable_check <- SOPARCObservations$usable
-                # lit_check <- SOPARCObservations$lit
-                # occupied_check <- SOPARCObservations$occupied
-                # supervised_check <- SOPARCObservations$supervised
-                # organized_check <- SOPARCObservations$organized
-                # equipped_check <- SOPARCObservations$equipped
-                # num_child_prim_check <- SOPARCObservations$num_child_prim
-                # num_child_snd_check <- SOPARCObservations$num_child_snd
-                # num_child_spec_check <- SOPARCObservations$num_child_spec
-                # num_teen_prim_check <- SOPARCObservations$num_teen_prim
-                # num_teen_snd_check <- SOPARCObservations$num_teen_snd
-                # num_teen_spec_check <- SOPARCObservations$num_teen_spec
-                # num_adult_prim_check <- SOPARCObservations$num_adult_prim
-                # num_adult_snd_check <- SOPARCObservations$num_adult_snd
-                # num_adult_spec_check <- SOPARCObservations$num_adult_spec
-                # num_senior_prim_check <- SOPARCObservations$num_senior_prim
-                # num_senior_snd_check <- SOPARCObservations$num_senior_snd
-                # num_senior_spec_check <- SOPARCObservations$num_senior_spec
-                # prim_act_name_check <- SOPARCObservations$prim_act_name
-                # prim_act_other_check <- SOPARCObservations$prim_act_other
-                # yesno_snd_check <- SOPARCObservations$yesno_snd
-                # snd_act_name_check <- SOPARCObservations$snd_act_name
-                # other_act_snd_check <- SOPARCObservations$other_act_snd
-                # yesno_spec_check <- SOPARCObservations$yesno_spec
-                # spec_act_name_check <- SOPARCObservations$spec_act_name
-                # other_act_spec_check <- SOPARCObservations$other_act_spec
-                # comments_check <- SOPARCObservations$comments
+RawSOPARCObservations$num_senior_tert <- as.numeric(RawSOPARCObservations$num_senior_tert)
+RawSOPARCObservations$num_senior_quat <- as.numeric(RawSOPARCObservations$num_senior_quat)
 
 
 ```
@@ -297,7 +270,7 @@ RawSOPARCObservations[, weekend := ifelse(day %in% c("Saturday", "Sunday"), 1, 0
 
 | Description                                  | Details                                                                                                                                                                                       |
 |----------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Drop pre-study data                          | Study start date is 7/1/23 with the first park being Garfield Playfield. Observations prior to this date or the first observation of Garfield are dropped                                     |
+| Drop pre-study data                          | Study start date is 7/1/24 with the first park being Garfield Playfield. Observations prior to this date or the first observation of Garfield are dropped                                     |
 | Drop incomplete entries                      | observations where the REDCap status is not "Complete", that are missing a timestamp, or missing a park name are dropped                                                                      |
 | Drop duplicates                              | duplicate entries (exclusive of redcapID) are dropped. Note that where this creates incomplete days, this is corrected in later QA                                                            |
 | Drop inacurate subareas                      | Some parks were identified as having having sub area data input without having multiple sub areas (and so shouldn't be processed as sub areas). The subarea entry for these parks is removed. |
