@@ -85,8 +85,8 @@ This script was last executed using `r version$version.string`.
 
 ```{r define constant and environment variables}
 SECRETS_LOCALE <- "./2024/inputs/secrets.txt" #REDCap project API access information goes here
-INPUTS_LOCALE <- "./2024/inputs/"
-OUPUTS_LOCALE <- "./2024/outputs/"
+INPUTS_LOCALE <- "2024/inputs/"
+OUPUTS_LOCALE <- "2024/outputs"
 
 
 REBUILDACTIVITYTABLE <- TRUE
@@ -217,6 +217,115 @@ RawSOPARCObservations <- as.data.table(fromJSON(result), )
 
 write.csv(RawSOPARCObservations,here(paste0(DATA_LOCALE,"REDCapSOPARCObservations.csv")), row.names = FALSE)
 
+```
+
+```{r apply manual corrections from Seth}
+DataToChange <- read_xlsx(here(INPUTS_LOCALE,"2024DatetoChange.xlsx"))
+DataToChange$time_period <- factor(DataToChange$time_period, c("1","2","3","4"),c("Morning","Lunch","Afternoon", "Evening") )
+DataToChange$time_period_half <- factor(DataToChange$time_period, c("1","2"),c("first observation","second observation") )
+parks <- c("Annex Park",
+  "Arbor Lake Park",
+  "Beverly Park Elementary School",
+  "Bicentennial Park",
+  "Boulevard Lane Park",
+  "Cascade View Community Park",
+  "Cecil Memorial Park",
+  "Cedarhurst Elementary School",
+  "Chelsea Park",
+  "Crestview Park",
+  "Crystal Springs Park",
+  "Dick Thurnau Memorial Park",
+  "Dotty Harper Park",
+  "Duwamish Gardens",
+  "Duwamish Hill Preserve",
+  "Duwamish Park",
+  "Five Mile Lake Park",
+  "Fort Dent Park (North)",
+  "Fort Dent Park (South)",
+  "Greenbridge Pocket Parks",
+  "Gregory Heights Elementary School",
+  "Hazel Valley Elementary School",
+  "Hazel Valley Park",
+  "Hazelnut Park",
+  "Hilltop Park",
+  "Jacob Ambaum Park",
+  "Joseph Foster Memorial Park",
+  "Lake Burien School Memorial Park",
+  "Lake Geneva Park",
+  "Lakeview Park",
+  "Manhattan Park",
+  "Maple Valley Heights Park",
+  "Maplewood Park",
+  "Marra Desimone Park",
+  "Mathison Park",
+  "Moshier Memorial Park",
+  "Mount View Elementary School",
+  "North Shorewood Park",
+  "Puget Sound Park",
+  "Riverton Park",
+  "Roxhill Park",
+  "Salmon Creek Park",
+  "Seahurst Park",
+  "Seola Gardens Pocket Parks",
+  "Shorewood Elementary School",
+  "Skyway Park",
+  "Soos Creek Park (Gary Grant)",
+  "South County Ballfields",
+  "Southern Heights Park",
+  "Steve Cox Playfield",
+  "Town Square Park",
+  "Tukwila Community Center",
+  "Tukwila Park",
+  "Tukwila Pond",
+  "White Center Heights Park")
+
+DataToChange$park_name <- factor(DataToChange$park_name,1:55,parks )
+
+DataToChange$accessible <- factor(DataToChange$accessible, c("1","0"),c("Yes","No") )
+DataToChange$lit <- factor(DataToChange$lit, c("1","0"),c("Yes","No") )
+DataToChange$occupied <- factor(DataToChange$occupied, c("1","0"),c("Yes","No") )
+DataToChange$usable <- factor(DataToChange$usable, c("1","0"),c("Yes","No") )
+DataToChange$supervised <- factor(DataToChange$supervised, c("1","0"),c("Yes","No") )
+DataToChange$organized <- factor(DataToChange$organized, c("1","0"),c("Yes","No") )
+DataToChange$equipped <- factor(DataToChange$equipped, c("1","0"),c("Yes","No") )
+
+DataToChange$yesno_snd <- factor(DataToChange$yesno_snd, c("1","0"),c("Yes","No") )
+DataToChange$yesno_tert <- factor(DataToChange$yesno_tert, c("1","0"),c("Yes","No") )
+DataToChange$yesno_quat <- factor(DataToChange$yesno_quat, c("1","0"),c("Yes","No") )
+
+
+activities <- c("Baseball/softball",
+                "Basketball",
+                "Bike Riding",
+                "Catch (any sport)",
+                "Climbing",
+                "Dance/Aerobics (dance/step aerobics)",
+                "Fitness stations",
+                "Football",
+                "Frisbee",
+                "Jumping (rope, hop scotch)",
+                "Lacrosse",
+                "Lying down",
+                "Picnic (food involved)",
+                "Playground activities",
+                "Running",
+                "Sitting",
+                "Skating/skateboarding",
+                "Soccer",
+                "Standing",
+                "Strength exercises (pull ups)",
+                "Tag/chasing games",
+                "Tennis/racquetball",
+                "Volleyball",
+                "Walking",
+                "Other")
+
+DataToChange$prim_act_name <- factor(DataToChange$prim_act_name,1:25,activities )
+DataToChange$snd_act_name <- factor(DataToChange$snd_act_name,1:25,activities )
+DataToChange$tert_act_name <- factor(DataToChange$tert_act_name,1:25,activities )
+DataToChange$quat_act_name <- factor(DataToChange$quat_act_name,1:25,activities )
+
+DataToChange$park_scan_data_collection_complete <- "Complete"
 ```
 
 ## Transformation
