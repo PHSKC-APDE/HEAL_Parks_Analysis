@@ -219,10 +219,12 @@ write.csv(RawSOPARCObservations,here(paste0(DATA_LOCALE,"REDCapSOPARCObservation
 
 ```
 
-```{r apply manual corrections from Seth}
+```{r apply manual corrections data to change}
 DataToChange <- read_xlsx(here(INPUTS_LOCALE,"2024DatetoChange.xlsx"))
-DataToChange$time_period <- factor(DataToChange$time_period, c("1","2","3","4"),c("Morning","Lunch","Afternoon", "Evening") )
-DataToChange$time_period_half <- factor(DataToChange$time_period, c("1","2"),c("first observation","second observation") )
+
+DataToChange$start_time <- as.character(DataToChange$start_time)
+DataToChange$time_period <- as.character(factor(DataToChange$time_period, c("1","2","3","4"),c("Morning","Lunch","Afternoon", "Evening") ))
+DataToChange$time_period_half <- as.character(factor(DataToChange$time_period_half, c("1","2"),c("first observation","second observation") ))
 parks <- c("Annex Park",
   "Arbor Lake Park",
   "Beverly Park Elementary School",
@@ -279,10 +281,10 @@ parks <- c("Annex Park",
   "Tukwila Pond",
   "White Center Heights Park")
 
-DataToChange$park_name <- factor(DataToChange$park_name,1:55,parks )
+DataToChange$park_name <- as.character(factor(DataToChange$park_name,1:55,parks ))
 
-DataToChange$accessible <- factor(DataToChange$accessible, c("1","0"),c("Yes","No") )
-DataToChange$lit <- factor(DataToChange$lit, c("1","0"),c("Yes","No") )
+DataToChange$accessible <- as.character(factor(DataToChange$accessible, c("1","0"),c("Yes","No") ))
+DataToChange$lit <- as.character(factor(DataToChange$lit, c("1","0"),c("Yes","No") ))
 DataToChange$occupied <- factor(DataToChange$occupied, c("1","0"),c("Yes","No") )
 DataToChange$usable <- factor(DataToChange$usable, c("1","0"),c("Yes","No") )
 DataToChange$supervised <- factor(DataToChange$supervised, c("1","0"),c("Yes","No") )
@@ -326,6 +328,25 @@ DataToChange$tert_act_name <- factor(DataToChange$tert_act_name,1:25,activities 
 DataToChange$quat_act_name <- factor(DataToChange$quat_act_name,1:25,activities )
 
 DataToChange$park_scan_data_collection_complete <- "Complete"
+
+test <- RawSOPARCObservations[record_id %in% DataToChange$record_id]
+(DataToChange$record_id %in% test$record_id)
+rbind(RawSOPARCObservations, DataToChange)
+occur <- data.frame(table(DataToChange$record_id))
+occur[occur$Freq > 1,]
+#the above records are repeated
+
+
+DataToChange[DataToChange$record_id == 6354,]
+DataToChange[DataToChange$record_id == 7079,]
+DataToChange[DataToChange$record_id == 10949,]
+DataToChange[DataToChange$record_id == 10951,]
+DataToChange[DataToChange$record_id == 13973,]
+
+```
+
+```{r apply manual corrections data to drop}
+
 ```
 
 ## Transformation
