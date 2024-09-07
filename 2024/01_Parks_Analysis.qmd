@@ -33,6 +33,12 @@ editor:
     canonical: true
 ---
 
+# Q's for Seth,
+
+There are two entries in recordstoremove with record id 3021, is this ok? Can
+you review the incomplete items in the attached spreadsheet. Also including a
+spreadsheet of all observations if hlepful
+
 # Front Matter
 
 This document outlines procedures, technical considerations, and analytic
@@ -215,7 +221,7 @@ result <- postForm(
 
 RawSOPARCObservations <- as.data.table(fromJSON(result), )
 
-write.csv(RawSOPARCObservations,here(paste0(DATA_LOCALE,"REDCapSOPARCObservations.csv")), row.names = FALSE)
+write.csv(RawSOPARCObservations,here(paste0(INPUTS_LOCALE,"/generated/REDCapSOPARCObservations.csv")), row.names = FALSE)
 
 ```
 
@@ -285,15 +291,17 @@ DataToChange$park_name <- as.character(factor(DataToChange$park_name,1:55,parks 
 
 DataToChange$accessible <- as.character(factor(DataToChange$accessible, c("1","0"),c("Yes","No") ))
 DataToChange$lit <- as.character(factor(DataToChange$lit, c("1","0"),c("Yes","No") ))
-DataToChange$occupied <- factor(DataToChange$occupied, c("1","0"),c("Yes","No") )
-DataToChange$usable <- factor(DataToChange$usable, c("1","0"),c("Yes","No") )
-DataToChange$supervised <- factor(DataToChange$supervised, c("1","0"),c("Yes","No") )
-DataToChange$organized <- factor(DataToChange$organized, c("1","0"),c("Yes","No") )
-DataToChange$equipped <- factor(DataToChange$equipped, c("1","0"),c("Yes","No") )
+DataToChange$occupied <- as.character(factor(DataToChange$occupied, c("1","0"),c("Yes","No") ))
+DataToChange$usable <- as.character(factor(DataToChange$usable, c("1","0"),c("Yes","No") ))
+DataToChange$supervised <- as.character(factor(DataToChange$supervised, c("1","0"),c("Yes","No") ))
+DataToChange$organized <- as.character(factor(DataToChange$organized, c("1","0"),c("Yes","No") ))
+DataToChange$equipped <- as.character(factor(DataToChange$equipped, c("1","0"),c("Yes","No") ))
 
-DataToChange$yesno_snd <- factor(DataToChange$yesno_snd, c("1","0"),c("Yes","No") )
-DataToChange$yesno_tert <- factor(DataToChange$yesno_tert, c("1","0"),c("Yes","No") )
-DataToChange$yesno_quat <- factor(DataToChange$yesno_quat, c("1","0"),c("Yes","No") )
+
+
+DataToChange$yesno_snd <- as.character(factor(DataToChange$yesno_snd, c("1","0"),c("Yes","No") ))
+DataToChange$yesno_tert <- as.character(factor(DataToChange$yesno_tert, c("1","0"),c("Yes","No") ))
+DataToChange$yesno_quat <- as.character(factor(DataToChange$yesno_quat, c("1","0"),c("Yes","No") ))
 
 
 activities <- c("Baseball/softball",
@@ -322,30 +330,57 @@ activities <- c("Baseball/softball",
                 "Walking",
                 "Other")
 
-DataToChange$prim_act_name <- factor(DataToChange$prim_act_name,1:25,activities )
-DataToChange$snd_act_name <- factor(DataToChange$snd_act_name,1:25,activities )
-DataToChange$tert_act_name <- factor(DataToChange$tert_act_name,1:25,activities )
-DataToChange$quat_act_name <- factor(DataToChange$quat_act_name,1:25,activities )
+DataToChange$prim_act_name <- as.character(factor(DataToChange$prim_act_name,1:25,activities ))
+DataToChange$snd_act_name <- as.character(factor(DataToChange$snd_act_name,1:25,activities ))
+DataToChange$tert_act_name <- as.character(factor(DataToChange$tert_act_name,1:25,activities ))
+DataToChange$quat_act_name <- as.character(factor(DataToChange$quat_act_name,1:25,activities ))
 
 DataToChange$park_scan_data_collection_complete <- "Complete"
 
-test <- RawSOPARCObservations[record_id %in% DataToChange$record_id]
-(DataToChange$record_id %in% test$record_id)
-rbind(RawSOPARCObservations, DataToChange)
-occur <- data.frame(table(DataToChange$record_id))
-occur[occur$Freq > 1,]
-#the above records are repeated
 
+###QC code to check for duplicated ids
 
-DataToChange[DataToChange$record_id == 6354,]
-DataToChange[DataToChange$record_id == 7079,]
-DataToChange[DataToChange$record_id == 10949,]
-DataToChange[DataToChange$record_id == 10951,]
-DataToChange[DataToChange$record_id == 13973,]
+if(nrow(RawSOPARCObservations[record_id %in% DataToChange$record_id]) != nrow(DataToChange)) {
+  warning("number of rows in datatochange does not match number of ids that will be replaced")
+  warning("checking for duplicates in data to change")
+  test <- RawSOPARCObservations[record_id %in% DataToChange$record_id]
+  occur <- data.frame(table(DataToChange$record_id))
+  if(nrow(occur[occur$Freq > 0,]) != 0) {
+    stop("there are duplicate rows, these need to be manually fixed")
+  }
+}
 
+if(nrow(RawSOPARCObservations[!(record_id %in% DataToChange$record_id),]) != nrow(RawSOPARCObservations) - nrow(DataToChange)) {
+  stop("cross check fail")
+} else {
+  #drop rows that are to be changed
+  RawSOPARCObservations <- RawSOPARCObservations[!(record_id %in% DataToChange$record_id),]
+  
+  #add corrected rows
+  RawSOPARCObservations <- rbind(RawSOPARCObservations, DataToChange)
+
+}
 ```
 
 ```{r apply manual corrections data to drop}
+DataToRemove <- as.data.table(read_xlsx(here(INPUTS_LOCALE,"2024DatetoRemove.xlsx")))
+DataToRemove <- DataToRemove[!is.na(record_id),]
+
+
+if(nrow(RawSOPARCObservations[record_id %in% DataToRemove$record_id] ) != nrow(DataToRemove)) {
+  warning("number of rows in datatoremove does not match number of ids that will be removed")
+  #test <- RawSOPARCObservations[record_id %in% DataToRemove$record_id]
+  occur <- data.frame(table(DataToRemove$record_id))
+  if(nrow(occur[occur$Freq > 1,]) != 0) {
+    occur[occur$Freq > 1,]
+    warning("there are duplicate rows, these should be checked")
+  }
+  if(nrow(DataToRemove[!(record_id %in% RawSOPARCObservations$record_id)]) > 0) {
+    stop("rows without matching ids found")
+  }
+}
+
+RawSOPARCObservations <- RawSOPARCObservations[!(record_id %in% DataToRemove$record_id),]
 
 ```
 
@@ -354,6 +389,12 @@ DataToChange[DataToChange$record_id == 13973,]
 Data types are assigned. And character dates configured to POSIX dates.
 
 ```{r convert object and set data types}
+
+#convert empty entries to NA
+na_codes <- c("")
+for (i in seq_along(RawSOPARCObservations)) {
+    RawSOPARCObservations[[i]][RawSOPARCObservations[[i]] %in% na_codes] <- NA
+}
 
 
 #convert countables to numeric
@@ -375,7 +416,6 @@ RawSOPARCObservations$num_senior_prim <- as.numeric(RawSOPARCObservations$num_se
 RawSOPARCObservations$num_senior_snd <- as.numeric(RawSOPARCObservations$num_senior_snd)
 RawSOPARCObservations$num_senior_tert <- as.numeric(RawSOPARCObservations$num_senior_tert)
 RawSOPARCObservations$num_senior_quat <- as.numeric(RawSOPARCObservations$num_senior_quat)
-
 
 ```
 
@@ -410,14 +450,15 @@ RawSOPARCObservations[, weekend := ifelse(day %in% c("Saturday", "Sunday"), 1, 0
 
 SOPARCObservations <- copy(RawSOPARCObservations)
 
-#remove duplicates
-#SOPARCObservations <- SOPARCObservations[!duplicated(SOPARCObservations[, setdiff(names(SOPARCObservations), "record_id"), with = FALSE]),]
+#report non Complete observations
+write.csv(RawSOPARCObservations,file = here(OUPUTS_LOCALE,"./all_data.csv"))
+write.csv(RawSOPARCObservations[park_scan_data_collection_complete != "Complete",] ,file = here(OUPUTS_LOCALE,"./incomplete_data.csv"))
+```
 
+```{r}
 #remove data with incomplete entry status
 SOPARCObservations <- SOPARCObservations[park_scan_data_collection_complete %in% "Complete",]
 
-#drop observations without a time, we cannot use these
-SOPARCObservations <- SOPARCObservations[start_time != "",]
 #drop observations with missing park names, we cannot use these
 SOPARCObservations <- SOPARCObservations[!(park_name %in% ""),]
 
@@ -430,25 +471,7 @@ SOPARCObservations[park_name %in% c("Hazelnut Park",
                                     "Fort Dent Park - North") & sub_area == "0", sub_area := ""]
 
 #remove pre-study observation (test data)
-SOPARCObservations <- SOPARCObservations[record_id >= 141,]
 SOPARCObservations <- SOPARCObservations[datePOSIX >= "2023-07-01",]
-
-#remove extra day from Manhattan park
-#Manhattan Park has one too many days collected. We drop an extra day here. 
-# unique(SOPARCObservations[park_name %in% "Manhattan Park" , datePOSIX]) #check dates collected to ocnfirm where they are in the calendar
-# unique(SOPARCObservations[park_name %in% "Manhattan Park" & day == "Friday", datePOSIX]) #check days of the week of each: two are friday
-# unique(SOPARCObservations[park_name %in% "Manhattan Park" , .(.N,first(obs_initial)),by =datePOSIX]) #double check that all days are complete/identical in number of observations
-#after review, we will drop friday 18/08/2023 because it is furthers from the other dates. 
-SOPARCObservations <- SOPARCObservations[!(park_name %in% "Manhattan Park" & datePOSIX == "2023-08-18"),]
-
-#remove identified records
-RemoveMe <- openxlsx2::read_xlsx(here("2023/inputs/Records-to-Remove.xlsx"))
-SOPARCObservations <- SOPARCObservations[!(record_id %in% RemoveMe$record_id),]
-
-#correct identified error
-SOPARCObservations[record_id == 4706, "tar_area"] <- 5
-
-
 
 #reorder given new data
 setorder(SOPARCObservations, cols = "timestampPOSIX")
