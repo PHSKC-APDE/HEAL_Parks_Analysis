@@ -754,9 +754,84 @@ This strategy looks at the number of days of data observed, and, if only 3 days
 are observed, then checks to confirm that, for each target area, 8 or fewer
 observations are made. If both of these conditions are met, this strategy
 attempts to insert the missing observations as blank entries in the part of the
-day that appeaer to be missing them. It identifies part of day by looking at
-each data collection period and inserting observations into the underweighted
-period(s) until 8 exists for each target area.
+day that appeaer to be missing them.
+
+```{r create helper function for adding empty observations}
+createEmptyObservation <- function(park, expectedTargetArea, areasExpected, periodCount) {
+  periodStartTimes <- c(0730, #start morning1
+                        0800, #start morning2
+                        1230, #start L1
+                        1300, #start L2
+                        1530, #start A1
+                        1600, #start A2
+                        1830, #start E1
+                        1900) #start E2
+  periods <- c("Morning",
+               "Morning",
+               "Lunch",
+               "Lunch",
+               "Afternoon",
+               "Afternoon",
+               "Evening",
+               "Evening")
+  timeToInterpolate <- round(periodStartTimes[periodTracker] + (30 * (expectedTargetArea/areasExpected))-(30 * (1/areasExpected)),0) #calculate how far into the observation period thetime should be set
+  timeToInterpolateChar <- ifelse(nchar(as.character(timeToInterpolate)) == 3, paste0("0",substr(as.character(timeToInterpolate),1,1),":",substr(as.character(timeToInterpolate),2,3)), paste0(substr(as.character(timeToInterpolate),1,2),":",substr(as.character(timeToInterpolate),3,4)))
+  timestampToInterpolate <- paste(as.character(dateToFix),timeToInterpolateChar)
+  tempObs <- data.table(record_id = -1,
+                        redcap_survey_identifier = "",
+                        park_scan_data_collection_timestamp = "",
+                        obs_initial = "APDE",
+                        start_time = timestampToInterpolate,
+                        time_period = periods[periodCount],
+                        time_period_half = ifelse(periodCount %% 2 == 1, "first observation", "second observation"),
+                        park_name = park,
+                        tar_area = expectedTargetArea,
+                        sub_area = "",
+                        accessible = "",
+                        lit = "",
+                        occupied = "",
+                        usable = "",
+                        supervised = "",
+                        organized = "",
+                        equipped = "",
+                        num_child_prim = NA,
+                        num_child_snd = NA,
+                        num_child_tert = NA,
+                        num_child_quat = NA,
+                        num_teen_prim = NA,
+                        num_teen_snd = NA,
+                        num_teen_tert = NA,
+                        num_teen_quat = NA,
+                        num_adult_prim = NA,
+                        num_adult_snd = NA,
+                        num_adult_tart = NA,
+                        num_adult_quat = NA,
+                        num_senior_prim = NA,
+                        num_senior_snd = NA,
+                        num_senior_tert = NA,
+                        num_senior_quat = NA,
+                        prim_act_name = "",
+                        prim_act_other = "",
+                        yesno_snd = "",
+                        snd_act_name = "",
+                        snd_act_other = "",
+                        yesno_tert = "",
+                        tert_act_name = "",
+                        tart_act_other = "",
+                        yesno_quat = "",
+                        quat_act_name = "",
+                        quat_act_other = "",
+                        comments = "",
+                        park_scan_data_collection_complete = "",
+                        timestampPOSIX = as.POSIXct(strptime(timestampToInterpolate, "%Y-%m-%d %H:%M"), "America/Los_Angeles"),
+                        datePOSIX = as.Date(as.POSIXct(strptime(timestampToInterpolate, "%Y-%m-%d %H:%M"), "America/Los_Angeles"), tz = "America/Los_Angeles"),
+                        day = weekdays(as.POSIXct(strptime(timestampToInterpolate, "%Y-%m-%d %H:%M"), "America/Los_Angeles")),
+                        month = months(as.POSIXct(strptime(timestampToInterpolate, "%Y-%m-%d %H:%M"), "America/Los_Angeles")),
+                        weekend = ifelse(weekdays(as.POSIXct(strptime(timestampToInterpolate, "%Y-%m-%d %H:%M"), "America/Los_Angeles")) %in% c("Saturday", "Sunday"), 1, 0))
+      return(tempObs)
+}
+
+```
 
 ```{r any days with missing and only missing}
 
@@ -764,8 +839,6 @@ period(s) until 8 exists for each target area.
 
 
 #for each day of observation with too many observations per day, try to resolve to 24xtarget area
-
-
 for(park in unique(SOPARCObservationsToFix$park_name)) {
   SOPARCSingle <- SOPARCObservationsToFix[park_name == park,]
   areasExpected <- parkStats[park_name == park, areaCount]
@@ -775,114 +848,44 @@ for(park in unique(SOPARCObservationsToFix$park_name)) {
   x <- OBSINDAYTOLERANCE
   stratResult <- SOPARCSingle[, .("N" = .N,"exact" = .N == observationsExpectedPerDay ,"inRange" = (.N >= observationsExpectedPerDay - x) & (.N <= observationsExpectedPerDay +x), "under" = (.N < observationsExpectedPerDay), "over" = (.N > observationsExpectedPerDay)),by = datePOSIX]
 
-  if(parkStats[park_name == park,]$numberDaysObserved == 3) { #start strategy 1 checks: what to do if there are the incorrect number of days
+  if(parkStats[park_name == park,]$numberDaysObserved == 3) { #start strategy 1 checks: what to do if there are the correct number of days
     for(dateToFix in as.list(stratResult[exact == FALSE,]$datePOSIX)) { # per day
       if(all(SOPARCSingle[ datePOSIX == dateToFix, .N <= 8 , by = tar_area]$V1)) { #if no target area has more than the expected, insert missing observations into the day
         parkStats[park_name == park, ]$strateg1exec <- TRUE
         SOPARCSingleToFix <- SOPARCSingle[ datePOSIX == dateToFix, ]
-        periodTracker <- 1
-        #expectedTargetArea <- 1
-        rowCounter <- 1
-        nextExpectedTargetArea <- ifelse(areasExpected == 1, 1, 2)
-        periodStartTimes <- c(0730, #start morning1
-                         0800, #start morning2
-                         1230, #start L1
-                         1300, #start L2
-                         1530, #start A1
-                         1600, #start A2
-                         1830, #start E1
-                         1900) #start E2
         for(expectedTargetArea in 1:areasExpected) {
           if(nrow(SOPARCSingleToFix[tar_area == expectedTargetArea,]) != 8){
-            numberToInsert <- 8 - nrow(SOPARCSingleToFix[tar_area == expectedTargetArea,])
-            createEmptyObservation <- function(park, period, expectedTargetArea, areasExpected) {
-                                    periodStartTimes <- c(0730, #start morning1
-                         0800, #start morning2
-                         1230, #start L1
-                         1300, #start L2
-                         1530, #start A1
-                         1600, #start A2
-                         1830, #start E1
-                         1900) #start E2
-                         timeToInterpolate <- round(periodStartTimes[periodTracker] + (30 * (expectedTargetArea/areasExpected))-(30 * (1/areasExpected)),0) #calculate how far into the observation period thetime should be set
-            timeToInterpolateChar <- ifelse(nchar(as.character(timeToInterpolate)) == 3, paste0("0",substr(as.character(timeToInterpolate),1,1),":",substr(as.character(timeToInterpolate),2,3)), paste0(substr(as.character(timeToInterpolate),1,2),":",substr(as.character(timeToInterpolate),3,4)))
-            timestampToInterpolate <- paste(as.character(dateToFix),timeToInterpolateChar)
-                  tempObs <- data.table(record_id = -1,
-                                     redcap_survey_identifier = "",
-                                     park_scan_data_collection_timestamp = "",
-                                     obs_initial = "APDE",
-                                     start_time = timestampToInterpolate,
-                                     park_name = park,
-                                     tar_area = expectedTargetArea,
-                                     sub_area = "",
-                                     accessible = "",
-                                     usable = "",
-                                     lit = "",
-                                     occupied = "",
-                                     supervised = "",
-                                     organized = "",
-                                     equipped = "",
-                                     num_child_prim = NA,
-                                     num_child_snd = NA,
-                                     num_child_spec = NA,
-                                     num_teen_prim = NA,
-                                     num_teen_snd = NA,
-                                     num_teen_spec = NA,
-                                     num_adult_prim = NA,
-                                     num_adult_snd = NA,
-                                     num_adult_spec = NA,
-                                     num_senior_prim = NA,
-                                     num_senior_snd = NA,
-                                     num_senior_spec = NA,
-                                     prim_act_name = "",
-                                     prim_act_other = "",
-                                     yesno_snd = "",
-                                     snd_act_name = "",
-                                     other_act_snd = "",
-                                     yesno_spec = "",
-                                     spec_act_name = "",
-                                     other_act_spec = "",
-                                     comments = "",
-                                     park_scan_data_collection_complete = "",
-                                     timestampPOSIX = as.POSIXct(strptime(timestampToInterpolate, "%Y-%m-%d %H:%M"), "America/Los_Angeles"),
-                                     datePOSIX = as.Date(as.POSIXct(strptime(timestampToInterpolate, "%Y-%m-%d %H:%M"), "America/Los_Angeles"), tz = "America/Los_Angeles"),
-                                     day = weekdays(as.POSIXct(strptime(timestampToInterpolate, "%Y-%m-%d %H:%M"), "America/Los_Angeles")),
-                                     month = months(as.POSIXct(strptime(timestampToInterpolate, "%Y-%m-%d %H:%M"), "America/Los_Angeles")),
-                                     weekend = ifelse(weekdays(as.POSIXct(strptime(timestampToInterpolate, "%Y-%m-%d %H:%M"), "America/Los_Angeles")) %in% c("Saturday", "Sunday"), 1, 0))
-                  return(tempObs)
-            }
-            while(numberToInsert != 0){ # attempt to insert into the most underweighted time of day note, we don't need to worry about 1st or second period of that time (l1 vs l2)
-              if(nrow(SOPARCSingleToFix[tar_area == expectedTargetArea & hour(timestampPOSIX) < 15,]) <= nrow(SOPARCSingleToFix[tar_area == expectedTargetArea & hour(timestampPOSIX) >= 15,])) { #first or second half of day
-                if(nrow(SOPARCSingleToFix[tar_area == expectedTargetArea & hour(timestampPOSIX) < 15,][hour(timestampPOSIX) < 12,]) <= nrow(SOPARCSingleToFix[tar_area == expectedTargetArea & hour(timestampPOSIX) < 15,][hour(timestampPOSIX) >= 12,])) { #first or second of first half
-                  #insert intro morning
-                  periodTracker <- 1
-                  SOPARCObservationsToFix <-  rbind(createEmptyObservation(park, periodTracker, expectedTargetArea, areasExpected),SOPARCObservationsToFix)
-                  numberToInsert <- numberToInsert -1
+            for(period in c("Morning","Lunch", "Afternoon","Evening")) {
+              if(nrow(SOPARCSingleToFix[tar_area == expectedTargetArea & time_period == period,]) != 2) {
+                if(period == "Morning") {
+                  periodCount <- 1
+                } else if(period == "Lunch") {
+                  periodCount <- 3
+                } else if(period == "Afternoon"){
+                  periodCount <- 5
                 } else {
-                  #insert into lunch
-                  periodTracker <- 3
-                  SOPARCObservationsToFix <-  rbind(createEmptyObservation(park, periodTracker, expectedTargetArea, areasExpected),SOPARCObservationsToFix)
-  
-                  numberToInsert <- numberToInsert -1
+                  periodCount <- 7
                 }
-              } else {
-                if(nrow(SOPARCSingleToFix[tar_area == expectedTargetArea & hour(timestampPOSIX) >= 15,][hour(timestampPOSIX) < 18,]) <= nrow(SOPARCSingleToFix[tar_area == expectedTargetArea & hour(timestampPOSIX) >= 15,][hour(timestampPOSIX) >= 18,])) { #first or second of second half)
-                  #insert into afternoon
-                  periodTracker <- 5
-                  SOPARCObservationsToFix <-  rbind(createEmptyObservation(park, periodTracker, expectedTargetArea, areasExpected),SOPARCObservationsToFix)
-  
-                  numberToInsert <- numberToInsert -1
-                }else {
-                  #insert into evening
-                  periodTracker <- 7
-                  SOPARCObservationsToFix <-  rbind(createEmptyObservation(park, periodTracker, expectedTargetArea, areasExpected),SOPARCObservationsToFix)
-  
-                  numberToInsert <- numberToInsert -1
+                #if 0, create an empty for both halves of the period, 
+                #if 1, create for missing half, 
+                #if > 2 throw stop for now
+                if(nrow(SOPARCSingleToFix[tar_area == expectedTargetArea & time_period == period,]) == 0) {
+                  #create 2 observations for this period
+ 
+                  createEmptyObservation(park, expectedTargetArea,areasExpected, periodCount)
+                  createEmptyObservation(park, expectedTargetArea,areasExpected, periodCount + 1)
+                  
+                } else if(nrow(SOPARCSingleToFix[tar_area == expectedTargetArea & time_period == period,]) == 1) {
+                  if(SOPARCSingleToFix[tar_area == expectedTargetArea & time_period == period,]$time_period_half == "second observation") {
+                    periodCount <- periodCount + 1
+                  }
+                  createEmptyObservation(park, expectedTargetArea,areasExpected, periodCount)
+                } else {
+                  stop("more than 2 observations in teh period, investigate")
                 }
               }
-              
-  
             }
+
             
           }
         }
