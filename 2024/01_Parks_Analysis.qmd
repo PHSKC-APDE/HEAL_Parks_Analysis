@@ -407,7 +407,7 @@ RawSOPARCObservations$num_child_quat <- as.numeric(RawSOPARCObservations$num_chi
 RawSOPARCObservations$num_teen_prim <- as.numeric(RawSOPARCObservations$num_teen_prim)
 RawSOPARCObservations$num_teen_snd <- as.numeric(RawSOPARCObservations$num_teen_snd)
 RawSOPARCObservations$num_teen_tert <- as.numeric(RawSOPARCObservations$num_teen_tert)
-RawSOPARCObservations$num_teen_uat <- as.numeric(RawSOPARCObservations$num_teen_quat)
+RawSOPARCObservations$num_teen_quat <- as.numeric(RawSOPARCObservations$num_teen_quat)
 RawSOPARCObservations$num_adult_prim <- as.numeric(RawSOPARCObservations$num_adult_prim)
 RawSOPARCObservations$num_adult_snd <- as.numeric(RawSOPARCObservations$num_adult_snd)
 RawSOPARCObservations$num_adult_tert <- as.numeric(RawSOPARCObservations$num_adult_tert)
@@ -453,28 +453,31 @@ SOPARCObservations <- copy(RawSOPARCObservations)
 #report non Complete observations
 write.csv(RawSOPARCObservations,file = here(OUPUTS_LOCALE,"./all_data.csv"))
 write.csv(RawSOPARCObservations[park_scan_data_collection_complete != "Complete",] ,file = here(OUPUTS_LOCALE,"./incomplete_data.csv"))
-```
 
-```{r}
-#remove data with incomplete entry status
-SOPARCObservations <- SOPARCObservations[park_scan_data_collection_complete %in% "Complete",]
-
+#test if any observations are missing park name
 #drop observations with missing park names, we cannot use these
-SOPARCObservations <- SOPARCObservations[!(park_name %in% ""),]
+if(!(nrow(SOPARCObservations) == nrow(SOPARCObservations[!(park_name %in% ""),]))){
+  stop("there are incomplete observations. you COULD drop them with the below line, but should you?")
+  #drop observations with missing park names, we cannot use these 
+  SOPARCObservations <- nrow(SOPARCObservations[!(park_name %in% ""),])
+}
 
-#redact inaccurate subarea labels
-SOPARCObservations[park_name %in% c("Hazelnut Park", 
-                                    "Puget Sound Park",
-                                    "Tukwila Community Center",
-                                    "Tukwila Park",
-                                    "Fort Dent Park - South",
-                                    "Fort Dent Park - North") & sub_area == "0", sub_area := ""]
 
 #remove pre-study observation (test data)
-SOPARCObservations <- SOPARCObservations[datePOSIX >= "2023-07-01",]
+#none exists?
+#SOPARCObservations <- SOPARCObservations[datePOSIX >= "2023-07-01",]
+
 
 #reorder given new data
 setorder(SOPARCObservations, cols = "timestampPOSIX")
+
+```
+
+```{r}
+
+
+
+
 ```
 
 ## Create table of activities including sub areas
@@ -483,28 +486,13 @@ Park activities are extracted from other park data for more accurate analysis.
 
 ```{r create seperate activity table}
 
-if( !(file.exists(here("2023/local_only/SOPARCActivities.csv"))) | REBUILDACTIVITYTABLE){
-# SOPARCActivities <- data.table("record_id" = SOPARCObservations[prim_act_name != "",]$record_id, 
-#                                "record_id_aggregated" = SOPARCObservations[prim_act_name != "",]$record_id, 
-#                                "activity" = "", 
-#                                "children" = 0, 
-#                                "teen" = 0, 
-#                                "adult" = 0, 
-#                                "senior" = 0)
-#                                
-#                                
-#                                
+if( !(file.exists(here("2024/inputs/generated/SOPARCActivities.csv"))) | REBUILDACTIVITYTABLE){
+                            
 
 SOPARCActivities <- data.table()
 
   for(id in SOPARCObservations[prim_act_name != "",]$record_id) {
 
-      # SOPARCActivities[record_id == id, `:=`(activity = ifelse(SOPARCObservations[record_id == id, ]$prim_act_name == "Other", SOPARCObservations[record_id == id, ]$prim_act_other, SOPARCObservations[record_id == id, ]$prim_act_name),
-      #                                        children = SOPARCObservations[record_id == id, ]$num_child_prim, 
-      #                                        teen = SOPARCObservations[record_id == id, ]$num_teen_prim, 
-      #                                        adult = SOPARCObservations[record_id == id, ]$num_adult_prim, 
-      #                                        senior = SOPARCObservations[record_id == id, ]$num_senior_prim)] 
-    
     DT <- SOPARCObservations[record_id == id, .(record_id = id,
                                                 record_id_aggregated = id,
                                           activity = ifelse(prim_act_name == "Other", prim_act_other, prim_act_name),
@@ -515,42 +503,41 @@ SOPARCActivities <- data.table()
     
     SOPARCActivities <- rbindlist(list(SOPARCActivities, DT))
     
-    if(SOPARCObservations[record_id == id,]$yesno_snd == "Yes") {
-      # SOPARCActivities[record_id == id, `:=`(activity = ifelse(SOPARCObservations[record_id == id, ]$snd_act_name == "Other", SOPARCObservations[record_id == id, ]$other_act_snd, SOPARCObservations[record_id == id, ]$snd_act_name),
-      #                                        children = SOPARCObservations[record_id == id, ]$num_child_snd, 
-      #                                        teen = SOPARCObservations[record_id == id, ]$num_teen_snd, 
-      #                                        adult = SOPARCObservations[record_id == id, ]$num_adult_snd, 
-      #                                        senior = SOPARCObservations[record_id == id, ]$num_senior_snd)] 
-      
+    if(SOPARCObservations[record_id == id,]$yesno_snd %in% "Yes") {
       DT <- SOPARCObservations[record_id == id, .(record_id = id,
                                                   record_id_aggregated = id,
-                                      activity = ifelse(snd_act_name == "Other", other_act_snd, snd_act_name),
+                                      activity = ifelse(snd_act_name == "Other", snd_act_other, snd_act_name),
                                       children = num_child_snd, 
                                       teen = num_teen_snd, 
                                       adult = num_adult_snd, 
                                       senior = num_senior_snd)]
       SOPARCActivities <- rbindlist(list(SOPARCActivities, DT))
     }
-    if(SOPARCObservations[record_id == id,]$yesno_spec == "Yes") {
-      # SOPARCActivities[record_id == id, `:=`(activity = ifelse(SOPARCObservations[record_id == id, ]$spec_act_name == "Other", SOPARCObservations[record_id == id, ]$other_act_spec, SOPARCObservations[record_id == id, ]$spec_act_name),
-      #                                        children = SOPARCObservations[record_id == id, ]$num_child_spec, 
-      #                                        teen = SOPARCObservations[record_id == id, ]$num_teen_spec, 
-      #                                        adult = SOPARCObservations[record_id == id, ]$num_adult_spec, 
-      #                                        senior = SOPARCObservations[record_id == id, ]$num_senior_spec)] 
+    if(SOPARCObservations[record_id == id,]$yesno_tert %in% "Yes") {
       DT <- SOPARCObservations[record_id == id, .(record_id = id,
                                                   record_id_aggregated = id,
-                                activity = ifelse(spec_act_name == "Other", other_act_spec, spec_act_name),
-                                children = num_child_spec, 
-                                teen = num_teen_spec, 
-                                adult = num_adult_spec, 
-                                senior = num_senior_spec)]
+                                activity = ifelse(tert_act_name == "Other", tert_act_other, tert_act_name),
+                                children = num_child_tert, 
+                                teen = num_teen_tert, 
+                                adult = num_adult_tert, 
+                                senior = num_senior_tert)]
+      SOPARCActivities <- rbindlist(list(SOPARCActivities, DT))
+    }
+    if(SOPARCObservations[record_id == id,]$yesno_quat %in% "Yes") {
+      DT <- SOPARCObservations[record_id == id, .(record_id = id,
+                                                  record_id_aggregated = id,
+                                activity = ifelse(quat_act_name == "Other", quat_act_other, quat_act_name),
+                                children = num_child_quat, 
+                                teen = num_teen_quat, 
+                                adult = num_adult_quat, 
+                                senior = num_senior_quat)]
       SOPARCActivities <- rbindlist(list(SOPARCActivities, DT))
     }
   }
-  write.csv(SOPARCActivities, here("2023/local_only/SOPARCActivities.csv"), row.names = FALSE)
-  write.csv(SOPARCActivities, here("2023/outputs/data-metadata/SOPARCActivities.csv"), row.names = FALSE)
+  write.csv(SOPARCActivities, here("2024/inputs/generated/SOPARCActivities.csv"), row.names = FALSE)
+  write.csv(SOPARCActivities, here("2024/outputs/data-metadata/SOPARCActivities.csv"), row.names = FALSE)
 } else {
-  SOPARCActivities <-  fread(here("2023/local_only/SOPARCActivities.csv"))
+  SOPARCActivities <-  fread(here("2024/inputs/generated/SOPARCActivities.csv"))
 }
 ```
 
@@ -580,6 +567,8 @@ In this step we also append changed record_ids to our activity table as
 "record_id_aggregated" and save the updated activity table.
 
 ```{r collapse sub areas into a single area}
+#| eval: false
+
 SOPARCObservationsSubAreas <- copy(SOPARCObservations[sub_area != "",])
 
 remove(SOPARCCollapsedSubAreas) #if this DT exist, remove it because we will recreate it in this chunk
@@ -673,13 +662,13 @@ SOPARCObservations <- rbind(SOPARCObservations[sub_area == "",], SOPARCCollapsed
 #save newly updated activity table
 
 
-write.csv(SOPARCActivities, here("2023/outputs/data-metadata/Park Activities.csv"), row.names = F)
+write.csv(SOPARCActivities, here("2024/outputs/data-metadata/Park Activities.csv"), row.names = F)
 
 
 ```
 
 ```{r save pre QA observations}
-write.csv(SOPARCObservations,here("2023/outputs/data-metadata/PrepForQASOPARCObservations.csv"), row.names = FALSE)
+write.csv(SOPARCObservations,here("2024/outputs/data-metadata/PrepForQASOPARCObservations.csv"), row.names = FALSE)
 
 ```
 
@@ -786,7 +775,7 @@ for(park in unique(SOPARCObservationsToFix$park_name)) {
   x <- OBSINDAYTOLERANCE
   stratResult <- SOPARCSingle[, .("N" = .N,"exact" = .N == observationsExpectedPerDay ,"inRange" = (.N >= observationsExpectedPerDay - x) & (.N <= observationsExpectedPerDay +x), "under" = (.N < observationsExpectedPerDay), "over" = (.N > observationsExpectedPerDay)),by = datePOSIX]
 
-  if(parkStats[park_name == park,]$numberDaysObserved == 3) { #start strategy 1 checks: what to do if there are the correct number of days
+  if(parkStats[park_name == park,]$numberDaysObserved == 3) { #start strategy 1 checks: what to do if there are the incorrect number of days
     for(dateToFix in as.list(stratResult[exact == FALSE,]$datePOSIX)) { # per day
       if(all(SOPARCSingle[ datePOSIX == dateToFix, .N <= 8 , by = tar_area]$V1)) { #if no target area has more than the expected, insert missing observations into the day
         parkStats[park_name == park, ]$strateg1exec <- TRUE
