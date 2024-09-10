@@ -568,6 +568,7 @@ In this step we also append changed record_ids to our activity table as
 
 ```{r collapse sub areas into a single area}
 #| eval: false
+#no sub areas this year
 
 SOPARCObservationsSubAreas <- copy(SOPARCObservations[sub_area != "",])
 
@@ -721,28 +722,14 @@ parkStats[, passQA := ifelse(meetsExpected &
                                numberDaysOver == 0 &
                                numberDaysUnder == 0, TRUE, FALSE)]
 
-#insert base variables
-# parkStats[,`:=`(strateg1exec = FALSE, 
-#              numberDaysOver =  ifelse(meetsExpected, 0, NA),
-#              numberDaysUnder = ifelse(meetsExpected, 0, NA),
-#              numberDaysComplete = ifelse(meetsExpected, 3, NA)),]
-
-
-
-# parkStats$strateg1exec <- FALSE
-# parkStats$numberDaysOver <- 0
-# parkStats$numberDaysUnder <- 0
-# parkStats$numberDaysObserved <- 3
-# parkStats$numberDaysComplete <- 3
-
 #save QA results to file for review
-write.csv(parkStats, here("2023/outputs/data-metadata/QA_report.csv"), row.names = F)
+write.csv(parkStats, here("2024/outputs/data-metadata/QA_report.csv"), row.names = F)
 
 
 SOPARCObservationsOK <- SOPARCObservations[park_name %in% parkStats[passQA %in% TRUE, park_name],]
 SOPARCObservationsToFix <- SOPARCObservations[park_name %in% parkStats[passQA %in% FALSE, park_name],]
-write.csv(SOPARCObservationsOK, here("2023/outputs/data-metadata/QAPassSOPARCObservations.csv"), row.names = F)
-write.csv(SOPARCObservationsToFix, here("2023/outputs/data-metadata/QAFailSOPARCObservations.csv"), row.names = F)
+write.csv(SOPARCObservationsOK, here("2024/outputs/data-metadata/QAPassSOPARCObservations.csv"), row.names = F)
+write.csv(SOPARCObservationsToFix, here("2024/outputs/data-metadata/QAFailSOPARCObservations.csv"), row.names = F)
 
 
 
@@ -804,7 +791,7 @@ createEmptyObservation <- function(park, expectedTargetArea, areasExpected, peri
                         num_teen_quat = NA,
                         num_adult_prim = NA,
                         num_adult_snd = NA,
-                        num_adult_tart = NA,
+                        num_adult_tert = NA,
                         num_adult_quat = NA,
                         num_senior_prim = NA,
                         num_senior_snd = NA,
@@ -817,7 +804,7 @@ createEmptyObservation <- function(park, expectedTargetArea, areasExpected, peri
                         snd_act_other = "",
                         yesno_tert = "",
                         tert_act_name = "",
-                        tart_act_other = "",
+                        tert_act_other = "",
                         yesno_quat = "",
                         quat_act_name = "",
                         quat_act_other = "",
@@ -833,12 +820,11 @@ createEmptyObservation <- function(park, expectedTargetArea, areasExpected, peri
 
 ```
 
-```{r any days with missing and only missing}
+# strategy 1 resolve too few observations per day
+
+```{r impute for any days with missing and only missing}
 
 
-
-
-#for each day of observation with too many observations per day, try to resolve to 24xtarget area
 for(park in unique(SOPARCObservationsToFix$park_name)) {
   SOPARCSingle <- SOPARCObservationsToFix[park_name == park,]
   areasExpected <- parkStats[park_name == park, areaCount]
@@ -866,22 +852,23 @@ for(park in unique(SOPARCObservationsToFix$park_name)) {
                 } else {
                   periodCount <- 7
                 }
+
                 #if 0, create an empty for both halves of the period, 
                 #if 1, create for missing half, 
                 #if > 2 throw stop for now
                 if(nrow(SOPARCSingleToFix[tar_area == expectedTargetArea & time_period == period,]) == 0) {
                   #create 2 observations for this period
  
-                  createEmptyObservation(park, expectedTargetArea,areasExpected, periodCount)
-                  createEmptyObservation(park, expectedTargetArea,areasExpected, periodCount + 1)
+                  SOPARCObservationsToFix <- rbind(createEmptyObservation(park, expectedTargetArea,areasExpected, periodCount), SOPARCObservationsToFix)
+                  SOPARCObservationsToFix <- rbind(createEmptyObservation(park, expectedTargetArea,areasExpected, periodCount + 1), SOPARCObservationsToFix)
                   
                 } else if(nrow(SOPARCSingleToFix[tar_area == expectedTargetArea & time_period == period,]) == 1) {
                   if(SOPARCSingleToFix[tar_area == expectedTargetArea & time_period == period,]$time_period_half == "second observation") {
                     periodCount <- periodCount + 1
                   }
-                  createEmptyObservation(park, expectedTargetArea,areasExpected, periodCount)
+                  SOPARCObservationsToFix <- rbind(createEmptyObservation(park, expectedTargetArea,areasExpected, periodCount), SOPARCObservationsToFix)
                 } else {
-                  stop("more than 2 observations in teh period, investigate")
+                  stop("2 or more observations in teh period, investigate")
                 }
               }
             }
@@ -929,14 +916,14 @@ for(park in parkStatscheck$park_name) {
 }
 
 #write updated QA results
-write.csv(parkStats, here("2023/outputs/data-metadata/QA_report.csv"), row.names = F)
+write.csv(parkStats, here("2024/outputs/data-metadata/QA_report.csv"), row.names = F)
 
 SOPARCObservationsCorrected <- copy(SOPARCObservationsToFix[park_name %in% parkStats[passQA == TRUE, park_name],])
 
 SOPARCObservationsOK <- rbind(SOPARCObservationsOK, SOPARCObservationsCorrected)
 SOPARCObservationsToFix <- copy(SOPARCObservationsToFix[park_name %in% parkStats[passQA == FALSE, park_name],])
-write.csv(SOPARCObservationsOK, here("2023/outputs/data-metadata/QAPassSOPARCObservations.csv"), row.names = F)
-write.csv(SOPARCObservationsToFix, here("2023/outputs/data-metadata/QAFailSOPARCObservations.csv"), row.names = F)
+write.csv(SOPARCObservationsOK, here("2024/outputs/data-metadata/QAPassSOPARCObservations.csv"), row.names = F)
+write.csv(SOPARCObservationsToFix, here("2024/outputs/data-metadata/QAFailSOPARCObservations.csv"), row.names = F)
 
 
 ```
@@ -960,7 +947,7 @@ zip, neighborhood, tract, equity score, image status, planned park change notes,
 and general notes for each park will be appended to the analysis table.
 
 ```{r load parkwide metadata}
-ParksMetaData <- as.data.table(read_xlsx(here("2023/inputs/Parks_MASTER.xlsx"), sheet = "Sheet1"))
+ParksMetaData <- as.data.table(read_xlsx(here("2024/inputs/Parks_MASTER.xlsx"), sheet = "Sheet1"))
 ```
 
 ## Assign population within half-mile radius
@@ -1025,103 +1012,32 @@ if(!skip | RECALCULATEPOPULATIONS) {
 }
 ```
 
-## Study tracker
+## Update Study tracker
 
 For the 2023 analysis we advised creating a study tracker. For each time a park
-is studied, a new entry is created. Each entry should includ the park name, the
-date the study staretd, and a brief description of the study. We generate and
-save a study tracker that covers 2022 and 2023 studies.
+is studied, a new entry is created. Each entry should include the park name, the
+date the study started, and a brief description of the study.
 
 In a later step we will use this table to append a study count to our parks
 
 ```{r create park study tracker}
 
-#generate a list of full park names for 2023
-parks2023 <- merge(parkStats, ParksMetaData, by.x = "park_name", by.y = "REDCap Name", all.x = T)$"Park Name"
+ParksStudyRecord <- read.csv(here("2024/inputs/RecordOfParkStudies.csv"))
 
-#generate a list of full park names for 2022
-lastYearParks <- c("Brighton Playfield",
-                     "Cascade View Community Park",
-                     "Marra Desimone Park",
-                     "Midway Park",
-                     "Moshier Memorial Park",
-                     "Puget Sound Park",
-                     "Roxhill Park",
-                     "Steel Lake Park",
-                     "Steve Cox Playfield",
-                     "Tukwila Community Center")
 
-ParksStudyRecord <- data.table("parkName" = lastYearParks, "studyStartDate" = "2022-06-25", "studyDescription" = "2022 annual study round 1")
-ParksStudyRecord <- rbind(ParksStudyRecord, data.table("parkName" = lastYearParks, "studyStartDate" = "2022-07-21", "studyDescription" = "2022 annual study round 2"))
-ParksStudyRecord <- rbind(ParksStudyRecord, data.table("parkName" = parks2023, "studyStartDate" = "2023-07-01", "studyDescription" = "2023 annual study"))
+ParksStudyRecord <- rbind(data.table("parkName" = unique(SOPARCAnalysisSet$park_name), "studyStartDate" = "2024-07-08", "studyDescription" = "2024 annual study"), ParksStudyRecord)
 
-write.csv(ParksStudyRecord, here("2023/outputs/data-metadata/RecordOfParkStudies.csv"), row.names = F)
+write.csv(ParksStudyRecord, here("2024/outputs/data-metadata/RecordOfParkStudies.csv"), row.names = F)
 ```
 
 # Parameterizing Data For Analysis
 
 ## Time of day
 
-For each observation we need to assign a time period to that observation.
-Because time stamps and the actual time of data collection may not align, the
-assignment of the time period requires some assumptions and may effect results.
-
-```{r period assignment based on timestamp}
-#| eval: false
-
-#this was an earlier attempt that is not used in teh final analysis
-
-expectedTimeBreakpoints <- c(0800, #start morning2
-                             0830, #between M2 and L1
-                             1230, #start L1
-                             1300, #start L2
-                             1330, # between L2 and A1
-                             1530, #start A1
-                             1600, #start A2
-                             1630, #between A2 and E1
-                             1830, #start E1
-                             1900) #start E2
-
-
-breakPointLabels <- c("morning1",
-             "morning2",
-             "betweenML",
-             "lunch1",
-             "lunch2",
-             "betweenLA",
-             "afternoon1",
-             "afternoon2",
-             "betweeenAE",
-             "evening1",
-             "evening2")
-
-
-
-#for remaining observations, create a list of their times, standardized to POSIX
-dataCollectionTimes <- as.POSIXct(strptime(SOPARCAnalysisSet$start_time, "%Y-%m-%d %H:%M"), "America/Los_Angeles")
-
-breakpointAssignments <- breakPointLabels[findInterval(format(dataCollectionTimes, format = "%H%M"), expectedTimeBreakpoints, left.open = T, all.inside = FALSE, rightmost.closed = FALSE)+1]
-
-#assign observed times to scheduled periods. Use only the house (otherwise would attribute date.)
-SOPARCAnalysisSet$periodBasedOnBreakpoint <- breakpointAssignments
-
-```
-
-### assigning time periods based on sequence
-
-Our primary approach to assigning time periods relies on the assumption that
-timestamps are in order for each target area (e.g. the first observation of park
-A area 1 is always "morning1", the second, "morning2" and so on.)
-
-In turn, with this approach, we assign the sequence of the day such that the
-first morning1 is day 1, the second is day2, and so on.
-
-We assume that there are the correct number of observation periods such that 1
-can be assigned to each period, and 8 to each day.
-
-For each park, there should be 3 days of observation. We will detect this by
-extracting the date per park and putting observations in order of day "1" "2"
-"3".
+time of day labels are created based on the available data. In 2024 we requested
+observers to specify their reporting period, so this should be trivial for non
+corrupted entries. We recreate the variable "period based on sequence" to reduce
+work in refactorying last year's code.
 
 ```{r assign time periods based on sequence}
 
@@ -1134,38 +1050,18 @@ sequenceLabels <- c("morning1",
              "evening1",
              "evening2")
 
+periodLabels <- c("Morning",
+                  "Lunch",
+                  "Afternoon",
+                  "Evening")
 
-
-#apply observation period labels based on the order that a park's target area was observed
-#SOPARCAnalysisSet[order(timestampPOSIX, tar_area), periodBasedOnSequence := rep_len(sequenceLabels, .N), by = .(park_name)]
-#
-##apply day sequence labels based on the order of a park's observation period
-# SOPARCAnalysisSet[order(datePOSIX), dayNumberBasedOnSequence := as.numeric(factor(datePOSIX)), by = .(park_name)]
-
-
-
-#new process
-
-errorCatch <- data.frame("message" = "")
+periodHalfs <- c("first observation",
+                 "second observation")
 
 SOPARCAnalysisSet$periodBasedOnSequence <- ""
-SOPARCAnalysisSet$dayNumberBasedOnSequence <- 0
-for(park in unique(SOPARCAnalysisSet$park_name)) {
-  datesToMatch <- unique(SOPARCAnalysisSet[park_name == park,][order(datePOSIX),]$datePOSIX)
-
-  for(dateIndex in 1:length(datesToMatch)) {
-    date <- datesToMatch[dateIndex]
-    SOPARCAnalysisSet[datePOSIX == date & park_name == park, ]$dayNumberBasedOnSequence <- dateIndex
-    taMax <- max(SOPARCAnalysisSet[datePOSIX == date & park_name == park,]$tar_area)
-    for(taIndex in 1:taMax) {
-      if(nrow(SOPARCAnalysisSet[datePOSIX == date & park_name == park & tar_area == taIndex,][order(timestampPOSIX),]) != 8) {errorCatch[nrow(errorCatch)+1, "message"]<-  paste0(park," on day ", as.POSIXct.Date(date), " for target area ",taIndex, " has ", nrow(SOPARCAnalysisSet[datePOSIX == date & park_name == park & tar_area == taIndex,][order(timestampPOSIX),]) , " observations, should have 8")}
-
-      SOPARCAnalysisSet[datePOSIX == date & park_name == park & tar_area == taIndex,][order(timestampPOSIX), ]$periodBasedOnSequence <- sequenceLabels
-      #SOPARCAnalysisSet[datePOSIX == date & park_name == park & tar_area == taIndex,][order(timestampPOSIX), ]
-    }
-  }
+for(i in 1:8) {
+  SOPARCAnalysisSet[time_period == periodLabels[ceiling(i/2)] & time_period_half == periodHalfs[ifelse(i%%2 == 1, 1, 2)],]$periodBasedOnSequence <- sequenceLabels[i]
 }
-
 
 
 
