@@ -822,8 +822,6 @@ createEmptyObservation <- function(park, expectedTargetArea, areasExpected, peri
 
 ```
 
-# strategy 1 resolve too few observations per day
-
 ```{r impute for any days with missing and only missing}
 
 
@@ -942,9 +940,11 @@ if(USEGOODDATA) {
 }
 ```
 
-# Time of day variable
+## Caclulated time of day variables
 
 (move this up after fixing code to work earlier)
+
+### period labels in line with 2023 analysis functions
 
 time of day labels are created based on the available data. In 2024 we requested
 observers to specify their reporting period, so this should be trivial for non
@@ -977,6 +977,23 @@ for(i in 1:8) {
 
 
 
+```
+
+### day numbers based on sequence
+
+```{r}
+
+SOPARCAnalysisSet dayNumberBasedOnSequence
+                                 
+```
+
+## Study descriptors
+
+```{r}
+                                 
+                                 studyStartDate,
+                                 studyDescription,
+                                 study_count)]
 ```
 
 ## Parks metadata
@@ -1070,6 +1087,103 @@ ParksStudyRecord <- read.csv(here("2024/inputs/RecordOfParkStudies.csv"))
 ParksStudyRecord <- rbind(data.table("parkName" = unique(SOPARCAnalysisSet$park_name), "studyStartDate" = "2024-07-08", "studyDescription" = "2024 annual study"), ParksStudyRecord)
 
 write.csv(ParksStudyRecord, here("2024/outputs/data-metadata/RecordOfParkStudies.csv"), row.names = F)
+```
+
+# Load and combine prior years
+
+Going forward, we intend to conduct analyses over all available years of data.
+Previous year's data is provided in the inputs folder. Future executions should
+only need the last and current years data, as the saved tables will include all
+prior data.
+
+Note that after this step, the resulting observations and activities files are
+renumbered to maintain their alignment for the aggregated data set. That part of
+the routine should be updated next year and repeated when conducting the annual
+update.
+
+```{r}
+SOPARC2023 <- fread(here(INPUTS_LOCALE, "2023/SOPARCAnalysisSet.csv"))
+#create missing variables
+#time period
+SOPARC2023$time_period <- ""
+SOPARC2023[,paste(toupper(substr(periodBasedOnSequence, 1, 1)), substr(periodBasedOnSequence, 2, nchar(periodBasedOnSequence)-1), sep="")]
+
+names(SOPARCAnalysisSet)[!(names(SOPARCAnalysisSet) %in% names(SOPARC2023))]
+names(SOPARC2023)
+names(SOPARCAnalysisSet)
+names(SOPARC2023)[!(names(SOPARC2023) %in% names(SOPARCAnalysisSet))]
+SOPARC2023[,c("period", "Park Address", "City", "Zip", "Neighborhood", "Images", "Tract", "Latitude", "Longitude", "Equity Score Priority ", "Planned park changes?", "Notes", "censusYear","populationHalfMile"):=NULL]
+
+SOPARC2023Fixed <- SOPARC2023[,.(record_id, 
+                                 redcap_survey_identifier, 
+                                 park_scan_data_collection_timestamp, 
+                                 obs_initial, 
+                                 start_time,
+                                 time_period = paste(toupper(substr(periodBasedOnSequence, 1, 1)), substr(periodBasedOnSequence, 2, nchar(periodBasedOnSequence)-1), sep=""),
+                                 time_period_half =  ifelse(substr(periodBasedOnSequence, nchar(periodBasedOnSequence), nchar(periodBasedOnSequence)) == "1", "first observation", "second observation"),
+                                 park_name = park_name_full,
+                                 tar_area,
+                                 sub_area,
+                                 accessible,
+                                 lit,
+                                 occupied,
+                                 usable,
+                                 supervised,
+                                 organized,
+                                 equipped,
+                                 num_child_prim,
+                                 num_child_snd,
+                                 num_child_tert = num_child_spec,
+                                 num_child_quat = NA,
+                                 num_teen_prim,
+                                 num_teen_snd,
+                                 num_teen_tert = num_teen_spec,
+                                 num_teet_quat = NA,
+                                 num_adult_prim,
+                                 num_adult_snd,
+                                 num_adult_tert = num_adult_spec,
+                                 num_senior_prim,
+                                 num_senior_snd,
+                                 num_senior_tert = num_senior_spec,
+                                 num_senior_quat = NA,
+                                 prim_act_name,
+                                 prim_act_other,
+                                 yesno_snd,
+                                 snd_act_name,
+                                 snd_act_other = other_act_snd,
+                                 yesno_tert = yesno_spec,
+                                 tert_act_name = spec_act_name,
+                                 tert_act_other = other_act_spec,
+                                 yesno_quat = NA,
+                                 quat_act_name = NA,
+                                 quat_act_other = NA,
+                                 comments,
+                                 park_scan_data_collection_complete,
+                                 timestampPOSIX,
+                                 datePOSIX,
+                                 day,
+                                 month,
+                                 weekend,
+                                 periodBasedOnSequence,
+                                 dayNumberBasedOnSequence,
+                                 studyStartDate,
+                                 studyDescription,
+                                 study_count)]
+                                 
+substr(SOPARC2023$periodBasedOnSequence, nchar(SOPARC2023$periodBasedOnSequence)-1, nchar(SOPARC2023$periodBasedOnSequence))
+                               
+
+                 
+[31] "yesno_snd"                           "snd_act_name"                        "other_act_snd"                       "yesno_spec"                          "spec_act_name"                      
+[36] "other_act_spec"                      "comments"                            "park_scan_data_collection_complete"  "timestampPOSIX"                      "datePOSIX"                          
+[41] "day"                                 "month"                               "weekend"                             "periodBasedOnSequence"               "dayNumberBasedOnSequence"           
+[46] "studyStartDate"                      "studyDescription"                    "study_count"                  ]
+                     "num_senior_tert"                     "num_senior_quat"                     "prim_act_name"                       "prim_act_other"                     
+[36] "yesno_snd"                           "snd_act_name"                        "snd_act_other"                       "yesno_tert"                          "tert_act_name"                      
+[41] "tert_act_other"                      "yesno_quat"                          "quat_act_name"                       "quat_act_other"                      "comments"                           
+[46] "park_scan_data_collection_complete"  "timestampPOSIX"                      "datePOSIX"                           "day"                                 "month"                              
+[51] "weekend"                             "periodBasedOnSequence"  
+
 ```
 
 # Parameterizing Data For Analysis
