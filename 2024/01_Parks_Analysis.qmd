@@ -981,19 +981,30 @@ for(i in 1:8) {
 
 ### day numbers based on sequence
 
+add a counter for 1st through 3rd day of observation.
+
 ```{r}
 
-SOPARCAnalysisSet dayNumberBasedOnSequence
-                                 
+
+SOPARCAnalysisSet$periodBasedOnSequence <- ""
+SOPARCAnalysisSet$dayNumberBasedOnSequence <- 0
+for(park in unique(SOPARCAnalysisSet$park_name)) {
+  datesToMatch <- unique(SOPARCAnalysisSet[park_name == park,][order(datePOSIX),]$datePOSIX)
+
+  for(dateIndex in 1:length(datesToMatch)) {
+    date <- datesToMatch[dateIndex]
+    SOPARCAnalysisSet[datePOSIX == date & park_name == park, ]$dayNumberBasedOnSequence <- dateIndex
+    taMax <- max(SOPARCAnalysisSet[datePOSIX == date & park_name == park,]$tar_area)
+  }
+}
 ```
 
 ## Study descriptors
 
 ```{r}
-                                 
-                                 studyStartDate,
-                                 studyDescription,
-                                 study_count)]
+SOPARCAnalysisSet$studyStartDate <- "2024-07-08"
+SOPARCAnalysisSet$studyDescription <- "2024 annual study"
+SOPARCAnalysisSet$study_count <- 1 #this needs to be adjusted after combing earlier data
 ```
 
 ## Parks metadata
@@ -1079,7 +1090,7 @@ date the study started, and a brief description of the study.
 
 In a later step we will use this table to append a study count to our parks
 
-```{r create park study tracker}
+```{r update park study tracker}
 
 ParksStudyRecord <- read.csv(here("2024/inputs/RecordOfParkStudies.csv"))
 
@@ -1101,18 +1112,8 @@ renumbered to maintain their alignment for the aggregated data set. That part of
 the routine should be updated next year and repeated when conducting the annual
 update.
 
-```{r}
+```{r integrating 2023 data}
 SOPARC2023 <- fread(here(INPUTS_LOCALE, "2023/SOPARCAnalysisSet.csv"))
-#create missing variables
-#time period
-SOPARC2023$time_period <- ""
-SOPARC2023[,paste(toupper(substr(periodBasedOnSequence, 1, 1)), substr(periodBasedOnSequence, 2, nchar(periodBasedOnSequence)-1), sep="")]
-
-names(SOPARCAnalysisSet)[!(names(SOPARCAnalysisSet) %in% names(SOPARC2023))]
-names(SOPARC2023)
-names(SOPARCAnalysisSet)
-names(SOPARC2023)[!(names(SOPARC2023) %in% names(SOPARCAnalysisSet))]
-SOPARC2023[,c("period", "Park Address", "City", "Zip", "Neighborhood", "Images", "Tract", "Latitude", "Longitude", "Equity Score Priority ", "Planned park changes?", "Notes", "censusYear","populationHalfMile"):=NULL]
 
 SOPARC2023Fixed <- SOPARC2023[,.(record_id, 
                                  redcap_survey_identifier, 
@@ -1138,10 +1139,11 @@ SOPARC2023Fixed <- SOPARC2023[,.(record_id,
                                  num_teen_prim,
                                  num_teen_snd,
                                  num_teen_tert = num_teen_spec,
-                                 num_teet_quat = NA,
+                                 num_teen_quat = NA,
                                  num_adult_prim,
                                  num_adult_snd,
                                  num_adult_tert = num_adult_spec,
+                                 num_adult_quat = NA,
                                  num_senior_prim,
                                  num_senior_snd,
                                  num_senior_tert = num_senior_spec,
@@ -1166,23 +1168,110 @@ SOPARC2023Fixed <- SOPARC2023[,.(record_id,
                                  weekend,
                                  periodBasedOnSequence,
                                  dayNumberBasedOnSequence,
-                                 studyStartDate,
+                                 studyStartDate = as.character(studyStartDate),
                                  studyDescription,
                                  study_count)]
-                                 
-substr(SOPARC2023$periodBasedOnSequence, nchar(SOPARC2023$periodBasedOnSequence)-1, nchar(SOPARC2023$periodBasedOnSequence))
-                               
 
-                 
-[31] "yesno_snd"                           "snd_act_name"                        "other_act_snd"                       "yesno_spec"                          "spec_act_name"                      
-[36] "other_act_spec"                      "comments"                            "park_scan_data_collection_complete"  "timestampPOSIX"                      "datePOSIX"                          
-[41] "day"                                 "month"                               "weekend"                             "periodBasedOnSequence"               "dayNumberBasedOnSequence"           
-[46] "studyStartDate"                      "studyDescription"                    "study_count"                  ]
-                     "num_senior_tert"                     "num_senior_quat"                     "prim_act_name"                       "prim_act_other"                     
-[36] "yesno_snd"                           "snd_act_name"                        "snd_act_other"                       "yesno_tert"                          "tert_act_name"                      
-[41] "tert_act_other"                      "yesno_quat"                          "quat_act_name"                       "quat_act_other"                      "comments"                           
-[46] "park_scan_data_collection_complete"  "timestampPOSIX"                      "datePOSIX"                           "day"                                 "month"                              
-[51] "weekend"                             "periodBasedOnSequence"  
+#test <- rbind(SOPARCAnalysisSet, SOPARC2023Fixed)                                 
+
+```
+
+For 2022 data there are 6 observation days per park.
+
+per Seth 4/25/2024:
+
+| When we did the observations in 2022, we did two different time periods: early summer and late summer. Both are of-quality. One option would be to combine the 6 observation days for each park as 2022 data (like you said). Another option would be to have two different 2022 data sets. If you have a preference, go with that.
+
+| From my end, I lean towards combining them into one 2022 analysis with 6 observation days, unless it makes issues in the future to have some time periods with 3 observation days and some have 6. My feeling is having one 2022 dataset is the easiest way to communicate it. Keeping it separate does not add anything particularly unique, like pre/post opportunities for a park construction project.
+
+```{r integrating 2022 data}
+SOPARC2022 <- fread(here(INPUTS_LOCALE, "2022/SOPARCAnalysisSet.csv"))
+
+#convert time to time data type and save as separate variables
+SOPARC2022[, timestampPOSIX := as.POSIXct(strptime(datePOSIX, "%Y-%m-%d %H:%M"), "America/Los_Angeles") ] #a POSIX format of time
+SOPARC2022[, datePOSIX := as.Date(SOPARC2022$timestampPOSIX, tz = "America/Los_Angeles")] #a data.table integer format of second of the day
+#RawSOPARCObservations[, idate := IDateTime(timestampPOSIX)$idate] #a data.table integer format of second of the day
+#add day of the week
+SOPARC2022[, day := weekdays(timestampPOSIX)]
+#add month indicator
+SOPARC2022[, month := months(timestampPOSIX)]
+#add weekend indicator
+SOPARC2022[, weekend := ifelse(day %in% c("Saturday", "Sunday"), 1, 0)]
+
+
+SOPARC2022[,dayNumberBasedOnSequence := NULL]
+SOPARC2022$dayNumberBasedOnSequence <- 0
+
+for(park in unique(SOPARC2022$park_name)) {
+  datesToMatch <- unique(SOPARC2022[park_name == park,][order(datePOSIX),]$datePOSIX)
+
+  for(dateIndex in 1:length(datesToMatch)) {
+    
+    date <- datesToMatch[dateIndex]
+    SOPARC2022[datePOSIX == date & park_name == park, ]$dayNumberBasedOnSequence <- dateIndex
+    taMax <- max(SOPARC2022[datePOSIX == date & park_name == park,]$tar_area)
+  }
+}
+
+
+SOPARC2022Fixed <- SOPARC2022[,.(record_id, 
+                                 redcap_survey_identifier, 
+                                 park_scan_data_collection_timestamp, 
+                                 obs_initial, 
+                                 start_time,
+                                 time_period = paste(toupper(substr(periodBasedOnSequence, 1, 1)), substr(periodBasedOnSequence, 2, nchar(periodBasedOnSequence)-1), sep=""),
+                                 time_period_half =  ifelse(substr(periodBasedOnSequence, nchar(periodBasedOnSequence), nchar(periodBasedOnSequence)) == "1", "first observation", "second observation"),
+                                 park_name = park_name_full,
+                                 tar_area,
+                                 sub_area,
+                                 accessible,
+                                 lit,
+                                 occupied,
+                                 usable,
+                                 supervised,
+                                 organized,
+                                 equipped,
+                                 num_child_prim,
+                                 num_child_snd,
+                                 num_child_tert = num_child_spec,
+                                 num_child_quat = NA,
+                                 num_teen_prim,
+                                 num_teen_snd,
+                                 num_teen_tert = num_teen_spec,
+                                 num_teen_quat = NA,
+                                 num_adult_prim,
+                                 num_adult_snd,
+                                 num_adult_tert = num_adult_spec,
+                                 num_adult_quat = NA,
+                                 num_senior_prim,
+                                 num_senior_snd,
+                                 num_senior_tert = num_senior_spec,
+                                 num_senior_quat = NA,
+                                 prim_act_name,
+                                 prim_act_other,
+                                 yesno_snd,
+                                 snd_act_name,
+                                 snd_act_other,
+                                 yesno_tert = yesno_spec,
+                                 tert_act_name = spec_act_name,
+                                 tert_act_other = spec_act_other,
+                                 yesno_quat = NA,
+                                 quat_act_name = NA,
+                                 quat_act_other = NA,
+                                 comments,
+                                 park_scan_data_collection_complete,
+                                 timestampPOSIX,
+                                 datePOSIX,
+                                 day,
+                                 month,
+                                 weekend,
+                                 periodBasedOnSequence,
+                                 dayNumberBasedOnSequence,
+                                 studyStartDate = as.character(studyStartDate),
+                                 studyDescription,
+                                 study_count)]
+
+#test <- rbind(SOPARCAnalysisSet, SOPARC2022Fixed) 
 
 ```
 
