@@ -764,7 +764,7 @@ createEmptyObservation <- function(park, expectedTargetArea, areasExpected, peri
                "Afternoon",
                "Evening",
                "Evening")
-  timeToInterpolate <- round(periodStartTimes[periodTracker] + (30 * (expectedTargetArea/areasExpected))-(30 * (1/areasExpected)),0) #calculate how far into the observation period thetime should be set
+  timeToInterpolate <- round(periodStartTimes[periodCount] + (30 * (expectedTargetArea/areasExpected))-(30 * (1/areasExpected)),0) #calculate how far into the observation period thetime should be set
   timeToInterpolateChar <- ifelse(nchar(as.character(timeToInterpolate)) == 3, paste0("0",substr(as.character(timeToInterpolate),1,1),":",substr(as.character(timeToInterpolate),2,3)), paste0(substr(as.character(timeToInterpolate),1,2),":",substr(as.character(timeToInterpolate),3,4)))
   timestampToInterpolate <- paste(as.character(dateToFix),timeToInterpolateChar)
   tempObs <- data.table(record_id = -1,
@@ -860,8 +860,8 @@ for(park in unique(SOPARCObservationsToFix$park_name)) {
                 if(nrow(SOPARCSingleToFix[tar_area == expectedTargetArea & time_period == period,]) == 0) {
                   #create 2 observations for this period
  
-                  SOPARCObservationsToFix <- rbind(createEmptyObservation(park, expectedTargetArea,areasExpected, periodCount), SOPARCObservationsToFix)
-                  SOPARCObservationsToFix <- rbind(createEmptyObservation(park, expectedTargetArea,areasExpected, periodCount + 1), SOPARCObservationsToFix)
+                  SOPARCObservationsToFix <- rbind(createEmptyObservation(park, expectedTargetArea, areasExpected, periodCount), SOPARCObservationsToFix)
+                  SOPARCObservationsToFix <- rbind(createEmptyObservation(park, expectedTargetArea, areasExpected, periodCount + 1), SOPARCObservationsToFix)
                   
                 } else if(nrow(SOPARCSingleToFix[tar_area == expectedTargetArea & time_period == period,]) == 1) {
                   if(SOPARCSingleToFix[tar_area == expectedTargetArea & time_period == period,]$time_period_half == "second observation") {
@@ -1016,7 +1016,12 @@ planned park change notes, and general notes for each park will be appended to
 the analysis table.
 
 ```{r load parkwide metadata}
-ParksMetaData <- as.data.table(read_xlsx(here("2024/inputs/Parks_MASTER.xlsx"), sheet = "Sheet1"))
+ParksMetaData <- as.data.table(read_xlsx(here("2024/inputs/Parks_MASTER.xlsx"), sheet = "ParkList"))
+
+parksMissingFromList <- unique(SOPARCObservations$park_name)[!(unique(SOPARCObservations$park_name)  %in% ParksMetaData$`Park Name`)]
+parksMissingLongLat <- ParksMetaData[unique(`Park Name`) %in% unique(SOPARCObservations$park_name) & is.na(Longitude), `Park Name`]
+
+
 ```
 
 ### Add population within half-mile radius to metadata
@@ -1043,7 +1048,7 @@ if(!skip | RECALCULATEPOPULATIONS) {
   
   crsString <- "EPSG:2926" #preferred coordinate reference system for WA
   
-  ParkGeos <- ParksMetaData[,.("park" = `Park Name`, "long" = Longitude, "lat" = Latitude)] #create a prototype data frame for holding our geometry. This has the raw lat long data
+  ParkGeos <- ParksMetaData[!is.na(Longitude),.("park" = `Park Name`, "long" = Longitude, "lat" = Latitude)] #create a prototype data frame for holding our geometry. This has the raw lat long data
   
   ParkGeos <- st_as_sf(x = ParkGeos,coords = c("long","lat"), crs = "EPSG:4326") #turn teh raw data into a geometry using crs 2926 (this is one recomended for WA)
   ParkGeos <- st_transform(ParkGeos, st_crs(crsString))
@@ -1081,7 +1086,11 @@ if(!skip | RECALCULATEPOPULATIONS) {
 }
 ParksMetaData <- merge(ParksMetaData, ParkPopulationTable[,c(1,3)], by.x = "Park Name", by.y = "parkNameFull")
 
+
 ```
+
+The following parks are missing metadata. Importantly, longtitude and latitude
+are needed to calculate populations `r parksMissingMetadata`
 
 # Update Study tracker
 
@@ -1112,6 +1121,8 @@ Note that after this step, the resulting observations and activities files are
 renumbered to maintain their alignment for the aggregated data set. That part of
 the routine should be updated next year and repeated when conducting the annual
 update.
+
+## Import observations
 
 ```{r preparing 2023 observation data}
 SOPARC2023 <- fread(here(INPUTS_LOCALE, "2023/SOPARCAnalysisSet.csv"))
@@ -1175,61 +1186,6 @@ SOPARC2023Fixed <- SOPARC2023[,.(record_id,
 
 test <- rbind(SOPARCAnalysisSet, SOPARC2023Fixed)                                 
 
-```
-
-```{r preparing 2023 activities data}
-SOPARCActivities2023 <- fread(here(INPUTS_LOCALE,"2023/SOPARCActivities.csv"))
-SOPARCActivities2023$studyDescription <- "2023 annual study"
-
-```
-
-```{r preparing 2022 activities data}
-SOPARCActivities2022 <- fread(here(INPUTS_LOCALE,"2022/SOPARCActivities.csv"))
-SOPARCActivities2022$studyDescription <- "2022 annual study"
-
-
-
-```
-
-### Documentation of activities needing a crosswalk
-
-Here is a list of valid activities:
-
-```{r generate crosswalk candidates}
-
-activities <- c("Baseball/softball",
-                "Basketball",
-                "Bike Riding",
-                "Catch (any sport)",
-                "Climbing",
-                "Dance/Aerobics (dance/step aerobics)",
-                "Fitness stations",
-                "Football",
-                "Frisbee",
-                "Jumping (rope, hop scotch)",
-                "Lacrosse",
-                "Lying down",
-                "Picnic (food involved)",
-                "Playground activities",
-                "Running",
-                "Sitting",
-                "Skating/skateboarding",
-                "Soccer",
-                "Standing",
-                "Strength exercises (pull ups)",
-                "Tag/chasing games",
-                "Tennis/racquetball",
-                "Volleyball",
-                "Walking",
-                "Other")
-```
-
-Here are activities from 2022 & 2023 "other" categories:
-
-```{r}
-print(unique(SOPARCActivities2023$activity)[!(tolower(unique(SOPARCActivities2023$activity)) %in% tolower(activities))])
-
-print(unique(SOPARCActivities2022$activity)[!(tolower(unique(SOPARCActivities2022$activity)) %in% tolower(activities))])
 ```
 
 For 2022 data there are 6 observation days per park.
@@ -1331,6 +1287,71 @@ test <- rbind(SOPARCAnalysisSet, SOPARC2022Fixed)
 
 ```
 
+```{r}
+SOPARCAnalysisSetAllYears <- rbind(SOPARCAnalysisSet, SOPARC2022Fixed, SOPARC2023Fixed)
+```
+
+## Import activities
+
+```{r preparing 2023 activities data}
+SOPARCActivities2023 <- fread(here(INPUTS_LOCALE,"2023/SOPARCActivities.csv"))
+SOPARCActivities2023$studyDescription <- "2023 annual study"
+
+```
+
+```{r preparing 2022 activities data}
+SOPARCActivities2022 <- fread(here(INPUTS_LOCALE,"2022/SOPARCActivities.csv"))
+SOPARCActivities2022$studyDescription <- "2022 annual study"
+
+
+
+```
+
+```{r}
+SOPARCActivitiesAllYears <- rbind(SOPARCActivities, SOPARCActivities2022, SOPARCActivities2023)
+```
+
+### Documentation of activities needing a crosswalk
+
+Here is a list of valid activities:
+
+```{r generate crosswalk candidates}
+
+activities <- c("Baseball/softball",
+                "Basketball",
+                "Bike Riding",
+                "Catch (any sport)",
+                "Climbing",
+                "Dance/Aerobics (dance/step aerobics)",
+                "Fitness stations",
+                "Football",
+                "Frisbee",
+                "Jumping (rope, hop scotch)",
+                "Lacrosse",
+                "Lying down",
+                "Picnic (food involved)",
+                "Playground activities",
+                "Running",
+                "Sitting",
+                "Skating/skateboarding",
+                "Soccer",
+                "Standing",
+                "Strength exercises (pull ups)",
+                "Tag/chasing games",
+                "Tennis/racquetball",
+                "Volleyball",
+                "Walking",
+                "Other")
+```
+
+Here are activities from 2022 & 2023 "other" categories:
+
+```{r}
+print(unique(SOPARCActivities2023$activity)[!(tolower(unique(SOPARCActivities2023$activity)) %in% tolower(activities))])
+
+print(unique(SOPARCActivities2022$activity)[!(tolower(unique(SOPARCActivities2022$activity)) %in% tolower(activities))])
+```
+
 # Parameterizing Data For Analysis
 
 ## Aggregation of periods for analysis
@@ -1372,11 +1393,7 @@ using the record_id and record_id_aggregated where necessary.
 
 ```{r period aggregation}
 
-if(USEGOODDATA) {
-  SOPARCtoAggregate <- copy(SOPARCAnalysisSet)
-} else {
-  SOPARCtoAggregate <- copy(SOPARCAnalysisSet)
-}
+SOPARCtoAggregate <- copy(SOPARCAnalysisSetAllYears)
 
 #create single periodname for aggregating first and second of each period using sequence periods
 SOPARCtoAggregate[periodBasedOnSequence %in% c("morning1","morning2"), period := "Morning"]
@@ -1397,21 +1414,21 @@ SOPARCAggregated <- SOPARCtoAggregate[,
                                         "equipped" = ifelse(any(organized %in% "Yes"), "Yes", "No"),
                                         "num_child_prim" = ceiling(mean(num_child_prim, na.rm = T, )),
                                         "num_child_snd" = ceiling(mean(num_child_snd, na.rm = T)),
-                                        "num_child_tert" = ceiling(mean(num_child_spec, na.rm = T)),
-                                        "num_child_quat" = ceiling(mean(num_child_spec, na.rm = T)),
+                                        "num_child_tert" = ceiling(mean(num_child_tert, na.rm = T)),
+                                        "num_child_quat" = ceiling(mean(num_child_quat, na.rm = T)),
                                         "num_teen_prim"= ceiling(mean(num_teen_prim, na.rm = T)),
                                         "num_teen_snd" = ceiling(mean(num_teen_snd, na.rm = T)),
-                                        "num_teen_tert" = ceiling(mean(num_teen_spec, na.rm = T)),
-                                        "num_teen_quat" = ceiling(mean(num_teen_spec, na.rm = T)),
+                                        "num_teen_tert" = ceiling(mean(num_teen_tert, na.rm = T)),
+                                        "num_teen_quat" = ceiling(mean(num_teen_quat, na.rm = T)),
                                         "num_adult_prim" = ceiling(mean(num_adult_prim, na.rm = T)),
                                         "num_adult_snd" = ceiling(mean(num_adult_snd, na.rm = T)),
-                                        "num_adult_tert" = ceiling(mean(num_adult_spec, na.rm = T)),
-                                        "num_adult_quat" = ceiling(mean(num_adult_spec, na.rm = T)),
+                                        "num_adult_tert" = ceiling(mean(num_adult_tert, na.rm = T)),
+                                        "num_adult_quat" = ceiling(mean(num_adult_quat, na.rm = T)),
                                         "num_senior_prim" = ceiling(mean(num_senior_prim, na.rm = T)),
                                         "num_senior_snd" = ceiling(mean(num_senior_snd, na.rm = T)),
-                                        "num_senior_tert" = ceiling(mean(num_senior_spec, na.rm = T)), 
-                                        "num_senior_quat" = ceiling(mean(num_senior_spec, na.rm = T))), 
-                                      by = .(park_name, tar_area, dayNumberBasedOnSequence, period, datePOSIX, day, month, weekend )]
+                                        "num_senior_tert" = ceiling(mean(num_senior_tert, na.rm = T)), 
+                                        "num_senior_quat" = ceiling(mean(num_senior_quat, na.rm = T))), 
+                                      by = .(park_name, tar_area, dayNumberBasedOnSequence, period, datePOSIX, day, month, weekend , studyDescription)]
 
 #SOPARCtoAggregate[, .N, by = .(park_name, tar_area, dayNumberBasedOnSequence, period, datePOSIX, day, month, weekend ) ]
 
@@ -1429,48 +1446,45 @@ software such as excel.
 
 
 # add provided metadata to aggregated and non aggregated analysis ready sets
-SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParksMetaData[,.(`REDCap Name`,
-                                                  "park_name_full" = `Park Name`, 
+SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParksMetaData[,.("park_name" = `Park Name`, 
                                                   `Park Address`,
                                                   City,
                                                   Zip,
                                                   Neighborhood,
-                                                  Images,
+                                                  ParkOwner,
                                                   Tract,
                                                   Latitude,
                                                   Longitude,
                                                   `Equity Score Priority `,
                                                   `Planned park changes?`,
-                                                  Notes)], by.x = "park_name", by.y = "REDCap Name", all.x = T)
-SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParkPopulationTable, by.x = "park_name_full", by.y = "parkNameFull")
-SOPARCtoAggregate$studyStartDate <- "2023-07-01"
-SOPARCtoAggregate$studyDescription <- "2023 annual study"
+                                                  Notes)], by.x = "park_name", by.y = "park_name", all.x = T, all.y = F)
+SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParkPopulationTable, by.x = "park_name", by.y = "parkNameFull", all.x = T, all.y = F)
 
 
-SOPARCAggregated <- merge(SOPARCAggregated, ParksMetaData[,.(`REDCap Name`,
-                                                  "park_name_full" = `Park Name`, 
+
+SOPARCAggregated <- merge(SOPARCAggregated, ParksMetaData[,.("park_name" = `Park Name`, 
                                                   `Park Address`,
                                                   City,
                                                   Zip,
                                                   Neighborhood,
-                                                  Images,
+                                                  ParkOwner,
                                                   Tract,
                                                   Latitude,
                                                   Longitude,
                                                   `Equity Score Priority `,
                                                   `Planned park changes?`,
-                                                  Notes)], by.x = "park_name", by.y = "REDCap Name", all.x = T)
-SOPARCAggregated <- merge(SOPARCAggregated, ParkPopulationTable, by.x = "park_name_full", by.y = "parkNameFull")
-SOPARCAggregated$studyStartDate <- "2023-07-01"
-SOPARCAggregated$studyDescription <- "2023 annual study"
+                                                  Notes)], by.x = "park_name", by.y = "park_name", all.x = T)
+SOPARCAggregated <- merge(SOPARCAggregated, ParkPopulationTable, by.x = "park_name", by.y = "parkNameFull", all.x = T, all.y = F)
 
-#generate study count and append this to aggregated and non aggregated analysis ready sets
-SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParksStudyRecord[,.("study_count" = .N) , by = parkName], by.x = "park_name_full", by.y = "parkName", all.x = T)
-SOPARCAggregated <- merge(SOPARCAggregated, ParksStudyRecord[,.("study_count" = .N) , by = parkName], by.x = "park_name_full", by.y = "parkName", all.x = T)
+
+#update study count and append this to aggregated and non aggregated analysis ready sets
+SOPARCtoAggregate[, study_count := NULL]
+SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParksStudyRecord[,.("study_count" = .N) , by = parkName], by.x = "park_name", by.y = "parkName", all.x = T)
+SOPARCAggregated <- merge(SOPARCAggregated, ParksStudyRecord[,.("study_count" = .N) , by = parkName], by.x = "park_name", by.y = "parkName", all.x = T)
 
 #save results
-write.csv(SOPARCtoAggregate, here("2023/outputs/data-metadata/SOPARCAnalysisSet.csv"), row.names = FALSE)
-write.csv(SOPARCAggregated, here("2023/outputs/data-metadata/SOPARCAnalysisSetAggregatedPeriods.csv"), row.names = FALSE)
+write.csv(SOPARCtoAggregate, here("2024/outputs/data-metadata/SOPARCAnalysisSet.csv"), row.names = FALSE)
+write.csv(SOPARCAggregated, here("2024/outputs/data-metadata/SOPARCAnalysisSetAggregatedPeriods.csv"), row.names = FALSE)
 
 
 #would like to save as xlsx, but NAn ot handled gracefully
