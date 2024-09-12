@@ -148,10 +148,12 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
   OldDT[Period == "lunch"]$Period <- "Lunch"
   OldDT[Period == "morning"]$Period <- "Morning"
   OldDT[Period == "AfterNoon"]$Period <- "Afternoon"
+  
+  #simplifying activity names
 }
 ```
 
-# Create 2022 SOPARCObservation Set
+# Create 2022 SOPARCAnalysis Set
 
 ```{r}
 if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALYSISSET){
@@ -203,13 +205,13 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
                                           num_senior_prim = Sen...20,
                                           num_senior_snd = Sen...33,
                                           num_senior_spec = Sen...46,
-                                          prim_act_name = Activity1,
+                                          prim_act_name = ifelse(is.na(Activity1), NA, paste(toupper(substr( Activity1, 1,1)), tolower(substr( Activity1, 2, nchar(Activity1))), sep = "")),
                                           prim_act_other = NA,
                                           yesno_snd = ifelse(is.na(Activity2), "No","Yes"),
-                                          snd_act_name = Activity2,
+                                          snd_act_name = ifelse(is.na(Activity2), NA, paste(toupper(substr( Activity2, 1,1)), tolower(substr( Activity2, 2, nchar(Activity2))), sep = "")),
                                           snd_act_other = NA,
                                           yesno_spec = ifelse(is.na(Activity), "No","Yes"),
-                                          spec_act_name = Activity,
+                                          spec_act_name = ifelse(is.na(Activity), NA, paste(toupper(substr( Activity, 1,1)), tolower(substr( Activity, 2, nchar(Activity))), sep = "")),
                                           spec_act_other = NA,
                                           comments = Comment,
                                           park_scan_data_collection_complete = "Complete",
@@ -370,8 +372,10 @@ if(!skip | RECALCULATEPOPULATIONS) {
 
   
 SOPARCAnalysisSet <- merge(SOPARCAnalysisSet, ParkPopulationTable, by = "park_name_full")
-
+write.csv(SOPARCAnalysisSet ,here("2022/outputs/data-metadata/SOPARCAnalysisSet.csv"), row.names = F)
 ```
+
+# Create 2022 SOPARC Analysis Set
 
 # Create 2022 SOPARCActivities.csv
 
@@ -388,8 +392,8 @@ if( !(file.exists(here("2022/local_only/SOPARCActivities.csv"))) | REBUILDACTIVI
 #                                
 #                                
 #                                
-
-SOPARCActivities <- data.table()
+  
+  SOPARCActivities <- data.table()
 
   for(id in SOPARCAnalysisSet[prim_act_name != "",]$record_id) {
 
