@@ -1184,8 +1184,13 @@ SOPARC2023Fixed <- SOPARC2023[,.(record_id,
                                  studyDescription,
                                  study_count)]
 
-test <- rbind(SOPARCAnalysisSet, SOPARC2023Fixed)                                 
+SOPARC2023Fixed[park_name == "Salmon Creek",]$park_name <-  "Salmon Creek Park"
 
+#viewer test
+#test <- rbind(SOPARCAnalysisSet, SOPARC2023Fixed)                                 
+
+# checking that all names are in the current meta names
+# unique(SOPARC2023Fixed$park_name)[(!unique(SOPARC2023Fixed$park_name) %in% ParksMetaData$`Park Name`)]
 ```
 
 For 2022 data there are 6 observation days per park.
@@ -1283,8 +1288,16 @@ SOPARC2022Fixed <- SOPARC2022[,.(record_id,
                                  studyDescription,
                                  study_count)]
 
-test <- rbind(SOPARCAnalysisSet, SOPARC2022Fixed) 
+SOPARC2022Fixed[park_name == "Steel Lake Park",]$park_name <-  "Steel Lake Annex Park"
 
+
+#viewer test
+# test <- rbind(SOPARCAnalysisSet, SOPARC2022Fixed) 
+
+
+
+#checking taht all names are in the metadata
+# unique(SOPARC2022Fixed$park_name)[(!unique(SOPARC2022Fixed$park_name) %in% ParksMetaData$`Park Name`)]
 ```
 
 ```{r}
@@ -1645,7 +1658,7 @@ The daily average number of users observed in the park.
 ```{r average number of daily users}
 #| output: true
 
-DT <- SOPARCAggregated[order(park_name_full),.("Users" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3), by = .("Park Name" = park_name_full)]
+DT <- SOPARCAggregated[order(park_name),.("Users" = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .("Park Name" = park_name, datePOSIX)]
 
 
 WB$add_worksheet("Avg Users")
