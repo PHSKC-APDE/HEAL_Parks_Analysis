@@ -153,7 +153,7 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
 }
 ```
 
-# Create 2022 SOPARCObservation Set
+# Create 2022 SOPARCAnalysis Set
 
 ```{r}
 if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALYSISSET){
@@ -372,8 +372,10 @@ if(!skip | RECALCULATEPOPULATIONS) {
 
   
 SOPARCAnalysisSet <- merge(SOPARCAnalysisSet, ParkPopulationTable, by = "park_name_full")
-
+write.csv(SOPARCAnalysisSet ,here("2022/outputs/data-metadata/SOPARCAnalysisSet.csv"), row.names = F)
 ```
+
+# Create 2022 SOPARC Analysis Set
 
 # Create 2022 SOPARCActivities.csv
 
