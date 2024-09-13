@@ -96,7 +96,7 @@ OUPUTS_LOCALE <- "2024/outputs"
 
 
 REBUILDACTIVITYTABLE <- TRUE
-RECALCULATEPOPULATIONS <- FALSE
+RECALCULATEPOPULATIONS <- TRUE
 
 SUPPRESS_TABLES <- TRUE #do not print tables in report. 
 SUPPRESS_CHARTS <- TRUE #do not show charts in report
@@ -381,6 +381,23 @@ if(nrow(RawSOPARCObservations[record_id %in% DataToRemove$record_id] ) != nrow(D
 }
 
 RawSOPARCObservations <- RawSOPARCObservations[!(record_id %in% DataToRemove$record_id),]
+
+```
+
+## Disaggregation of pocket parks
+
+Pocket parks were analyzed as one park in this year's data collection. Seth has
+provided a crosswalk for unpacking these into multiple parks.
+
+```{r disagregation of pocket parks}
+PocketParkCrosswalk <- readxl::read_xlsx(here("2024/inputs/Parks_MiniParkReclassCrosswalk.xlsx"), "Sheet1")
+
+head(PocketParkCrosswalk)
+
+for(i in 1:nrow(PocketParkCrosswalk)) {
+  RawSOPARCObservations[park_name == PocketParkCrosswalk[i,]$REDCap_park_name & tar_area == PocketParkCrosswalk[i,]$REDCap_tar_area, `:=`(park_name = PocketParkCrosswalk[i,]$New_park_name, tar_area = PocketParkCrosswalk[i,]$New_scan_area)]
+}
+
 
 ```
 
