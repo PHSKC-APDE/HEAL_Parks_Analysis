@@ -104,7 +104,7 @@ OUPUTS_LOCALE <- "2024/outputs"
 
 
 REBUILDACTIVITYTABLE <- TRUE
-RECALCULATEPOPULATIONS <- FALSE
+RECALCULATEPOPULATIONS <- TRUE
 
 SUPPRESS_TABLES <- TRUE #do not print tables in report. 
 SUPPRESS_CHARTS <- TRUE #do not show charts in report
@@ -1305,7 +1305,7 @@ SOPARC2022Fixed <- SOPARC2022[,.(record_id,
                                  day,
                                  month,
                                  weekend,
-                                 periodBasedOnSequence,
+                                 periodBasedOnSequence = tolower(periodBasedOnSequence),
                                  dayNumberBasedOnSequence,
                                  studyStartDate = as.character(studyStartDate),
                                  studyDescription,
@@ -1516,6 +1516,9 @@ SOPARCAggregated <- merge(SOPARCAggregated, ParksMetaData[,.("park_name" = `Park
                                                   Notes)], by.x = "park_name", by.y = "park_name", all.x = T)
 SOPARCAggregated <- merge(SOPARCAggregated, ParkPopulationTable, by.x = "park_name", by.y = "parkNameFull", all.x = T, all.y = F)
 
+ParksStudyRecord[ studyDescription == "2022 annual study round 1"]$studyDescription <- "2022 annual study"
+
+ParksStudyRecord <-  ParksStudyRecord[!studyDescription == "2022 annual study round 2",]
 
 #update study count and append this to aggregated and non aggregated analysis ready sets
 SOPARCtoAggregate[, study_count := NULL]
@@ -1648,6 +1651,65 @@ Notes:
 
 The total number of users observed in the park per day across all available data
 
+```{r number of daily users}
+#| output: true
+
+DT <- SOPARCAggregated[order(park_name),.("Users" = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .("Park Name" = park_name, datePOSIX)]
+
+
+WB$add_worksheet("Daily User Counts")
+WB$add_data(sheet = "Daily User Counts", DT)
+
+
+wsName <- "Daily User Counts"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+}
+
+
+if(!SUPPRESS_TABLES){
+  kbl(DT, 
+        caption =  "Daily User Counts",
+      booktabs = TRUE,
+      longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+}
+
+
+
+#export charts for use
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2024/outputs/tables/daily_users/"))) {
+  unlink(here("./2024/outputs/tables/daily_users/"), recursive = T)
+}
+dir.create(here("./2024/outputs/tables/daily_users"), recursive = T)
+write.csv(DT, here("2024/outputs/tables/daily_users/daily_users.csv"), row.names = FALSE)
+FT <- DT[, .(`Park Name`,"Users" = round(Users,0))] %>% regulartable() %>% autofit()
+
+read_docx() %>%
+body_add_flextable(FT) %>%
+print(target = paste0("./outputs/tables/daily_users/daily_users.docx"))  
+
+
+```
+
+### Daily average number of park users
+
+The total number of users observed in the park per day across all available data
+
 ```{r average number of daily users}
 #| output: true
 
@@ -1702,6 +1764,138 @@ print(target = paste0("./outputs/tables/daily_users/daily_users.docx"))
 
 
 ```
+
+### Daily average number of park users by time period
+
+The daily average number of users within each time period.
+
+For each park:
+
+$$
+\text{(Average Park Users By Period)} = \frac{\sum_{d=1}^{3}{(\text{People}_p)_d}}{3}
+$$
+
+where $_d$ is the day of study and $(\text{People}_p)$ are the sum of number of
+people observed in a time period of a given day.
+
+The people within a given time period and day is defined as the average (rounded
+up) of people observed in a time period of a given day and target area $_t$,
+summed across across all target areas.
+
+$$
+\text{People}_p = \sum_{t=1}^{n}{\left( \lceil\frac{\text{(people observed first half of period)}+\text{(people observed second half of period)}}{2}\rceil\right) _t}
+$$
+
+```{r average park users by period, fig.cap = "Daily Average Park Users By Period"}
+#| output: true
+
+DT <- SOPARCAggregated[order(park_name),.("Users" = round(sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)/ unique(3 * study_count),0)), by = .("Park Name" = park_name, "Time Period" = period)]
+
+test <- SOPARCAggregated[order(park_name),.("Users" = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .("Park Name" = park_name, "Time Period" = period)]
+
+DT$`Time Period` <- factor(DT$`Time Period`, level = c("Morning","Lunch","Afternoon","Evening"))
+
+WB$add_worksheet("Avg Users x Period")
+WB$add_data(sheet = "Avg Users x Period", DT)
+
+wsName <- "Avg Users x Period"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+}
+
+
+if(!SUPPRESS_CHARTS) {
+PT <- ggplot(DT, (aes(x = `Time Period`, y = Users))) +
+  geom_col() +
+  facet_wrap(vars(DT$"Park Name"), scales = "free")
+  
+
+  print(PT)
+}
+
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2024/outputs/charts/avg_users_x_period/"))) {
+  unlink(here("./2024/outputs/charts/avg_users_x_period/"), recursive = T)
+}
+dir.create(here("./2024/outputs/charts/avg_users_x_period"), recursive = T)
+
+for(park in unique(SOPARCAggregated$park_name)) {
+  if(max(DT[`Park Name` %in% park]$Users) < 11) {
+    topOfY <- 10
+  } else if(max(DT[`Park Name` %in% park]$Users) < 26){
+    topOfY <- 25
+  } else if(max(DT[`Park Name` %in% park]$Users) < 51){
+    topOfY <- 50
+  } else if(max(DT[`Park Name` %in% park]$Users) < 101){
+    topOfY <- 100
+  } else if(max(DT[`Park Name` %in% park]$Users) < 251){
+    topOfY <- 250
+  } else if(max(DT[`Park Name` %in% park]$Users) < 501){
+    topOfY <- 500
+  } else if(max(DT[`Park Name` %in% park]$Users) < 1001) {
+    topOfY <- 1000
+  } else {
+    topOfY <- max(DT[`Park Name` %in% park]$Users)
+  }
+  tooLow <- topOfY *.30
+  cityName <- first(SOPARCAggregated[park_name == park, City])
+  
+  PTExport <- ggplot(DT[`Park Name` %in% park], (aes(x = `Time Period`, y = `Users`))) +
+  geom_col()  +
+  #labs(title = paste0(park,"\n", cityName,"\n", "2024"), subtitle = paste("Average Users Per Period")) +
+  labs(title = paste0(park," ", cityName," ", "2024"), subtitle = paste("Average Users Per Period")) +
+  geom_label(aes(label = `Users`, colour = "#000000", vjust =  ifelse(`Users` > tooLow, 1.5, 0) )) +
+  scale_color_manual(values=c("#000000")) +
+  scale_y_continuous(limits=c(0,topOfY), breaks = integer_breaks()) +
+  theme(plot.title = element_text(size = 8),
+        plot.subtitle = element_text(size = 14,),
+        #axis.title.x = element_text(size = 12))
+        axis.title.x = element_blank(),
+        legend.position = "none")
+
+  ggsave(paste0(park,"_avg_users_x_period.pdf"), plot = PTExport, path = paste0("./outputs/charts/avg_users_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
+  ggsave(paste0(park,"_avg_users_x_period.png"), plot = PTExport, path = paste0("./outputs/charts/avg_users_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
+  
+}
+
+
+
+if(!SUPPRESS_TABLES){
+  kbl(DT,
+      caption = "Daily Average Number of Users Per Time Period",
+      booktabs = TRUE,
+      longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+}
+
+```
+
+Notes:
+
+-   User counts are more accurately understood as "person time of use per target
+    area"
+    -   "Person using target area during the observation"
+-   If taken strictly as "people using a park" then this may be an over or under
+    count
+    -   If in the first morning observation 2 people are observed, and the
+        second 3, this may be 3 unique people, or as many as 5, but we calculate
+        this as 2.5 and round up to 3.
+    -   If two people walk across all target areas during an observation period,
+        they would be counted each time. With 10 target areas, this would be 20
+        people observed.
 
 ```{r save workbooks}
 #create project wide workbooks
