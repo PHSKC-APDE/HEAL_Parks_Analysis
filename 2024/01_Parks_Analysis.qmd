@@ -1003,8 +1003,6 @@ add a counter for 1st through 3rd day of observation.
 
 ```{r}
 
-
-SOPARCAnalysisSet$periodBasedOnSequence <- ""
 SOPARCAnalysisSet$dayNumberBasedOnSequence <- 0
 for(park in unique(SOPARCAnalysisSet$park_name)) {
   datesToMatch <- unique(SOPARCAnalysisSet[park_name == park,][order(datePOSIX),]$datePOSIX)
@@ -1404,16 +1402,20 @@ following:
 |-----------------|-------------------|
 | num_child_prim  | ceiling of mean   |
 | num_child_snd   | ceiling of mean   |
-| num_child_spec  | ceiling of mean   |
+| num_child_tert  | ceiling of mean   |
+| num_child_quat  | ceiling of mean   |
 | num_teen_prim   | ceiling of mean   |
 | num_teen_snd    | ceiling of mean   |
-| num_teen_spec   | ceiling of mean   |
+| num_teen_tert   | ceiling of mean   |
+| num_teen_quat   | ceiling of mean   |
 | num_adult_prim  | ceiling of mean   |
 | num_adult_snd   | ceiling of mean   |
-| num_adult_spec  | ceiling of mean   |
+| num_adult_tert  | ceiling of mean   |
+| num_adult_quat  | ceiling of mean   |
 | num_senior_prim | ceiling of mean   |
 | num_senior_snd  | ceiling of mean   |
-| num_senior_spec | ceiling of mean   |
+| num_senior_tert | ceiling of mean   |
+| num_senior_quat | ceiling of mean   |
 
 Activities are independently captured in the activity table and not aggregated
 here. The non aggregated observations table may contain multiple activities
@@ -1559,7 +1561,7 @@ for (i in unique(SOPARCAggregated$park_name_full)) {
 ```{r report included parks}
 #| output: true
 
-kbl(SOPARCAggregated[order(park_name), .("Park Name" = unique(park_name_full))], 
+kbl(SOPARCAggregated[order(park_name), .("Park Name" = unique(park_name))], 
     caption = "Parks Included In Analysis",
     booktabs = TRUE,
     longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
@@ -1580,7 +1582,8 @@ multiple times by crossing target areas during the observation period.
 
 ### number of park users
 
-The total number of users observed in the park across all observation periods.
+The total number of users observed in the park across all available data (All
+years).
 
 ```{r number of users}
 #| output: true
@@ -1588,7 +1591,7 @@ The total number of users observed in the park across all observation periods.
 # kbl(SOPARCtoAggregate[order(park_name),.("Number of Attendees" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name)], 
 #       caption =  "Total Number of Attendees",
 #     booktabs = T) %>% kable_styling(latex_options = "striped")
-DT <- SOPARCAggregated[order(park_name_full),.("Users" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name_full)]
+DT <- SOPARCAggregated[order(park_name),.("Users" = sum(num_child_prim, num_child_snd, num_child_tert, num_teen_prim, num_teen_snd, num_teen_tert, num_adult_prim, num_adult_snd, num_adult_tert, num_senior_prim, num_senior_snd, num_senior_tert, na.rm = TRUE)), by = .("Park Name" = park_name)]
 
 
 
@@ -1597,8 +1600,8 @@ WB$add_data(sheet = "User Counts", DT)
 i <- unique(DT$`Park Name`)[3]
 
 for(i in unique(DT$`Park Name`)) {
-  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
-    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+  if(file.exists(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
     if("User Counts" %in% wb$sheet_names){
       wb$remove_worksheet("User Counts")
     }
@@ -1609,49 +1612,15 @@ for(i in unique(DT$`Park Name`)) {
   }
   wb$add_worksheet("User Counts")
   wb$add_data(sheet = "User Counts", DT[`Park Name` == i,])
-  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+  openxlsx2::wb_save(wb, file = here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
 }
 
-# WBs$`Annex Park`
-# WBs[i]
-# openxlsx2::wb_add_worksheet(WBs[[i]], "User Counts")
-# openxlsx2::wb_add_data(WBs[[i]],sheet = "User Counts", DT[`Park Name` == i])
-# WBs <- sapply(unique(SOPARCAggregated[,park_name_full]), assign, value = openxlsx2::wb_workbook())
-# WBs$i
-# 
-# WBs <- sapply(unique(SOPARCAggregated[,park_name_full]), assign, value = openxlsx2::wb_workbook())
-# 
-# WBs$add_worksheet("User Counts")
-# for (i in names(WBs)) {
-#   eval(paste0("WBs$",i))
-#   wb_add_worksheet(WBs$, "User Counts")
-#   wb$add_worksheet("User Counts")
-#   WBs[i]$add_data(sheet = "User Counts", DT[`Park Name` == i])
-# 
-# }
-
-#this is a bit wonky, as worksheets get created across all workbooks in the list. So we create these outside of the loop, calling a member of the list arbitrarily
-# openxlsx::addWorksheet(WBs[[1]], sheetName = "User Counts")
-# for (i in names(WBs)) {
-#   openxlsx::writeData(wb = WBs[[i]], sheet = "User Counts",DT[`Park Name` == i,])
-# }
-# openxlsx::writeData(WBs$`White Center Heights Park`,sheet = "User Counts", DT[`Park Name` == i,])
-# 
-# if(!SUPPRESS_TABLES){
-#   kbl(DT, 
-#         caption =  "Total Number of Users",
-#       booktabs = TRUE,
-#       longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
-# }
-
-#export charts for use
-#save charts as individual files
 #cleanup old images of this chart
-if(file.exists(here("./2023/outputs/tables/num_users/"))) {
-  unlink(here("./2023/outputs/tables/num_users/"), recursive = T)
+if(file.exists(here("./2024/outputs/tables/num_users/"))) {
+  unlink(here("./2024/outputs/tables/num_users/"), recursive = T)
 }
-dir.create(here("./2023/outputs/tables/num_users"), recursive = T)
-write.csv(DT, here("2023/outputs/tables/num_users/num_users.csv"), row.names = FALSE)
+dir.create(here("./2024/outputs/tables/num_users"), recursive = T)
+write.csv(DT, here("2024/outputs/tables/num_users/num_users.csv"), row.names = FALSE)
 FT <- DT %>% regulartable() %>% autofit()
 
 read_docx() %>%
@@ -1665,12 +1634,11 @@ Notes:
 
 -   Due to the study design, user counts are subject to both over and under
     counting
--   User counts are more accurately understood as "person time of use per target
-    area"
+-   Does not account for number of studies or days of park observation.
 
-### average number of daily park users
+### Average number of daily park users
 
-The daily average number of users observed in the park.
+The daily average number of users observed in the park across all available data
 
 ```{r average number of daily users}
 #| output: true
