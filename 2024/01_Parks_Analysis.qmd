@@ -103,6 +103,8 @@ INPUTS_LOCALE <- "2024/inputs/"
 OUPUTS_LOCALE <- "2024/outputs"
 
 
+YEAR <- 2024 #used throughout this strict in reporting and metadata generation. Updating this will change directories and population basis
+
 REBUILDACTIVITYTABLE <- TRUE
 RECALCULATEPOPULATIONS <- FALSE
 
@@ -1902,7 +1904,7 @@ Notes:
         they would be counted each time. With 10 target areas, this would be 20
         people observed.
 
-### rate of park use by time period
+### Rate of Average Daily Park Use by Time Period
 
 The proportion of the total users observed within each time period.
 
@@ -1926,24 +1928,23 @@ $$
 The total number of people in a day, $\text{People}_d$, is defined as the sum of
 all $\text{People}_p$ within a day.
 
-```{r rate of park use by period, fig.cap="Rate Of Park Use By Period"}
+```{r rate of average daily park use by period, fig.cap="Rate Of Average Daily Park Use By Period"}
 #| output: true
 
-
-DT <- SOPARCAggregated[order(park_name_full), sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3 , by = .(park_name_full, period)][,.("Time Period" = period, "Rate of Use" = (V1/ sum(V1))), by = .("Park Name" = park_name_full) ]
+DT <- SOPARCAggregated[order(park_name), sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE) / unique(3 * study_count), by = .(park_name, period)][,.("Time Period" = period, "Rate of Use" = (V1/ sum(V1))), by = .("Park Name" = park_name) ]
 
 
 DT$`Time Period` <- factor(DT$`Time Period`, level = c("Morning","Lunch","Afternoon","Evening"))
 
 
-WB$add_worksheet("Rate Use x Period")
-WB$add_data(sheet = "Rate Use x Period", DT)
+WB$add_worksheet("Rate Avg Use x Period")
+WB$add_data(sheet = "Rate Avg Use x Period", DT)
 
-wsName <- "Rate Use x Period"
+wsName <- "Rate Avg Use x Period"
 
 for(i in unique(DT$`Park Name`)) {
-  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
-    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+  if(file.exists(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
     if(wsName %in% wb$sheet_names){
       wb$remove_worksheet(wsName)
     }
@@ -1954,7 +1955,7 @@ for(i in unique(DT$`Park Name`)) {
   }
   wb$add_worksheet(wsName)
   wb$add_data(sheet = wsName, DT[`Park Name` == i,])
-  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+  openxlsx2::wb_save(wb, file = here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
 }
 
 
@@ -1969,25 +1970,15 @@ if(!SUPPRESS_CHARTS) {
 
 #save charts as individual files
 #cleanup old images of this chart
-if(file.exists(here("./2023/outputs/charts/rate_use_x_period/"))) {
-  unlink(here("./2023/outputs/charts/rate_use_x_period/"), recursive = T)
+if(file.exists(here("./2024/outputs/charts/rate_avg_use_x_period/"))) {
+  unlink(here("./2024/outputs/charts/rate_avg_use_x_period/"), recursive = T)
 }
-dir.create(here("./2023/outputs/charts/rate_use_x_period"), recursive = T)
+dir.create(here("./2024/outputs/charts/rate_avg_use_x_period"), recursive = T)
 
-for(park in unique(SOPARCAggregated$park_name_full)) {
+for(park in unique(SOPARCAggregated$park_name)) {
   
-  cityName <- first(SOPARCAggregated[park_name_full == park, City])
-  
-  # PTExport <- ggplot(DT[`Park Name` %in% park], (aes(label = paste0(`Time Period`," \n \n",round(`Rate of Use`*100),"%"), area = `Rate of Use`))) +
-  # geom_treemap()  +
-  #  geom_treemap_text(color = "white",
-  #                    place = "centre",
-  #                    size = 6) +
-  # labs(title = paste0(park, " ", cityName," ","2023"), subtitle = paste("Rate of Park Use Per Period")) +
-  # theme(plot.title = element_text(size = 8),
-  #       plot.subtitle = element_text(size = 14,),
-  #       axis.title.x = element_text(size = 12))
-    
+  cityName <- first(SOPARCAggregated[park_name == park, City])
+
   PTExport <-  ggplot(DT[`Park Name` %in% park]) +
     theme_bw() +
     scale_fill_grey(labels = c(paste0("Morning", " (",label_percent()(DT[`Park Name` %in% park & `Time Period` %in% "Morning",`Rate of Use`]),")"),
@@ -1995,7 +1986,7 @@ for(park in unique(SOPARCAggregated$park_name_full)) {
                                   paste0("Afternoon", " (",label_percent()(DT[`Park Name` %in% park & `Time Period` %in% "Afternoon",`Rate of Use`]),")"),
                                   paste0("Evening", " (",label_percent()(DT[`Park Name` %in% park & `Time Period` %in% "Evening",`Rate of Use`]),")")))  +
     geom_bar(position = "stack", stat = "identity",  aes(x =`Park Name`, y = `Rate of Use`, fill = `Time Period`)) +
-    labs(title = paste0(park, " ", cityName," ","2023"), subtitle = paste("Rate of Park Use Per Period"))  +
+    labs(title = paste0(park, " ", cityName," ","2024"), subtitle = paste("Rate of Park Use Per Period"))  +
     theme(plot.title = element_text(size = 8),
           plot.subtitle = element_text(size = 14,),
           axis.title.x = element_blank(),
@@ -2003,13 +1994,13 @@ for(park in unique(SOPARCAggregated$park_name_full)) {
           axis.ticks.x = element_blank())+
     scale_y_continuous(labels=percent) 
       
-  ggsave(paste0(park,"_rate_use_x_period.pdf"), plot = PTExport, path = paste0("./outputs/charts/rate_use_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
-  ggsave(paste0(park,"_rate_use_x_period.png"), plot = PTExport, path = paste0("./outputs/charts/rate_use_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
+  ggsave(paste0(park,"_rate_avg_use_x_period.pdf"), plot = PTExport, path = paste0("./outputs/charts/rate_avg_use_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
+  ggsave(paste0(park,"_rate_avg_use_x_period.png"), plot = PTExport, path = paste0("./outputs/charts/rate_avg_use_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
 }
 
 if(!SUPPRESS_TABLES) {
   kbl(DT,
-      caption = "Daily Rate Of Park Use By Time Period",
+      caption = "Rate Of Daily Average Park Use By Time Period",
       booktabs = TRUE,
       longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 }
