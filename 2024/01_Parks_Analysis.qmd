@@ -104,7 +104,7 @@ OUPUTS_LOCALE <- "2024/outputs"
 
 
 REBUILDACTIVITYTABLE <- TRUE
-RECALCULATEPOPULATIONS <- TRUE
+RECALCULATEPOPULATIONS <- FALSE
 
 SUPPRESS_TABLES <- TRUE #do not print tables in report. 
 SUPPRESS_CHARTS <- TRUE #do not show charts in report
@@ -1031,90 +1031,6 @@ SOPARCAnalysisSet$studyDescription <- "2024 annual study"
 SOPARCAnalysisSet$study_count <- 1 #this needs to be adjusted after combing earlier data
 ```
 
-## Parks metadata
-
-Metadata are provided for each park by Seth. The formal name, address, city,
-zip, neighborhood, tract, equity score, longitude, latitude, image status,
-planned park change notes, and general notes for each park will be appended to
-the analysis table.
-
-```{r load parkwide metadata}
-ParksMetaData <- as.data.table(read_xlsx(here("2024/inputs/Parks_MASTER.xlsx"), sheet = "ParkList"))
-
-parksMissingFromList <- unique(SOPARCObservations$park_name)[!(unique(SOPARCObservations$park_name)  %in% ParksMetaData$`Park Name`)]
-parksMissingLongLat <- ParksMetaData[unique(`Park Name`) %in% unique(SOPARCObservations$park_name) & is.na(Longitude), `Park Name`]
-
-
-```
-
-### Add population within half-mile radius to metadata
-
-For each park we estimate the number of people within a half-mile. This is based
-on the generally accepted threshold of a [10-minute
-walk](https://10minutewalk.org/) to a park as a metric goal.
-
-This relies on access to APDE population data and use of the RADS library and on
-park longitudes and latitudes provided in the meta data.
-
-```{r create population estimates}
-#this chunk is very slow, so if the data already exists, do not rerun.
-skip <- FALSE
-if(file.exists(here("2024/inputs/generated/Park Populations.csv"))) {
-  ParkPopulationTable <- fread(here("2024/inputs/generated/Park Populations.csv"))
-  if("populationHalfMile" %in% names(ParkPopulationTable) &
-     all(ParksMetaData$`Park Name` %in% ParkPopulationTable[censusYear == 2023,]$parkNameFull)) 
-    skip <- TRUE #yay no need to calculate
-}
-if(!skip | RECALCULATEPOPULATIONS) {
-  
-  
-  
-  crsString <- "EPSG:2926" #preferred coordinate reference system for WA
-  
-  ParkGeos <- ParksMetaData[!is.na(Longitude),.("park" = `Park Name`, "long" = Longitude, "lat" = Latitude)] #create a prototype data frame for holding our geometry. This has the raw lat long data
-  
-  ParkGeos <- st_as_sf(x = ParkGeos,coords = c("long","lat"), crs = "EPSG:4326") #turn teh raw data into a geometry using crs 2926 (this is one recomended for WA)
-  ParkGeos <- st_transform(ParkGeos, st_crs(crsString))
-  ParkGeos <- st_buffer(ParkGeos, units::set_units(0.5, mile)) # units::set_units is intelligent about types of units so you can specify "mile". st_buffer will create a perimeter of the provided units.
-  
-  BlockShapes <- st_read("//dphcifs/APDE-CDIP/Shapefiles/Census_2020/block/kc_block.shp") 
-  BlockShapes <- st_transform(BlockShapes, st_crs(crsString)) #conform to same crs
-  
-  # ggplot() + geom_sf(data = BlockShapes, fill = NA) +
-  #   geom_sf(data = ParkGeos, fill = NA, color = 'purple')
-  
-  #get KC population estimates. Note, if a radius desired extends outside the county, then need to expand. Will greatly slow down calculations
-  #if not saved, pull and save. Otherwise, load from save
-  if(file.exists(here("2024/inputs/generated/KCPops.csv"))) {
-    KCPops <- read.csv(here("2024/inputs/generated/KCPops.csv"))
-  } else {
-    KCPops <- get_population(geo_type = "blk", kingco = T, year = 2023)
-    write.csv(x = KCPops, here("2024/inputs/generated/KCPops.csv"), row.names = F)
-  }
-  
-  #Create data frame for final results
-  ParkPopulationTable <- data.table("parkNameFull" = ParksMetaData$`Park Name`, "censusYear" = 2023, "populationHalfMile" = 0)
-  
-  #loop through parks and generate crosswalk for each park.
-  for(rowIndex in 1:nrow(ParkGeos)) {
-    CW <- create_xwalk(BlockShapes, ParkGeos[rowIndex,], "GEOID20", "park",min_overlap = 0.00001)
-    CWPop <- merge(CW, KCPops, by.x = "source_id", by.y = "geo_id")
-    weightedPop <- sum(CWPop$s2t_fraction * CWPop$pop)
-    
-    ParkPopulationTable[parkNameFull == ParkGeos[rowIndex,]$park, ]$populationHalfMile <- weightedPop 
-  }
-
-  write.csv(ParkPopulationTable ,here("2024/outputs/data-metadata/Park Populations.csv"), row.names = F)
-  write.csv(ParkPopulationTable ,here("2024/inputs/generated/Park Populations.csv"), row.names = F)
-}
-ParksMetaData <- merge(ParksMetaData, ParkPopulationTable[,c(1,3)], by.x = "Park Name", by.y = "parkNameFull")
-
-
-```
-
-The following parks are missing metadata. Importantly, longtitude and latitude
-are needed to calculate populations `r parksMissingMetadata`
-
 # Update Study tracker
 
 For the 2023 analysis we advised creating a study tracker. For each time a park
@@ -1386,6 +1302,96 @@ Here are activities from 2022 & 2023 "other" categories:
 print(unique(SOPARCActivities2023$activity)[!(tolower(unique(SOPARCActivities2023$activity)) %in% tolower(activities))])
 
 print(unique(SOPARCActivities2022$activity)[!(tolower(unique(SOPARCActivities2022$activity)) %in% tolower(activities))])
+```
+
+# Parks metadata
+
+Metadata are provided for each park by Seth. The formal name, address, city,
+zip, neighborhood, tract, equity score, longitude, latitude, image status,
+planned park change notes, and general notes for each park will be appended to
+the analysis table.
+
+```{r load parkwide metadata}
+ParksMetaData <- as.data.table(read_xlsx(here("2024/inputs/Parks_MASTER.xlsx"), sheet = "ParkList"))
+
+parksMissingFromList <- unique(SOPARCAnalysisSetAllYears$park_name)[!(unique(SOPARCAnalysisSetAllYears$park_name)  %in% ParksMetaData$`Park Name`)]
+parksMissingLongLat <- ParksMetaData[unique(`Park Name`) %in% unique(SOPARCAnalysisSetAllYears$park_name) & is.na(Longitude), `Park Name`]
+
+```
+
+The following parks (if any) are missing from the Parks Master sheet:
+
+`r parksMissingFromList`
+
+The following parks (if any) are missing Longitute and/or Latitute:
+
+`r oarjsMissingLongLat`
+
+Importantly, longtitude and latitude are needed to calculate populations
+`r parksMissingMetadata`
+
+## Add population within half-mile radius to metadata
+
+For each park we estimate the number of people within a half-mile. This is based
+on the generally accepted threshold of a [10-minute
+walk](https://10minutewalk.org/) to a park as a metric goal.
+
+This relies on access to APDE population data and use of the RADS library and on
+park longitudes and latitudes provided in the meta data.
+
+```{r create population estimates}
+#this chunk is very slow, so if the data already exists, do not rerun.
+skip <- FALSE
+if(file.exists(here("2024/inputs/generated/Park Populations.csv"))) {
+  ParkPopulationTable <- fread(here("2024/inputs/generated/Park Populations.csv"))
+  if("populationHalfMile" %in% names(ParkPopulationTable) &
+     all(ParksMetaData$`Park Name` %in% ParkPopulationTable[censusYear == 2023,]$parkNameFull)) 
+    skip <- TRUE #yay no need to calculate
+}
+if(!skip | RECALCULATEPOPULATIONS) {
+  
+  
+  
+  crsString <- "EPSG:2926" #preferred coordinate reference system for WA
+  
+  ParkGeos <- ParksMetaData[!is.na(Longitude),.("park" = `Park Name`, "long" = Longitude, "lat" = Latitude)] #create a prototype data frame for holding our geometry. This has the raw lat long data
+  
+  ParkGeos <- st_as_sf(x = ParkGeos,coords = c("long","lat"), crs = "EPSG:4326") #turn teh raw data into a geometry using crs 2926 (this is one recomended for WA)
+  ParkGeos <- st_transform(ParkGeos, st_crs(crsString))
+  ParkGeos <- st_buffer(ParkGeos, units::set_units(0.5, mile)) # units::set_units is intelligent about types of units so you can specify "mile". st_buffer will create a perimeter of the provided units.
+  
+  BlockShapes <- st_read("//dphcifs/APDE-CDIP/Shapefiles/Census_2020/block/kc_block.shp") 
+  BlockShapes <- st_transform(BlockShapes, st_crs(crsString)) #conform to same crs
+  
+  # ggplot() + geom_sf(data = BlockShapes, fill = NA) +
+  #   geom_sf(data = ParkGeos, fill = NA, color = 'purple')
+  
+  #get KC population estimates. Note, if a radius desired extends outside the county, then need to expand. Will greatly slow down calculations
+  #if not saved, pull and save. Otherwise, load from save
+  if(file.exists(here("2024/inputs/generated/KCPops.csv"))) {
+    KCPops <- read.csv(here("2024/inputs/generated/KCPops.csv"))
+  } else {
+    KCPops <- get_population(geo_type = "blk", kingco = T, year = 2023)
+    write.csv(x = KCPops, here("2024/inputs/generated/KCPops.csv"), row.names = F)
+  }
+  
+  #Create data frame for final results
+  ParkPopulationTable <- data.table("parkNameFull" = ParksMetaData$`Park Name`, "censusYear" = 2023, "populationHalfMile" = 0)
+  
+  #loop through parks and generate crosswalk for each park.
+  for(rowIndex in 1:nrow(ParkGeos)) {
+    CW <- create_xwalk(BlockShapes, ParkGeos[rowIndex,], "GEOID20", "park",min_overlap = 0.00001)
+    CWPop <- merge(CW, KCPops, by.x = "source_id", by.y = "geo_id")
+    weightedPop <- sum(CWPop$s2t_fraction * CWPop$pop)
+    
+    ParkPopulationTable[parkNameFull == ParkGeos[rowIndex,]$park, ]$populationHalfMile <- weightedPop 
+  }
+
+  write.csv(ParkPopulationTable ,here("2024/outputs/data-metadata/Park Populations.csv"), row.names = F)
+  write.csv(ParkPopulationTable ,here("2024/inputs/generated/Park Populations.csv"), row.names = F)
+}
+ParksMetaData <- merge(ParksMetaData, ParkPopulationTable[,c(1,3)], by.x = "Park Name", by.y = "parkNameFull")
+
 ```
 
 # Parameterizing Data For Analysis
@@ -1713,14 +1719,14 @@ The total number of users observed in the park per day across all available data
 ```{r average number of daily users}
 #| output: true
 
-DT <- SOPARCAggregated[order(park_name),.("Users" = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .("Park Name" = park_name, datePOSIX)]
+DT <- SOPARCAggregated[order(park_name),.("Users" = round(sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)/ unique(3 * study_count),0)), by = .("Park Name" = park_name)]
 
 
-WB$add_worksheet("Daily User Counts")
-WB$add_data(sheet = "Daily User Counts", DT)
+WB$add_worksheet("Daily User Average")
+WB$add_data(sheet = "Daily User Average", DT)
 
 
-wsName <- "Daily User Counts"
+wsName <- "Daily User Average"
 
 for(i in unique(DT$`Park Name`)) {
   if(file.exists(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
@@ -1741,7 +1747,7 @@ for(i in unique(DT$`Park Name`)) {
 
 if(!SUPPRESS_TABLES){
   kbl(DT, 
-        caption =  "Daily User Counts",
+        caption =  "Daily User Average",
       booktabs = TRUE,
       longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 }
@@ -1751,16 +1757,16 @@ if(!SUPPRESS_TABLES){
 #export charts for use
 #save charts as individual files
 #cleanup old images of this chart
-if(file.exists(here("./2024/outputs/tables/daily_users/"))) {
-  unlink(here("./2024/outputs/tables/daily_users/"), recursive = T)
+if(file.exists(here("./2024/outputs/tables/daily_user_avg/"))) {
+  unlink(here("./2024/outputs/tables/daily_user_avg/"), recursive = T)
 }
-dir.create(here("./2024/outputs/tables/daily_users"), recursive = T)
-write.csv(DT, here("2024/outputs/tables/daily_users/daily_users.csv"), row.names = FALSE)
+dir.create(here("./2024/outputs/tables/daily_user_avg"), recursive = T)
+write.csv(DT, here("2024/outputs/tables/daily_user_avg/daily_user_avg.csv"), row.names = FALSE)
 FT <- DT[, .(`Park Name`,"Users" = round(Users,0))] %>% regulartable() %>% autofit()
 
 read_docx() %>%
 body_add_flextable(FT) %>%
-print(target = paste0("./outputs/tables/daily_users/daily_users.docx"))  
+print(target = paste0("./outputs/tables/daily_user_avg/daily_user_avg.docx"))  
 
 
 ```
@@ -1791,7 +1797,6 @@ $$
 
 DT <- SOPARCAggregated[order(park_name),.("Users" = round(sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)/ unique(3 * study_count),0)), by = .("Park Name" = park_name, "Time Period" = period)]
 
-test <- SOPARCAggregated[order(park_name),.("Users" = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .("Park Name" = park_name, "Time Period" = period)]
 
 DT$`Time Period` <- factor(DT$`Time Period`, level = c("Morning","Lunch","Afternoon","Evening"))
 
@@ -1897,6 +1902,129 @@ Notes:
         they would be counted each time. With 10 target areas, this would be 20
         people observed.
 
+### rate of park use by time period
+
+The proportion of the total users observed within each time period.
+
+For each park:
+
+$$
+\text{(Rate of Park Use By Period)} = \frac{\sum_{d=1}^{3}{(\text{People}_p)_d}}{\sum_{d=1}^{3}{\text{People}_d}}
+$$
+
+where $_d$ is the day of study and $(\text{People}_p)$ are the sum of number of
+people observed in a time period of a given day.
+
+The people within a given time period and day is defined as the average (rounded
+up) of people observed in a time period of a given day and target area $_t$,
+summed across across all target areas.
+
+$$
+\text{People}_p = \sum_{t=1}^{n}{\left( \lceil\frac{\text{(people observed first half of period)}+\text{(people observed second half of period)}}{2}\rceil\right) _t}
+$$
+
+The total number of people in a day, $\text{People}_d$, is defined as the sum of
+all $\text{People}_p$ within a day.
+
+```{r rate of park use by period, fig.cap="Rate Of Park Use By Period"}
+#| output: true
+
+
+DT <- SOPARCAggregated[order(park_name_full), sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)/3 , by = .(park_name_full, period)][,.("Time Period" = period, "Rate of Use" = (V1/ sum(V1))), by = .("Park Name" = park_name_full) ]
+
+
+DT$`Time Period` <- factor(DT$`Time Period`, level = c("Morning","Lunch","Afternoon","Evening"))
+
+
+WB$add_worksheet("Rate Use x Period")
+WB$add_data(sheet = "Rate Use x Period", DT)
+
+wsName <- "Rate Use x Period"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+}
+
+
+if(!SUPPRESS_CHARTS) {
+  PT <- ggplot(DT, (aes(x = `Time Period`, y = `Rate of Use`))) +
+    geom_col() +
+    facet_wrap(vars(`Park Name`), scales = "free") +
+    scale_y_continuous(limits = c(0,1),labels = scales::percent) +
+     theme(axis.text.x = element_text(angle = 0, vjust = 0, hjust=0))
+  print(PT)
+}
+
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2023/outputs/charts/rate_use_x_period/"))) {
+  unlink(here("./2023/outputs/charts/rate_use_x_period/"), recursive = T)
+}
+dir.create(here("./2023/outputs/charts/rate_use_x_period"), recursive = T)
+
+for(park in unique(SOPARCAggregated$park_name_full)) {
+  
+  cityName <- first(SOPARCAggregated[park_name_full == park, City])
+  
+  # PTExport <- ggplot(DT[`Park Name` %in% park], (aes(label = paste0(`Time Period`," \n \n",round(`Rate of Use`*100),"%"), area = `Rate of Use`))) +
+  # geom_treemap()  +
+  #  geom_treemap_text(color = "white",
+  #                    place = "centre",
+  #                    size = 6) +
+  # labs(title = paste0(park, " ", cityName," ","2023"), subtitle = paste("Rate of Park Use Per Period")) +
+  # theme(plot.title = element_text(size = 8),
+  #       plot.subtitle = element_text(size = 14,),
+  #       axis.title.x = element_text(size = 12))
+    
+  PTExport <-  ggplot(DT[`Park Name` %in% park]) +
+    theme_bw() +
+    scale_fill_grey(labels = c(paste0("Morning", " (",label_percent()(DT[`Park Name` %in% park & `Time Period` %in% "Morning",`Rate of Use`]),")"),
+                                  paste0("Lunch", " (",label_percent()(DT[`Park Name` %in% park & `Time Period` %in% "Lunch",`Rate of Use`]),")"),
+                                  paste0("Afternoon", " (",label_percent()(DT[`Park Name` %in% park & `Time Period` %in% "Afternoon",`Rate of Use`]),")"),
+                                  paste0("Evening", " (",label_percent()(DT[`Park Name` %in% park & `Time Period` %in% "Evening",`Rate of Use`]),")")))  +
+    geom_bar(position = "stack", stat = "identity",  aes(x =`Park Name`, y = `Rate of Use`, fill = `Time Period`)) +
+    labs(title = paste0(park, " ", cityName," ","2023"), subtitle = paste("Rate of Park Use Per Period"))  +
+    theme(plot.title = element_text(size = 8),
+          plot.subtitle = element_text(size = 14,),
+          axis.title.x = element_blank(),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank())+
+    scale_y_continuous(labels=percent) 
+      
+  ggsave(paste0(park,"_rate_use_x_period.pdf"), plot = PTExport, path = paste0("./outputs/charts/rate_use_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
+  ggsave(paste0(park,"_rate_use_x_period.png"), plot = PTExport, path = paste0("./outputs/charts/rate_use_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
+}
+
+if(!SUPPRESS_TABLES) {
+  kbl(DT,
+      caption = "Daily Rate Of Park Use By Time Period",
+      booktabs = TRUE,
+      longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+}
+
+
+```
+
+Notes:
+
+-   This is accurately understood as the rate of park use during the period
+-   There is likely still some error from the under and overcounting of the
+    underlying counts, but the more true that over and under counting is
+    randomly distributed across all time periods, the less true this is.
+-   Rate is within-park (each park totals to 100%)
+
 ```{r save workbooks}
 #create project wide workbooks
 dir.create(here("./2024/outputs/tables/pivot_ready"), recursive = T, showWarnings = FALSE)
@@ -1931,7 +2059,7 @@ openxlsx2::wb_save(WB, file = "./outputs/tables/pivot_ready/analysis_tables.xlsx
 ```
 
 ```{r save expanded activity table}
-write.csv(merge(SOPARCActivities,SOPARCtoAggregate[,.(park_name_full, record_id, period, target_area, datePOSIX)], by.x = "record_id_aggregated", by.y = "record_id"), here("2024/outputs/data-metadata/SOPARCActivitiesExpanded.csv"), row.names = FALSE)
+write.csv(merge(SOPARCActivities,SOPARCtoAggregate[,.(park_name, record_id, period, tar_area, datePOSIX)], by.x = "record_id_aggregated", by.y = "record_id"), here("2024/outputs/data-metadata/SOPARCActivitiesExpanded.csv"), row.names = FALSE)
  
 ```
 
