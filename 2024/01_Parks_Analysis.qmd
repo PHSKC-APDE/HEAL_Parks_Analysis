@@ -2373,7 +2373,7 @@ if(!SUPPRESS_TABLES) {
   kbl(DT[`Park Name` == park,],
       caption = "Number of Users Observed in Park Activities",
       booktabs = TRUE,
-      longtable = TRUE) %>% 
+      longtable = TRUE) %>%
     kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 }
 
@@ -2407,6 +2407,175 @@ Notes:
     of a quarter than the first half, these will be counted as distinct
     activities, and so not averaged. This can results in slightly higher counts
     of people engaged in activities than the average user counts.
+
+### rate of user activity
+
+The percentage users observed doing the activity in the park.
+
+For each park, the number of users engaged in an activity is divided by the
+total number of users observed in the park throughout the study duration.
+
+```{r Rate of User Activity}
+#| output: true
+
+#construct an activity table from the non aggregated activity list to align record_ids
+DT <- merge(SOPARCActivitiesAllYears, SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name, tar_area, sub_area, dayNumberBasedOnSequence, period, periodBasedOnSequence,datePOSIX, day, month, weekend, studyDescription)], all.x = T, by.x = c("record_id_aggregated", "studyDescription"), by.y = c("record_id", "studyDescription"))
+
+#create target area level aggregation by adding together observations of poeple doing the same activity at the same sub-period in the same target area but different sub areas
+DT <- DT[, .(children = sum(children, na.rm = T), 
+             teen = sum(teen, na.rm = T), 
+             adult = sum(adult, na.rm = T), 
+             senior = sum(senior, na.rm = T)), by = .(park_name, dayNumberBasedOnSequence, tar_area, period, periodBasedOnSequence,activity, studyDescription )]
+
+#aggregate first and second half of each period such that people doing the same activity in the same target area are averaged rounding up
+DT <- DT[, .(children = ceiling(mean(children, na.rm = T)), 
+             teen = ceiling(mean(teen, na.rm = T)), 
+             adult = ceiling(mean(adult, na.rm = T)), 
+             senior = ceiling(mean(senior, na.rm = T))), by = .(park_name, dayNumberBasedOnSequence, tar_area, period, activity, studyDescription )]
+
+
+DT[,"Num" := sum(children, teen, adult, senior) , by = .(park_name, activity)]
+DT[,"Denom" := sum(children, teen, adult, senior) , by = .(park_name)]
+
+DT <- DT[!duplicated(DT[,.(park_name, activity,Num,Denom)]), .(park_name, activity, Num, Denom)]
+DT <- DT[,"Rate" := Num/Denom, by = .(park_name, activity)][,.("Park Name" = park_name, "Activity" = activity, "Rate" = Rate)]
+DT <- DT[order(`Park Name`, Activity),]
+
+
+WB$add_worksheet("Rate User Activity")
+WB$add_data(sheet = "Rate User Activity", DT)
+
+wsName <- "Rate User Activity"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+}
+
+
+if(!SUPPRESS_TABLES) {
+  kbl(DT[`Park Name` == park,],
+      caption = "Rate of Users Observed in Park Activities",
+      booktabs = TRUE,
+      longtable = TRUE) %>%
+    kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+}
+
+
+#export charts for use
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2024/outputs/tables/rate_user_activity/"))) {
+  unlink(here("./2024/outputs/tables/rate_user_activity/"), recursive = T)
+}
+dir.create(here("./2024/outputs/tables/rate_user_activity"), recursive = T)
+
+for(park in unique(SOPARCtoAggregate$park_name)) {
+
+  FT <- DT[order(Rate, decreasing = TRUE)][`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100, 2), "%"))]%>% regulartable() %>% autofit()
+
+  read_docx() %>%
+  body_add_flextable(FT) %>%
+  print(target = paste0("./outputs/tables/rate_user_activity/",park,"_rate_user_activity.docx"))  
+
+}
+```
+
+Notes:
+
+-   All activities listed have at least 1 participant, but some may show 0 in
+    the prepared tables due to being less than 0.01%
+-   The total rate of all user activities listed will equal 100%, the total
+    amount of activity observed.
+-   This is calculated on the non aggregated population counts.
+
+### rate of activity observed
+
+The percentage of observations where at least one user was observed doing the
+activity in the park.
+
+For each park, the total the number of periods the activity was observed is
+divided by 24, the total number of observations periods possible for any
+particular activity.
+
+```{r Rate of Activity Observed}
+#| output: true
+
+#construct an activity table from the activity list
+DT <- merge(SOPARCActivities[,.(record_id_aggregated,activity)], SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full, periodBasedOnSequence,dayNumberBasedOnSequence)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
+
+DT <- DT[,.N, by = .(park_name_full,activity,periodBasedOnSequence,dayNumberBasedOnSequence)]
+
+DT <- DT[order(park_name_full, activity), .("Rate" = .N/24), by = .("Park Name" = park_name_full, "Activity" = activity)]
+
+WB$add_worksheet("Rate Activity Observed")
+WB$add_data(sheet = "Rate Activity Observed", DT)
+
+wsName <- "Rate Activity Observed"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+}
+
+
+
+#export charts for use
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2023/outputs/tables/rate_activity_observed/"))) {
+  unlink(here("./2023/outputs/tables/rate_activity_observed/"), recursive = T)
+}
+dir.create(here("./2023/outputs/tables/rate_activity_observed"), recursive = T)
+
+for(park in unique(SOPARCtoAggregate$park_name_full)) {
+  # KBObject <- kbl(DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)],
+  #     caption = "Rate of User Activy",
+  #     booktabs = TRUE,
+  #     longtable = TRUE) %>%
+  #   kable_styling(latex_options = c("striped", "repeat_header"))
+  # 
+  #   save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_user_activity/",park,"rate_user_activity.pdf")))
+  
+  FT <- DT[order(Rate, decreasing = TRUE)][`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100, 2), "%"))]%>% regulartable() %>% autofit()
+
+  read_docx() %>%
+  body_add_flextable(FT) %>%
+  print(target = paste0("./outputs/tables/rate_activity_observed/",park,"_rate_activity_observed.docx"))  
+
+}
+```
+
+Notes:
+
+-   Unlike many of the other measures provided, these rates are mostly
+    independent of each other and do not have an additive meaning. This is
+    because multiple activities may be observed in a single observation period.
+    E..g "walking" may be observed in all 24 periods, and so have an observation
+    rate of 100%, and "sitting" may be observed in 6 periods and so have a rate
+    of 25%.
 
 # Closure and Next Steps
 
