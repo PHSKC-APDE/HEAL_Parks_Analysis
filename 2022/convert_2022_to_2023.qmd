@@ -149,7 +149,7 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
   OldDT[Period == "morning"]$Period <- "Morning"
   OldDT[Period == "AfterNoon"]$Period <- "Afternoon"
   
-  #simplifying activity names
+
 }
 ```
 
@@ -163,9 +163,6 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
 
 
   ParkData <- read_xlsx(here("2022/inputs/Parks_MASTER.xlsx"))
-
-  # c("park_name_full",	"park_name",	"record_id",	"redcap_survey_identifier",	"park_scan_data_collection_timestamp",	"obs_initial",	"start_time",	"tar_area",	"sub_area",	"accessible",	"usable",	"lit",	"occupied",	"supervised",	"organized",	"equipped",	"num_child_prim",	"num_child_snd",	"num_child_spec",	"num_teen_prim",	"num_teen_snd",	"num_teen_spec",	"num_adult_prim",	"num_adult_snd",	"num_adult_spec",	"num_senior_prim",	"num_senior_snd",	"num_senior_spec",	"prim_act_name",	"prim_act_other",	"yesno_snd",	"snd_act_name",	"other_act_snd",	"yesno_spec",	"spec_act_name",	"other_act_spec",	"comments",	"park_scan_data_collection_complete",	"timestampPOSIX",	"datePOSIX",	"day",	"month",	"weekend",	"periodBasedOnSequence",	"dayNumberBasedOnSequence",	"period",	"Park", "Address",	"City",	"Zip",	"Neighborhood",	"Images",	"Tract",	"Latitude",	"Longitude",	"Equity Score Priority", 	"Planned park changes?",	"Notes",	"censusYear",	"populationHalfMile",	"studyStartDate",	"studyDescription",	"study_count")
-
 
   
   OldDT.ParkData <- merge(OldDT, ParkData, by.x = "Park", by.y = "Park Name", all.x = T)
@@ -222,7 +219,7 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
                                           month = NA,
                                           weekend = NA,
                                           periodBasedOnSequence = "",
-                                          dayNumberBasedOnSequence = NA,
+                                          dayNumberBasedOnSequence = 1,
                                           period = Period,
                                           `Park Address`,
                                           City,
@@ -238,19 +235,42 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
                                           censusYear = 2022,
                                           studyStartDate = "7/1/2022",
                                           studyDescription = "2022 annual study",
-                                          study_count = 1)]
+                                          study_count = 2)]
   
   SOPARCAnalysisSet <- as.data.table(SOPARCAnalysisSet)
-  #load corrections
-  #Corrections <- fread("./inputs/ERRORED_OBSERVATIONS-correctionsv2.csv")
-  #SOPARCAnalysisSet <- SOPARCAnalysisSet[!(record_id %in% Corrections$record_id),]
-  #Corrections$datePOSIX <- as.POSIXct(Corrections$datePOSIX, "", "%m/%d/%Y")
-  #SOPARCAnalysisSet[,40]
-  #Corrections[,40]
-  #SOPARCAnalysisSet <- rbind(SOPARCAnalysisSet, Corrections)
   
-  #assigning period based on sequence
-  #debugging, error catcher...
+  #fix "Yes" "No"
+  #unique(SOPARCAnalysisSet$accessible)
+  SOPARCAnalysisSet[, accessible := ifelse(accessible %in% c("Y","y"), "Yes", ifelse(accessible %in% c("N", "n"),"No", NA))]
+  #unique(SOPARCAnalysisSet$usable)
+  SOPARCAnalysisSet[, usable := ifelse(usable %in% c("Y","y"), "Yes", ifelse(usable %in% c("N", "n"),"No", NA))]
+  #unique(SOPARCAnalysisSet$lit)
+  SOPARCAnalysisSet[, lit := ifelse(lit %in% c("Y","y"), "Yes", ifelse(lit %in% c("N", "n"),"No", NA))]
+  #unique(SOPARCAnalysisSet$occupied)
+  SOPARCAnalysisSet[, occupied := ifelse(occupied %in% c("Y","y"), "Yes", ifelse(occupied %in% c("N", "n"),"No", NA))]
+  #unique(SOPARCAnalysisSet$supervised)
+  SOPARCAnalysisSet[, supervised := ifelse(supervised %in% c("Y","y"), "Yes", ifelse(supervised %in% c("N", "n"),"No", NA))]
+  #unique(SOPARCAnalysisSet$organized)
+  SOPARCAnalysisSet[, organized := ifelse(organized %in% c("Y","y"), "Yes", ifelse(organized %in% c("N", "n"),"No", NA))]
+  #unique(SOPARCAnalysisSet$equipped)
+  SOPARCAnalysisSet[, equipped := ifelse(equipped %in% c("Y","y"), "Yes", ifelse(equipped %in% c("N", "n"),"No", NA))]
+  
+  #fix study date and description
+  for(park in unique(SOPARCAnalysisSet$park_name)) {
+    counter <- 0
+    for(date in unique(SOPARCAnalysisSet[park_name == park & order(datePOSIX),datePOSIX])) {
+      counter <- counter + 1
+      SOPARCAnalysisSet[park_name == park & datePOSIX == date, dayNumberBasedOnSequence := ifelse(counter <=3, counter, counter-3)]
+      SOPARCAnalysisSet[park_name == park & datePOSIX == date, studyStartDate := ifelse(counter <=3, "6/15/2022", "7/15/2022")]
+      SOPARCAnalysisSet[park_name == park & datePOSIX == date, studyDescription := ifelse(counter <=3, "2022 annual study round 1", "2022 annual study round 2")]
+    }
+  }
+
+  
+  
+  
+  
+  #error catching..
   if(exists("catcher")) {
     remove(catcher)
   }
@@ -298,7 +318,9 @@ if( !(file.exists(here("2022/local_only/SOPARCAnalysisSet.csv"))) | REBUILDANALY
         }
     }
         
-
+  
+  
+  
   write.csv(SOPARCAnalysisSet, here("2022/local_only/SOPARCAnalysisSetExtract.csv"), row.names = FALSE)
 } else {
   SOPARCAnalysisSet <-  fread(here("2022/local_only/SOPARCAnalysisSetExtract.csv"))
@@ -379,6 +401,10 @@ write.csv(SOPARCAnalysisSet ,here("2022/outputs/data-metadata/SOPARCAnalysisSet.
 
 # Create 2022 SOPARCActivities.csv
 
+An activitiy table is built following the same procedure as our 2023 analysis wiht the addition of a study id, per 2024 and onward.
+
+Some of the source tables include activities listed without people. These are dropped after building the activity table
+
 ```{r process SOPARCActivities}
 
 if( !(file.exists(here("2022/local_only/SOPARCActivities.csv"))) | REBUILDACTIVITYTABLE){
@@ -397,36 +423,27 @@ if( !(file.exists(here("2022/local_only/SOPARCActivities.csv"))) | REBUILDACTIVI
 
   for(id in SOPARCAnalysisSet[prim_act_name != "",]$record_id) {
 
-      # SOPARCActivities[record_id == id, `:=`(activity = ifelse(SOPARCObservations[record_id == id, ]$prim_act_name == "Other", SOPARCObservations[record_id == id, ]$prim_act_other, SOPARCObservations[record_id == id, ]$prim_act_name),
-      #                                        children = SOPARCObservations[record_id == id, ]$num_child_prim, 
-      #                                        teen = SOPARCObservations[record_id == id, ]$num_teen_prim, 
-      #                                        adult = SOPARCObservations[record_id == id, ]$num_adult_prim, 
-      #                                        senior = SOPARCObservations[record_id == id, ]$num_senior_prim)] 
-    
     DT <- SOPARCAnalysisSet[record_id == id, .(record_id = id,
                                                 record_id_aggregated = id,
                                           activity = ifelse(prim_act_name == "Other", prim_act_other, prim_act_name),
                                           children = num_child_prim, 
                                           teen = num_teen_prim, 
                                           adult = num_adult_prim, 
-                                          senior = num_senior_prim)]
+                                          senior = num_senior_prim,
+                                          studyDescription)]
     
     SOPARCActivities <- rbindlist(list(SOPARCActivities, DT))
     
     if(SOPARCAnalysisSet[record_id == id,]$yesno_snd == "Yes") {
-      # SOPARCActivities[record_id == id, `:=`(activity = ifelse(SOPARCObservations[record_id == id, ]$snd_act_name == "Other", SOPARCObservations[record_id == id, ]$other_act_snd, SOPARCObservations[record_id == id, ]$snd_act_name),
-      #                                        children = SOPARCObservations[record_id == id, ]$num_child_snd, 
-      #                                        teen = SOPARCObservations[record_id == id, ]$num_teen_snd, 
-      #                                        adult = SOPARCObservations[record_id == id, ]$num_adult_snd, 
-      #                                        senior = SOPARCObservations[record_id == id, ]$num_senior_snd)] 
-      
+
       DT <- SOPARCAnalysisSet[record_id == id, .(record_id = id,
                                                   record_id_aggregated = id,
                                       activity = ifelse(snd_act_name == "Other", other_act_snd, snd_act_name),
                                       children = num_child_snd, 
                                       teen = num_teen_snd, 
                                       adult = num_adult_snd, 
-                                      senior = num_senior_snd)]
+                                      senior = num_senior_snd,
+                                      studyDescription)]
       SOPARCActivities <- rbindlist(list(SOPARCActivities, DT))
     }
     if(SOPARCAnalysisSet[record_id == id,]$yesno_spec == "Yes") {
@@ -441,10 +458,16 @@ if( !(file.exists(here("2022/local_only/SOPARCActivities.csv"))) | REBUILDACTIVI
                                 children = num_child_spec, 
                                 teen = num_teen_spec, 
                                 adult = num_adult_spec, 
-                                senior = num_senior_spec)]
+                                senior = num_senior_spec,
+                                studyDescription)]
       SOPARCActivities <- rbindlist(list(SOPARCActivities, DT))
     }
   }
+  
+  #drop empty activities
+  SOPARCActivities <- SOPARCActivities[!((children == 0  | is.na(children)) & (teen == 0 | is.na(teen)) & (adult == 0 | is.na(adult)) & (senior == 0 | is.na(senior))),]
+
+  
   write.csv(SOPARCActivities, here("2022/local_only/SOPARCActivities.csv"), row.names = FALSE)
   write.csv(SOPARCActivities, here("2022/outputs/data-metadata/SOPARCActivities.csv"), row.names = FALSE)
 } else {
