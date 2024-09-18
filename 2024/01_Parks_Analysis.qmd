@@ -502,9 +502,9 @@ setorder(SOPARCObservations, cols = "timestampPOSIX")
 
 ```
 
-```{r}
-
-
+```{r renumber cleaned observation}
+SOPARCObservations <- as.data.table(SOPARCObservations)
+SOPARCObservations[,"record_id" ] <- 1:nrow(SOPARCObservations)
 
 
 ```
@@ -963,6 +963,7 @@ QA.
 ```{r select analysis set to use}
 if(USEGOODDATA) {
   SOPARCAnalysisSet <- copy(SOPARCObservationsOK) #only use parks that have expected number of observation
+  SOPARCActivities <- SOPARCActivities[record_id_aggregated %in% SOPARCAnalysisSet$record_id]
 } else {
   SOPARCAnalysisSet <- copy(rbind(SOPARCObservationsOK, SOPARCObservationsToFix)) #use all parks
 }
@@ -1253,21 +1254,20 @@ SOPARCAnalysisSetAllYears <- rbind(SOPARCAnalysisSet, SOPARC2022Fixed, SOPARC202
 ## Import activities
 
 ```{r preparing 2023 activities data}
-SOPARCActivities2023 <- fread(here(INPUTS_LOCALE,"2023/SOPARCActivities.csv"))
+SOPARCActivities2023 <- fread(here(INPUTS_LOCALE,"2023/SOPARCActivitiesExpanded.csv"))
 SOPARCActivities2023$studyDescription <- "2023 annual study"
-
 ```
 
 ```{r preparing 2022 activities data}
 SOPARCActivities2022 <- fread(here(INPUTS_LOCALE,"2022/SOPARCActivities.csv"))
 
-
+names(SOPARCActivities2022)
 
 
 ```
 
 ```{r}
-SOPARCActivitiesAllYears <- rbind(SOPARCActivities, SOPARCActivities2022, SOPARCActivities2023)
+SOPARCActivitiesAllYears <- rbind(SOPARCActivities, SOPARCActivities2022, SOPARCActivities2023[,.(record_id, record_id_aggregated, activity, children, teen, adult, senior, studyDescription)])
 ```
 
 ### Documentation of activities needing a crosswalk
@@ -2322,7 +2322,7 @@ Notes:
 
 ### number of users per activity
 
-The number of users observed doing the activity in the park.
+The number of users ever observed doing the activity in the park.
 
 ```{r users doing an activity}
 #| output: true
@@ -2353,8 +2353,8 @@ WB$add_data(sheet = "Users per Activity", DT)
 wsName <- "Users per Activity"
 
 for(i in unique(DT$`Park Name`)) {
-  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
-    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+  if(file.exists(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
     if(wsName %in% wb$sheet_names){
       wb$remove_worksheet(wsName)
     }
@@ -2365,7 +2365,7 @@ for(i in unique(DT$`Park Name`)) {
   }
   wb$add_worksheet(wsName)
   wb$add_data(sheet = wsName, DT[`Park Name` == i,])
-  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+  openxlsx2::wb_save(wb, file = here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
 }
 
 
@@ -2381,20 +2381,13 @@ if(!SUPPRESS_TABLES) {
 #export charts for use
 #save charts as individual files
 #cleanup old images of this chart
-if(file.exists(here("./2023/outputs/tables/num_user_activity/"))) {
-  unlink(here("./2023/outputs/tables/num_user_activity/"), recursive = T)
+if(file.exists(here("./2024/outputs/tables/num_user_activity/"))) {
+  unlink(here("./2024/outputs/tables/num_user_activity/"), recursive = T)
 }
-dir.create(here("./2023/outputs/tables/num_user_activity"), recursive = T)
+dir.create(here("./2024/outputs/tables/num_user_activity"), recursive = T)
 
-for(park in unique(SOPARCtoAggregate$park_name_full)) {
-  # KBObject <- kbl(DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)],
-  #     caption = "Rate of User Activy",
-  #     booktabs = TRUE,
-  #     longtable = TRUE) %>%
-  #   kable_styling(latex_options = c("striped", "repeat_header"))
-  # 
-  #   save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_user_activity/",park,"rate_user_activity.pdf")))
-  
+for(park in unique(SOPARCtoAggregate$park_name)) {
+
   FT <- DT[order(Users, decreasing = TRUE)][`Park Name` == park,.(Activity, Users)]%>% regulartable() %>% autofit()
 
   read_docx() %>%
@@ -2406,12 +2399,14 @@ for(park in unique(SOPARCtoAggregate$park_name_full)) {
 
 Notes:
 
+-   Note, includes ALL years. Due to the varying number of times a park has been
+    observed, this statistic has decreased
 -   user counts are subject to over and under counting due to how observations
     were conducted and aggregated
 -   If an individual is observed doing a different activity in the second half
-    of a quarter than the first half, these will be counted as distincti
+    of a quarter than the first half, these will be counted as distinct
     activities, and so not averaged. This can results in slightly higher counts
-    of people engaged in actities than the average user counts.
+    of people engaged in activities than the average user counts.
 
 # Closure and Next Steps
 
