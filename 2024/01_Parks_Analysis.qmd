@@ -1180,8 +1180,10 @@ SOPARC2022Fixed <- SOPARC2022[,.(record_id,
                                  park_scan_data_collection_timestamp, 
                                  obs_initial, 
                                  start_time,
-                                 time_period = paste(toupper(substr(periodBasedOnSequence, 1, 1)), substr(periodBasedOnSequence, 2, nchar(periodBasedOnSequence)-1), sep=""),
-                                 time_period_half =  ifelse(substr(periodBasedOnSequence, nchar(periodBasedOnSequence), nchar(periodBasedOnSequence)) == "1", "first observation", "second observation"),
+                                 #time_period = paste(toupper(substr(periodBasedOnSequence, 1, 1)), substr(periodBasedOnSequence, 2, nchar(periodBasedOnSequence)-1), sep=""),
+                                 time_period,
+                                 #time_period_half =  ifelse(substr(periodBasedOnSequence, nchar(periodBasedOnSequence), nchar(periodBasedOnSequence)) == "1", "first observation", "second observation"),
+                                 time_period_half,
                                  park_name = park_name_full,
                                  tar_area,
                                  sub_area,
@@ -2316,6 +2318,114 @@ print(target = paste0("./outputs/tables/rate_occupied/rate_occupied.docx"))
 
 Notes:
 
+## Activities
+
+### number of users per activity
+
+The number of users observed doing the activity in the park.
+
+```{r users doing an activity}
+#| output: true
+
+#construct an activity table from the non aggregated activity list to align record_ids
+DT <- merge(SOPARCActivitiesAllYears, SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name, tar_area, sub_area, dayNumberBasedOnSequence, period, periodBasedOnSequence,datePOSIX, day, month, weekend, studyDescription)], all.x = T, by.x = c("record_id_aggregated", "studyDescription"), by.y = c("record_id", "studyDescription"))
+
+#create target area level aggregation by adding together observations of poeple doing the same activity at the same sub-period in the same target area but different sub areas
+DT <- DT[, .(children = sum(children, na.rm = T), 
+             teen = sum(teen, na.rm = T), 
+             adult = sum(adult, na.rm = T), 
+             senior = sum(senior, na.rm = T)), by = .(park_name, dayNumberBasedOnSequence, tar_area, period, periodBasedOnSequence,activity, studyDescription )]
+
+#aggregate first and second half of each period such that people doing the same activity in the same target area are averaged rounding up
+DT <- DT[, .(children = ceiling(mean(children, na.rm = T)), 
+             teen = ceiling(mean(teen, na.rm = T)), 
+             adult = ceiling(mean(adult, na.rm = T)), 
+             senior = ceiling(mean(senior, na.rm = T))), by = .(park_name, dayNumberBasedOnSequence, tar_area, period, activity, studyDescription )]
+
+DT <- DT[,.("Users" = sum(children, teen, adult, senior)) , by = .("Park Name" = park_name, "Activity" = activity)]
+
+DT <- DT[order(`Park Name`, Activity),]
+
+
+WB$add_worksheet("Users per Activity")
+WB$add_data(sheet = "Users per Activity", DT)
+
+wsName <- "Users per Activity"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+}
+
+
+if(!SUPPRESS_TABLES) {
+  kbl(DT[`Park Name` == park,],
+      caption = "Number of Users Observed in Park Activities",
+      booktabs = TRUE,
+      longtable = TRUE) %>% 
+    kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+}
+
+
+#export charts for use
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2023/outputs/tables/num_user_activity/"))) {
+  unlink(here("./2023/outputs/tables/num_user_activity/"), recursive = T)
+}
+dir.create(here("./2023/outputs/tables/num_user_activity"), recursive = T)
+
+for(park in unique(SOPARCtoAggregate$park_name_full)) {
+  # KBObject <- kbl(DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)],
+  #     caption = "Rate of User Activy",
+  #     booktabs = TRUE,
+  #     longtable = TRUE) %>%
+  #   kable_styling(latex_options = c("striped", "repeat_header"))
+  # 
+  #   save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_user_activity/",park,"rate_user_activity.pdf")))
+  
+  FT <- DT[order(Users, decreasing = TRUE)][`Park Name` == park,.(Activity, Users)]%>% regulartable() %>% autofit()
+
+  read_docx() %>%
+  body_add_flextable(FT) %>%
+  print(target = paste0("./outputs/tables/num_user_activity/",park,"_num_user_activity.docx"))  
+
+}
+```
+
+Notes:
+
+-   user counts are subject to over and under counting due to how observations
+    were conducted and aggregated
+-   If an individual is observed doing a different activity in the second half
+    of a quarter than the first half, these will be counted as distincti
+    activities, and so not averaged. This can results in slightly higher counts
+    of people engaged in actities than the average user counts.
+
+# Closure and Next Steps
+
+## Data store
+
+Several files are generated by this script:
+
+<table here>
+
+The contents of this working directory (this script, the compiled pdf report,
+the inputs folder, and the outputs folder) should be copied to this project's
+[sharepoint
+folder](https://kc1.sharepoint.com/teams/DPH-APDEWork/ParkObservationStudies/Forms/AllItems.aspx?FolderCTID=0x01200039C93A022A0FBD439B0B5508DD896857&viewid=c041ba9d%2Da2f7%2D47fb%2Db678%2D27378c274f6e)
+
 ```{r save workbooks}
 #create project wide workbooks
 dir.create(here("./2024/outputs/tables/pivot_ready"), recursive = T, showWarnings = FALSE)
@@ -2323,27 +2433,6 @@ if(file.exists(here("2024/outputs/tables/pivot_ready/analysis_tables.xlsx"))){
   file.remove(here("2024/outputs/tables/pivot_ready/analysis_tables.xlsx"))
 }
 openxlsx2::wb_save(WB, file = "./outputs/tables/pivot_ready/analysis_tables.xlsx")
-
-#create park speciifc workbooks
-# dir.create(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/")), recursive = T, showWarnings = FALSE)
-# for (i in names(WBs)) {
-#   wb = WBs[[i]]
-#   
-#   if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))){
-#     file.remove(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))
-#   }
-#   #wb$save(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))
-#   openxlsx2::wb_save(wb, file = paste0("./outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx"))
-# }
-
-# dir.create(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/")), recursive = T, showWarnings = FALSE)
-# for (i in names(WBs)) {
-#   if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))){
-#     file.remove(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx")))
-#   } 
-#   
-#   openxlsx::saveWorkbook(WBs[[i]], paste0("./outputs/tables/pivot_ready/park_specific/",i,"analysis_tables.xlsx"), overwrite = T)
-# }
 
 
 
@@ -2353,8 +2442,6 @@ openxlsx2::wb_save(WB, file = "./outputs/tables/pivot_ready/analysis_tables.xlsx
 write.csv(merge(SOPARCActivities,SOPARCtoAggregate[,.(park_name, record_id, period, tar_area, datePOSIX)], by.x = "record_id_aggregated", by.y = "record_id"), here("2024/outputs/data-metadata/SOPARCActivitiesExpanded.csv"), row.names = FALSE)
  
 ```
-
-# Closure and Next Steps
 
 ## REDCap maintanence
 
