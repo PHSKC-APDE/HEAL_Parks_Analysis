@@ -1539,13 +1539,15 @@ SOPARCtoAggregate <- merge(SOPARCtoAggregate, ParksStudyRecord[,.("study_count" 
 SOPARCAggregated <- merge(SOPARCAggregated, ParksStudyRecord[,.("study_count" = .N) , by = parkName], by.x = "park_name", by.y = "parkName", all.x = T)
 
 #save results
-write.csv(SOPARCtoAggregate, here("2024/outputs/data-metadata/SOPARCAnalysisSet.csv"), row.names = FALSE)
-write.csv(SOPARCAggregated, here("2024/outputs/data-metadata/SOPARCAnalysisSetAggregatedPeriods.csv"), row.names = FALSE)
+write.csv(SOPARCtoAggregate, here("2024/outputs/data-metadata/SOPARCAnalysisSetAllYears.csv"), row.names = FALSE)
+write.csv(SOPARCAggregated, here("2024/outputs/data-metadata/SOPARCAnalysisSetAggregatedPeriodsAllYears.csv"), row.names = FALSE)
+
+write.csv(SOPARCActivitiesAllYears, here("2024/outputs/data-metadata/SOPARCActivitiesAllYears.csv"), row.names = FALSE)
 
 
-#would like to save as xlsx, but NAn ot handled gracefully
-#write_xlsx(SOPARCtoAggregate, here("2023/outputs/data-metadata/SOPARCAnalysisSet.xlsx"), row.names = FALSE, showNA = FALSE)
-#write_xlsx(SOPARCAggregated, here("2023/outputs/data-metadata/SOPARCAnalysisSetAggregatedPeriods.xlsx"), row.names = FALSE)
+write.csv(merge(SOPARCActivitiesAllYears,SOPARCtoAggregate[,.(park_name, record_id, period, tar_area, datePOSIX)], by.x = "record_id_aggregated", by.y = "record_id"), here("2024/outputs/data-metadata/SOPARCActivitiesAllYearsExpanded.csv"), row.names = FALSE)
+ 
+
 
 ```
 
@@ -2513,11 +2515,11 @@ particular activity.
 #| output: true
 
 #construct an activity table from the activity list
-DT <- merge(SOPARCActivities[,.(record_id_aggregated,activity)], SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name_full, periodBasedOnSequence,dayNumberBasedOnSequence)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
+DT <- merge(SOPARCActivities[,.(record_id_aggregated,activity)], SOPARCtoAggregate[record_id != "X",.("record_id" = as.numeric(record_id), park_name, periodBasedOnSequence,dayNumberBasedOnSequence, studyDescription, study_count)], all.x = T, by.x = "record_id_aggregated", by.y = "record_id")
 
-DT <- DT[,.N, by = .(park_name_full,activity,periodBasedOnSequence,dayNumberBasedOnSequence)]
+DT <- DT[,.N, by = .(park_name,activity,periodBasedOnSequence,dayNumberBasedOnSequence, studyDescription, study_count)]
 
-DT <- DT[order(park_name_full, activity), .("Rate" = .N/24), by = .("Park Name" = park_name_full, "Activity" = activity)]
+DT <- DT[order(park_name, activity), .("Rate" = .N/ (24 * unique(study_count))), by = .("Park Name" = park_name, "Activity" = activity)]
 
 WB$add_worksheet("Rate Activity Observed")
 WB$add_data(sheet = "Rate Activity Observed", DT)
@@ -2525,8 +2527,8 @@ WB$add_data(sheet = "Rate Activity Observed", DT)
 wsName <- "Rate Activity Observed"
 
 for(i in unique(DT$`Park Name`)) {
-  if(file.exists(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
-    wb <- openxlsx2::wb_load(here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+  if(file.exists(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
     if(wsName %in% wb$sheet_names){
       wb$remove_worksheet(wsName)
     }
@@ -2537,7 +2539,7 @@ for(i in unique(DT$`Park Name`)) {
   }
   wb$add_worksheet(wsName)
   wb$add_data(sheet = wsName, DT[`Park Name` == i,])
-  openxlsx2::wb_save(wb, file = here(paste0("./2023/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+  openxlsx2::wb_save(wb, file = here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
 }
 
 
@@ -2545,20 +2547,13 @@ for(i in unique(DT$`Park Name`)) {
 #export charts for use
 #save charts as individual files
 #cleanup old images of this chart
-if(file.exists(here("./2023/outputs/tables/rate_activity_observed/"))) {
-  unlink(here("./2023/outputs/tables/rate_activity_observed/"), recursive = T)
+if(file.exists(here("./2024/outputs/tables/rate_activity_observed/"))) {
+  unlink(here("./2024/outputs/tables/rate_activity_observed/"), recursive = T)
 }
-dir.create(here("./2023/outputs/tables/rate_activity_observed"), recursive = T)
+dir.create(here("./2024/outputs/tables/rate_activity_observed"), recursive = T)
 
-for(park in unique(SOPARCtoAggregate$park_name_full)) {
-  # KBObject <- kbl(DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)],
-  #     caption = "Rate of User Activy",
-  #     booktabs = TRUE,
-  #     longtable = TRUE) %>%
-  #   kable_styling(latex_options = c("striped", "repeat_header"))
-  # 
-  #   save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_user_activity/",park,"rate_user_activity.pdf")))
-  
+for(park in unique(SOPARCtoAggregate$park_name)) {
+
   FT <- DT[order(Rate, decreasing = TRUE)][`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100, 2), "%"))]%>% regulartable() %>% autofit()
 
   read_docx() %>%
@@ -2576,6 +2571,83 @@ Notes:
     E..g "walking" may be observed in all 24 periods, and so have an observation
     rate of 100%, and "sitting" may be observed in 6 periods and so have a rate
     of 25%.
+
+## Spatial analysees
+
+### ratio of use to half-mile catchment area
+
+The ratio of how many users were observed per day on average relative to how
+many people live within 0.5 miles of the park.
+
+This is provided per 1,000 residents to improve readability.
+
+```{r ratio of use to catchment}
+#| output: true
+#calculate average users
+DT <- SOPARCAggregated[order(park_name),.("Users" = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)/(3* study_count )), by = .("Park Name" = park_name)]
+
+#attac
+DT <- merge(DT, ParkPopulationTable, by.x =  "Park Name", by.y = "parkNameFull")
+
+DT <- DT[order(`Park Name`), .("Ratio" = Users / populationHalfMile, "Population in Half Mile" = populationHalfMile, Users), by = `Park Name`][, .("Ratio Per 1000" = Ratio *1000,"Average Daily Users" = Users, `Population in Half Mile`), by = "Park Name"]
+
+
+
+WB$add_worksheet("Ratio Use Catchment")
+WB$add_data(sheet = "Ratio Use Catchment", DT)
+
+wsName <- "Ratio Use catchment"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+}
+
+#export charts for use
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2024/outputs/tables/ratio_use_catch/"))) {
+  unlink(here("./2024/outputs/tables/ratio_use_catch/"), recursive = T)
+}
+dir.create(here("./2024/outputs/tables/ratio_use_catch"), recursive = T)
+  write.csv(DT, here("2024/outputs/tables/ratio_use_catch/ratio_use_catch.csv"), row.names = FALSE)
+
+  # KBObject <- kbl(DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)],
+  #     caption = "Rate of User Activy",
+  #     booktabs = TRUE,
+  #     longtable = TRUE) %>%
+  #   kable_styling(latex_options = c("striped", "repeat_header"))
+  # 
+  #   save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_user_activity/",park,"rate_user_activity.pdf")))
+  
+  FT <- DT[, .(`Park Name`, "Ratio Per 1000" = round(`Ratio Per 1000`,2),"Average Daily Users" = round(`Average Daily Users`,0), "Population in Half Mile" = round(`Population in Half Mile`,0))] %>% regulartable() %>% autofit()
+
+  read_docx() %>%
+  body_add_flextable(FT) %>%
+  print(target = paste0("./outputs/tables/ratio_use_catch/ratio_use_catch.docx"))
+
+
+
+```
+
+Notes:
+
+-   The ratios are calculated on non-rounded data, and then rounded. The average
+    number of users and populations provided in the formatted word document are
+    rounded. This causes a rounding error where you wouldn't get the exact ratio
+    if you were to divide these users and populations. For accurate results use
+    the numbers provided in the pivot ready tables.
 
 # Closure and Next Steps
 
@@ -2600,11 +2672,6 @@ openxlsx2::wb_save(WB, file = "./outputs/tables/pivot_ready/analysis_tables.xlsx
 
 
 
-```
-
-```{r save expanded activity table}
-write.csv(merge(SOPARCActivities,SOPARCtoAggregate[,.(park_name, record_id, period, tar_area, datePOSIX)], by.x = "record_id_aggregated", by.y = "record_id"), here("2024/outputs/data-metadata/SOPARCActivitiesExpanded.csv"), row.names = FALSE)
- 
 ```
 
 ## REDCap maintanence
