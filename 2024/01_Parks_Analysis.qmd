@@ -37,9 +37,10 @@ editor:
 
 ## Data quality
 
-The list of included parks are for all data (2022-24) which pass QA after
-available corrections are applied. For any missing parks, further corrections
-are necessary (see email from last week).
+There are errant names in the activities list because of data entry
+inconsistencies in 2022. Some may involve reclassifying entries, for example,
+they would be "other" or fit in a pre identified category, and so look different
+in the observations table. Others are impossible to reclassify, such as "1".
 
 ## Analyses
 
@@ -1332,10 +1333,7 @@ The following parks (if any) are missing from the Parks Master sheet:
 
 The following parks (if any) are missing Longitute and/or Latitute:
 
-`r oarjsMissingLongLat`
-
-Importantly, longtitude and latitude are needed to calculate populations
-`r parksMissingMetadata`
+`r parksMissingLongLat`
 
 ## Add population within half-mile radius to metadata
 
@@ -1606,19 +1604,14 @@ use per target area" and represents a target area being used by a person within
 the observation period. This explanation accounts for people being counted
 multiple times by crossing target areas during the observation period.
 
-### Number of park users
+### number of park users
 
-The total number of users observed in the park across all available data (All
-years).
+The total number of users observed for a given park across all available data.
 
 ```{r number of users}
 #| output: true
 
-# kbl(SOPARCtoAggregate[order(park_name),.("Number of Attendees" = sum(num_child_prim, num_child_snd, num_child_spec, num_teen_prim, num_teen_snd, num_teen_spec, num_adult_prim, num_adult_snd, num_adult_spec, num_senior_prim, num_senior_snd, num_senior_spec, na.rm = TRUE)), by = .("Park Name" = park_name)], 
-#       caption =  "Total Number of Attendees",
-#     booktabs = T) %>% kable_styling(latex_options = "striped")
 DT <- SOPARCAggregated[order(park_name),.("Users" = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .("Park Name" = park_name)]
-
 
 
 WB$add_worksheet("User Counts")
@@ -1641,6 +1634,21 @@ for(i in unique(DT$`Park Name`)) {
   openxlsx2::wb_save(wb, file = here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
 }
 
+#this is a bit wonky, as worksheets get created across all workbooks in the list. So we create these outside of the loop, calling a member of the list arbitrarily
+#pulled from 2023, might not be appropriate at all
+# openxlsx::addWorksheet(WBs[[1]], sheetName = "User Counts")
+# for (i in names(WBs)) {
+#   openxlsx::writeData(wb = WBs[[i]], sheet = "User Counts",DT[`Park Name` == i,])
+# }
+# openxlsx::writeData(WBs$`White Center Heights Park`,sheet = "User Counts", DT[`Park Name` == i,])
+# 
+# if(!SUPPRESS_TABLES){
+#   kbl(DT, 
+#         caption =  "Total Number of Users",
+#       booktabs = TRUE,
+#       longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+# }
+
 #cleanup old images of this chart
 if(file.exists(here("./2024/outputs/tables/num_users/"))) {
   unlink(here("./2024/outputs/tables/num_users/"), recursive = T)
@@ -1660,70 +1668,13 @@ Notes:
 
 -   Due to the study design, user counts are subject to both over and under
     counting
--   Does not account for number of studies or days of park observation.
+-   Does not adjust for number of studies or days of park observation. Therefore
+    more heavily studied parks will tend towards higher counts.
 
-### Number of daily park users
+### daily average number of park users
 
-The total number of users observed in the park per day across all available data
-
-```{r number of daily users}
-#| output: true
-
-DT <- SOPARCAggregated[order(park_name),.("Users" = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .("Park Name" = park_name, datePOSIX)]
-
-
-WB$add_worksheet("Daily User Counts")
-WB$add_data(sheet = "Daily User Counts", DT)
-
-
-wsName <- "Daily User Counts"
-
-for(i in unique(DT$`Park Name`)) {
-  if(file.exists(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
-    wb <- openxlsx2::wb_load(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-    if(wsName %in% wb$sheet_names){
-      wb$remove_worksheet(wsName)
-    }
-    
-    
-  } else {
-    wb <- openxlsx2::wb_workbook()
-  }
-  wb$add_worksheet(wsName)
-  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
-  openxlsx2::wb_save(wb, file = here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-}
-
-
-if(!SUPPRESS_TABLES){
-  kbl(DT, 
-        caption =  "Daily User Counts",
-      booktabs = TRUE,
-      longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
-}
-
-
-
-#export charts for use
-#save charts as individual files
-#cleanup old images of this chart
-if(file.exists(here("./2024/outputs/tables/daily_users/"))) {
-  unlink(here("./2024/outputs/tables/daily_users/"), recursive = T)
-}
-dir.create(here("./2024/outputs/tables/daily_users"), recursive = T)
-write.csv(DT, here("2024/outputs/tables/daily_users/daily_users.csv"), row.names = FALSE)
-FT <- DT[, .(`Park Name`,"Users" = round(Users,0))] %>% regulartable() %>% autofit()
-
-read_docx() %>%
-body_add_flextable(FT) %>%
-print(target = paste0("./outputs/tables/daily_users/daily_users.docx"))  
-
-
-```
-
-### Daily average number of park users
-
-The total number of users observed in the park per day across all available data
+The average number of users observed in the park per day across all available
+data.
 
 ```{r average number of daily users}
 #| output: true
@@ -1766,28 +1717,28 @@ if(!SUPPRESS_TABLES){
 #export charts for use
 #save charts as individual files
 #cleanup old images of this chart
-if(file.exists(here("./2024/outputs/tables/daily_user_avg/"))) {
-  unlink(here("./2024/outputs/tables/daily_user_avg/"), recursive = T)
+if(file.exists(here("./2024/outputs/tables/avg_user/"))) {
+  unlink(here("./2024/outputs/tables/avg_user/"), recursive = T)
 }
-dir.create(here("./2024/outputs/tables/daily_user_avg"), recursive = T)
-write.csv(DT, here("2024/outputs/tables/daily_user_avg/daily_user_avg.csv"), row.names = FALSE)
+dir.create(here("./2024/outputs/tables/avg_user"), recursive = T)
+write.csv(DT, here("2024/outputs/tables/avg_user/avg_user.csv"), row.names = FALSE)
 FT <- DT[, .(`Park Name`,"Users" = round(Users,0))] %>% regulartable() %>% autofit()
 
 read_docx() %>%
 body_add_flextable(FT) %>%
-print(target = paste0("./outputs/tables/daily_user_avg/daily_user_avg.docx"))  
+print(target = paste0("./outputs/tables/avg_user/avg_user.docx"))  
 
 
 ```
 
-### Daily average number of park users by time period
+### daily average number of park users by time period
 
 The daily average number of users within each time period.
 
 For each park:
 
 $$
-\text{(Average Park Users By Period)} = \frac{\sum_{d=1}^{3}{(\text{People}_p)_d}}{3}
+\text{(Average Park Users By Period)} = \frac{\sum_{d=1}^{3}{(\text{People}_p)_d}}{3 * \text{(number of times park studied)}}
 $$
 
 where $_d$ is the day of study and $(\text{People}_p)$ are the sum of number of
@@ -1795,7 +1746,8 @@ people observed in a time period of a given day.
 
 The people within a given time period and day is defined as the average (rounded
 up) of people observed in a time period of a given day and target area $_t$,
-summed across across all target areas.
+summed across across all target areas. This is precalculated in the
+SOPARCAggregated table.
 
 $$
 \text{People}_p = \sum_{t=1}^{n}{\left( \lceil\frac{\text{(people observed first half of period)}+\text{(people observed second half of period)}}{2}\rceil\right) _t}
@@ -1911,7 +1863,7 @@ Notes:
         they would be counted each time. With 10 target areas, this would be 20
         people observed.
 
-### Rate of Average Daily Park Use by Time Period
+### rate of daily average park use by time period
 
 The proportion of the total users observed within each time period.
 
@@ -1926,7 +1878,8 @@ people observed in a time period of a given day.
 
 The people within a given time period and day is defined as the average (rounded
 up) of people observed in a time period of a given day and target area $_t$,
-summed across across all target areas.
+summed across across all target areas. This is precalculated in the
+SOPARCAggregated table.
 
 $$
 \text{People}_p = \sum_{t=1}^{n}{\left( \lceil\frac{\text{(people observed first half of period)}+\text{(people observed second half of period)}}{2}\rceil\right) _t}
@@ -1935,7 +1888,7 @@ $$
 The total number of people in a day, $\text{People}_d$, is defined as the sum of
 all $\text{People}_p$ within a day.
 
-```{r rate of average daily park use by period, fig.cap="Rate Of Average Daily Park Use By Period"}
+```{r rate of daily average park use by period, fig.cap="Rate Of Daily Average Park Use By Period"}
 #| output: true
 
 DT <- SOPARCAggregated[order(park_name), sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE) / unique(3 * study_count), by = .(park_name, period)][,.("Time Period" = period, "Rate of Use" = (V1/ sum(V1))), by = .("Park Name" = park_name) ]
@@ -2023,14 +1976,14 @@ Notes:
     randomly distributed across all time periods, the less true this is.
 -   Rate is within-park (each park totals to 100%)
 
-### average number of daily park users by age
+### daily average number of park users by age
 
 The daily average number of users observed in each age group.
 
 Computationally this measure is similar to the average users by time period
 above.
 
-```{r average park users by age, fig.cap="Average Park Users By Age"}
+```{r daily average park users by age, fig.cap="Average Park Users By Age"}
 #| output: true
 
 DT <- SOPARCAggregated[order(park_name), .( "Age Group" = rep(c("child","teen","adult","senior")), 
@@ -2158,7 +2111,7 @@ Notes:
 -   "Teens" were not a category in 2022, meaning all apparant minors are
     classified as "child". Teens may be underweighted for affected parks.
 
-### rate of park use by age
+### rate of daily average park use by age
 
 The proportion of the total users observed within each age group.
 
@@ -2402,12 +2355,12 @@ for(park in unique(SOPARCtoAggregate$park_name)) {
 Notes:
 
 -   Note, includes ALL years. Due to the varying number of times a park has been
-    observed, this statistic has decreased
+    observed and is not adjusted for how many times a park has been observed
 -   user counts are subject to over and under counting due to how observations
     were conducted and aggregated
 -   If an individual is observed doing a different activity in the second half
     of a quarter than the first half, these will be counted as distinct
-    activities, and so not averaged. This can results in slightly higher counts
+    activities, and so not averaged. This can result in slightly higher counts
     of people engaged in activities than the average user counts.
 
 ### rate of user activity
@@ -2507,9 +2460,9 @@ Notes:
 The percentage of observations where at least one user was observed doing the
 activity in the park.
 
-For each park, the total the number of periods the activity was observed is
-divided by 24, the total number of observations periods possible for any
-particular activity.
+For each park, the total number of periods the activity was observed is divided
+by 24 \* (the number of times studied), which is the total number of
+observations periods possible for any particular activity.
 
 ```{r Rate of Activity Observed}
 #| output: true
@@ -2565,12 +2518,11 @@ for(park in unique(SOPARCtoAggregate$park_name)) {
 
 Notes:
 
--   Unlike many of the other measures provided, these rates are mostly
-    independent of each other and do not have an additive meaning. This is
-    because multiple activities may be observed in a single observation period.
-    E..g "walking" may be observed in all 24 periods, and so have an observation
-    rate of 100%, and "sitting" may be observed in 6 periods and so have a rate
-    of 25%.
+-   These rates are mostly independent of each other and do not have an additive
+    meaning. This is because multiple activities may be observed in a single
+    observation period. E.g. "walking" may be observed in all 24 periods, and so
+    have an observation rate of 100%, and "sitting" may be observed in 6 periods
+    and so have a rate of 25%.
 
 ## Spatial analysees
 
@@ -2584,7 +2536,7 @@ This is provided per 1,000 residents to improve readability.
 ```{r ratio of use to catchment}
 #| output: true
 #calculate average users
-DT <- SOPARCAggregated[order(park_name),.("Users" = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)/(3* study_count )), by = .("Park Name" = park_name)]
+DT <- SOPARCAggregated[order(park_name),.("Users" = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)/(3* unique(study_count) )), by = .("Park Name" = park_name)]
 
 #attac
 DT <- merge(DT, ParkPopulationTable, by.x =  "Park Name", by.y = "parkNameFull")
@@ -2651,11 +2603,24 @@ Notes:
 
 # Closure and Next Steps
 
-## Data store
+## Data management
 
-Several files are generated by this script:
+Files in the provided data-metadata directory should be retained. These include
+QA information, updated metadata, and observational data at different stages of
+data preperation.
 
-<table here>
+Most critical is the maintenance of the version of the data used for the above
+analysis. Over the years, these would be the ones expected for use in further
+analytic work and for comparing year-over-year results.
+
+The analysis-ready files include:
+
+-   SOPARCAnalysisSetAllYears.csv (fully cleaned park observation)
+-   SOPARCAnalysisSetAggregatedPeriodsAllYears.csv (analysis set with
+    observations aggregated by period, the level of analysis most commonly used)
+-   SOPARCActivities.csv & SOPARCActivitiesExpanded.csv (all activity data at
+    the individual record level. The expanded version includes some park
+    information already attached for human readability)
 
 The contents of this working directory (this script, the compiled pdf report,
 the inputs folder, and the outputs folder) should be copied to this project's
@@ -2674,62 +2639,46 @@ openxlsx2::wb_save(WB, file = "./outputs/tables/pivot_ready/analysis_tables.xlsx
 
 ```
 
+### Error identification and QA Work
+
+-   Fix in-report print of results to just show 1-3 as a sample
+    -   fix broken results prints
+-   The sub area aggregation code was not updated this year because no sub areas
+    were observed.
+-   
+
 ## REDCap maintanence
 
-Project has been in "development" status throughout the study period. It has now
-been moved into "analysis/cleanup". It is recommended to keep it in this stage
-until finished with any future studies and analyses in this line of work, e.g.
-if planing to use the data from this study in the future, it is good to keep
-this REDCap project in analysis mode for review. There is an additional
-"completed" status, which should generally only be used when completely finished
-with the body of work. This status makes the project largely inaccessible.
-Notably, changing the project to "complete" status would also break this script
-(or require it to be fed a different data source rather than pulling from the
-REDCap API.)
-
-As currently envisioned, these data are part of a longitudinal study, and so
-this and future REDCap projects would ideally remain accessible.
+Following closure of data collection the REDCap project should be moved into
+"analysis/cleanup". It is recommended to keep it in this stage until finished
+with any future studies and analyses in this line of work, e.g. if planing to
+use the data from this study in the future, it is good to keep this REDCap
+project in analysis mode for review. There is an additional "completed" status,
+which should generally only be used when completely finished with the body of
+work. This status makes the project largely inaccessible. Notably, changing the
+project to "complete" status would also break this script (or require it to be
+fed a different data source rather than pulling from the REDCap API.)
 
 I recommend conducting future data collection efforts in their own REDCap
 projects, naming them similarly, such as "Public Health - Seattle & King County
-Park Observations: title_of_study"
-
-The project used for this analysis has been renamed to: Public Health - Seattle
-& King County Park Observations: 2023 Annual Study
+Park Observations: title_of_study" The project used for this analysis has been
+renamed to: Public Health - Seattle & King County Park Observations: 2024 Annual
+Study
 
 ### recommended changes to future surveys instruments
 
--   variable for capturing other primary activities is inconsistent to secondary
-    and special ones
--   modify instrument to have observers indicate the time of their data
-    collection
--   add a study name to data (hidden value)
--   include additional testing and possibly consultation with ITHS REDCap staff
+-   Include additional testing and possibly consultation with ITHS REDCap staff
     for issues with data upload from cell phones. This cause problems for
-    observers. It is unclear if this is a problem with the cell phone
-    application or due to the study being executed with the project in
-    "development" status.
-
-## Data management
-
-Files in the provided data-metadata directory should be retained. These include
-QA information, updated metadata, and observational data at different stages of
-data preperation.
-
-Most critical is the maintenance of the version of the data used for the above
-analysis. Over the years, these would be the ones expected for use in further
-analytic work and for comparing year-over-year results.
-
-The analysis-ready files include:
-
--   SOPARCAnalysisSet.csv (fully cleaned park observation)
--   SOPARCAnalysisSetAggregatedPeriods.csv (analysis set with observations
-    aggregated by period, the level of analysis most commonly used)
--   SOPARCActivities.csv & SOPARCActivitiesExpanded.csv (all activity data at
-    the individual record level. The expanded version includes some park
-    information already attached for human readability)
+    observers.
 
 ## Documentation
+
+Documentation for this project is available in [git
+hub](https://github.com/PHSKC-APDE/HEAL_Parks_Analysis) and in the [project
+sharepoint
+library](https://kc1.sharepoint.com/teams/DPH-APDEWork/ParkObservationStudies/Forms/AllItems.aspx).
+
+### problem notes:
 
 -   Latex math chunks do not render correctly when the README.me is viewed on
     github
@@ -2737,15 +2686,3 @@ The analysis-ready files include:
     github
 -   Some package/visualization is preventing a non-html compilation of github
     markdown
-
-## Error identification and QA Work
-
-10/18 Seth identified that Chelsea Park has dramatically different numbers of
-users for the average users in activity compared to the average daily users. Why
-is this?
-
-This is due to two things. Primarily, there was an error in the code to extract
-the activity counts which resulted in some rows being dropped. This has been
-corrected. Second is an expected behavior. If people are performing a different
-activity in the second half of a period than the first, then those will be
-counted distinctly, instead of averaged together.
