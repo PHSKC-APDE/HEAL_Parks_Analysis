@@ -1250,6 +1250,8 @@ SOPARC2022Fixed[park_name == "Steel Lake Park",]$park_name <-  "Steel Lake Annex
 
 ```{r}
 SOPARCAnalysisSetAllYears <- rbind(SOPARCAnalysisSet, SOPARC2022Fixed, SOPARC2023Fixed)
+
+SOPARCAnalysisSetAllYears[, `:=`(prim_act_name = tolower(prim_act_name), snd_act_name = tolower(snd_act_name), tert_act_name = tolower(tert_act_name), quat_act_name = tolower(quat_act_name))]
 ```
 
 ## Import activities
@@ -1268,12 +1270,16 @@ names(SOPARCActivities2022)
 ```
 
 ```{r}
-SOPARCActivitiesAllYears <- rbind(SOPARCActivities, SOPARCActivities2022, SOPARCActivities2023[,.(record_id, record_id_aggregated, activity, children, teen, adult, senior, studyDescription)])
+SOPARCActivitiesAllYears <- rbind(SOPARCActivities[,.(record_id, record_id_aggregated, activity = tolower(activity), children, teen, adult, senior, studyDescription)], SOPARCActivities2022[,.(record_id, record_id_aggregated, activity = tolower(activity), children, teen, adult, senior, studyDescription)], SOPARCActivities2023[,.(record_id, record_id_aggregated, activity = tolower(activity), children, teen, adult, senior, studyDescription)])
 ```
 
-### Documentation of activities needing a crosswalk
+### Fixing activities
 
-Here is a list of valid activities:
+Several activities can be reclassified for more accurate analysis. This is a
+manual step, so information is provided below to assist.
+
+Here is a list of activities presented to observers. They may also enter "other"
+and type a custom entry.
 
 ```{r generate crosswalk candidates}
 
@@ -1304,12 +1310,116 @@ activities <- c("Baseball/softball",
                 "Other")
 ```
 
-Here are activities from 2022 & 2023 "other" categories:
+`r activities`
+
+This year we focused on fixing errors in 2022 activities to help them align to
+this list.
+
+We also identified one 2024 activity where the observer entered "other" but did
+not enter something into the box. this has been changed to "other".
+
+```{r implement corrections}
+
+#an activity with "1"
+SOPARCActivitiesAllYears <- SOPARCActivitiesAllYears[!(studyDescription == "2022 annual study round 1" & record_id == 131),] 
+SOPARCAnalysisSetAllYears[studyDescription == "2022 annual study round 1" & record_id == 131,`:=`(num_senior_prim = NA, prim_act_name = NA)]
+
+#NA
+SOPARCActivitiesAllYears[record_id == 9553 & studyDescription == "2024 annual study", activity := "other"]
+SOPARCAnalysisSetAllYears[record_id == 9553 & studyDescription == "2024 annual study", prim_act_other := "other"]
+
+activityRenamer <- function(activitytarget, poornames, study, DT) {
+  if("activity" %in% names(DT)) {
+    DT[activity %in% poornames, activity := activitytarget]
+    return(DT)
+  }
+  if("prim_act_name" %in% names(DT)) {
+    DT[studyDescription %in% study & prim_act_name %in% poornames, prim_act_name := activitytarget]
+    DT[studyDescription %in% study & snd_act_name %in% poornames, snd_act_name := activitytarget]
+    DT[studyDescription %in% study & tert_act_name %in% poornames, tert_act_name := activitytarget]
+    DT[studyDescription %in% study & quat_act_name %in% poornames, quat_act_name := activitytarget]
+    return(DT)
+  }
+  stop("missuse of function, check code")
+}
+
+#make this loop (how do you store a vector in a cell?)
+#corrections <- data.frame(act = tolower(activities), errors = "")
+
+studies <- c("2022 annual study round 1", "2022 annual study round 2")
+
+#fixing baseball/softball
+baseball <- c("baseball")
+SOPARCActivitiesAllYears <- activityRenamer("baseball/softball", baseball, studies, SOPARCActivitiesAllYears)
+SOPARCAnalysisSetAllYears <- activityRenamer("baseball/softball", baseball, studies, SOPARCAnalysisSetAllYears)
+
+#fix "bike riding"
+biking <- c("riding bike", "ride bike", "rding bike","bicycle","bicycling", "bikng")
+SOPARCActivitiesAllYears <- activityRenamer("bike riding", biking, studies, SOPARCActivitiesAllYears)
+SOPARCAnalysisSetAllYears <- activityRenamer("bike riding", biking, studies, SOPARCAnalysisSetAllYears)
+
+#fixing "Catch (any sport)"
+catch <- c("plyg catch", "playing catch")
+SOPARCActivitiesAllYears <- activityRenamer("catch (any sport)", catch, studies, SOPARCActivitiesAllYears)
+SOPARCAnalysisSetAllYears <- activityRenamer("catch (any sport)", catch, studies, SOPARCAnalysisSetAllYears)
+
+#fixing lying down
+lyingdown <- c("laying")
+
+#fixing running
+running <- c("runnng","runing")
+
+
+#fixing sitting
+sitting <- c("siting","ppl sitting" )
+SOPARCActivitiesAllYears <- activityRenamer("sitting", sitting, studies, SOPARCActivitiesAllYears)
+SOPARCAnalysisSetAllYears <- activityRenamer("sitting", sitting, studies, SOPARCAnalysisSetAllYears)
+
+
+#fix skating/skateboarding
+skating <- c("skateboard ")
+
+
+#fixing soccer
+soccer <- c("drills soccer")
+SOPARCActivitiesAllYears <- activityRenamer("soccer", soccer, studies, SOPARCActivitiesAllYears)
+SOPARCAnalysisSetAllYears <- activityRenamer("soccer", soccer, studies, SOPARCAnalysisSetAllYears)
+
+#fix standing
+standing <- c("standaing")
+SOPARCActivitiesAllYears <- activityRenamer("standing", standing, studies, SOPARCActivitiesAllYears)
+SOPARCAnalysisSetAllYears <- activityRenamer("standing", standing, studies, SOPARCAnalysisSetAllYears)
+
+
+#fix walking
+walking <- c("walkers", "walkling", "walking path", "walker", "wakling")
+SOPARCActivitiesAllYears <- activityRenamer("walking", walking, studies, SOPARCActivitiesAllYears)
+SOPARCAnalysisSetAllYears <- activityRenamer("walking", walking, studies, SOPARCAnalysisSetAllYears)
+
+
+
+
+
+
+```
+
+After making corrections, here are activities in our data that are not in the
+above list. Is this ok or are further adjustments needed?
 
 ```{r}
-print(unique(SOPARCActivities2023$activity)[!(tolower(unique(SOPARCActivities2023$activity)) %in% tolower(activities))])
 
-print(unique(SOPARCActivities2022$activity)[!(tolower(unique(SOPARCActivities2022$activity)) %in% tolower(activities))])
+#print(unique(SOPARCActivities2023$activity)[!(tolower(unique(SOPARCActivities2023$activity)) %in% tolower(activities))])
+
+#print(unique(SOPARCActivities2022$activity)[!(tolower(unique(SOPARCActivities2022$activity)) %in% tolower(activities))])
+
+
+print(unique(SOPARCActivitiesAllYears$activity)[!(unique(SOPARCActivitiesAllYears$activity) %in% activities)])
+
+```
+
+```{r return activities in activity table to capital}
+SOPARCActivitiesAllYears[, activity :=paste(toupper(substr(activity,1,1)), tolower(substr(activity, 2, nchar(activity))), sep = "") ]
+
 ```
 
 # Parks metadata
@@ -2670,6 +2780,10 @@ Study
 -   Include additional testing and possibly consultation with ITHS REDCap staff
     for issues with data upload from cell phones. This cause problems for
     observers.
+-   A participant was able to choose "other" activity but not enter something in
+    the other description. This shouldn't have been possible. Fix the instrument
+    validation to rpevent this. (2024 study, record_id 15651 in raw, 9553 in
+    prepared)
 
 ## Documentation
 
