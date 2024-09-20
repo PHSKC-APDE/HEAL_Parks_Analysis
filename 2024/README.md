@@ -61,9 +61,8 @@ Ronald Buie
     observations](#import-observations)
   - [<span class="toc-section-number">6.2</span> Import
     activities](#import-activities)
-    - [<span class="toc-section-number">6.2.1</span> Documentation of
-      activities needing a
-      crosswalk](#documentation-of-activities-needing-a-crosswalk)
+    - [<span class="toc-section-number">6.2.1</span> Fixing
+      activities](#fixing-activities)
 - [<span class="toc-section-number">7</span> Parks
   metadata](#parks-metadata)
   - [<span class="toc-section-number">7.1</span> Add population within
@@ -131,9 +130,11 @@ Ronald Buie
 
 ## Data quality
 
-The list of included parks are for all data (2022-24) which pass QA
-after available corrections are applied. For any missing parks, further
-corrections are necessary (see email from last week).
+There are errant names in the activities list because of data entry
+inconsistencies in 2022. Some may involve reclassifying entries, for
+example, they would be “other” or fit in a pre identified category, and
+so look different in the observations table. Others are impossible to
+reclassify, such as “1”.
 
 ## Analyses
 
@@ -344,11 +345,30 @@ opportunities for a park construction project.
 
 ## Import activities
 
-### Documentation of activities needing a crosswalk
+### Fixing activities
 
-Here is a list of valid activities:
+Several activities can be reclassified for more accurate analysis. This
+is a manual step, so information is provided below to assist.
 
-Here are activities from 2022 & 2023 “other” categories:
+Here is a list of activities presented to observers. They may also enter
+“other” and type a custom entry.
+
+Baseball/softball, Basketball, Bike Riding, Catch (any sport), Climbing,
+Dance/Aerobics (dance/step aerobics), Fitness stations, Football,
+Frisbee, Jumping (rope, hop scotch), Lacrosse, Lying down, Picnic (food
+involved), Playground activities, Running, Sitting,
+Skating/skateboarding, Soccer, Standing, Strength exercises (pull ups),
+Tag/chasing games, Tennis/racquetball, Volleyball, Walking, Other
+
+This year we focused on fixing errors in 2022 activities to help them
+align to this list.
+
+We also identified one 2024 activity where the observer entered “other”
+but did not enter something into the box. this has been changed to
+“other”.
+
+After making corrections, here are activities in our data that are not
+in the above list. Is this ok or are further adjustments needed?
 
 # Parks metadata
 
@@ -784,6 +804,10 @@ Park Observations: 2024 Annual Study
 - Include additional testing and possibly consultation with ITHS REDCap
   staff for issues with data upload from cell phones. This cause
   problems for observers.
+- A participant was able to choose “other” activity but not enter
+  something in the other description. This shouldn’t have been possible.
+  Fix the instrument validation to rpevent this. (2024 study, record_id
+  15651 in raw, 9553 in prepared)
 
 ## Documentation
 
