@@ -37,9 +37,14 @@ editor:
 
 -   Copy edit note: I have been trying to change the language from “target area”
     to “scan area”
+
+    ```         
+    Q: do you want to do this now?
+    ```
+
 -   ?create median analyses alongside the averages
--   add note(s) in results clarifying that analyses use all years of data
-    available
+
+    For median within period
 
 # Q's for Seth,
 
@@ -1724,6 +1729,10 @@ of people observed within an observation period (e.g. "morning1") and target
 area. It is possible that the same people may be observed across multiple blocks
 of time and multiple target areas.
 
+The below analyses include parks studied frome 2022 to present unless otherwise
+indicated. For these analyses all available data are used. This means that if
+the same park has been studied for multiple years, all years are included.
+
 Because of this user counts are more accurately understood as "person time of
 use per target area" and represents a target area being used by a person within
 the observation period. This explanation accounts for people being counted
@@ -1856,9 +1865,68 @@ print(target = paste0("./outputs/tables/avg_user/avg_user.docx"))
 
 ```
 
-### daily average number of park users by time period
+### daily median number of park users
 
-The daily average number of users within each time period.
+The median number of users observed in the park in a given day across all
+available data.
+
+```{r median number of daily users}
+#| output: true
+
+DT <- SOPARCAggregated[order(park_name),.("Users" = (sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE))), by = .("Park Name" = park_name, datePOSIX)][, .(Users = round(median(Users), 0)), by = "Park Name"]
+
+WB$add_worksheet("Daily User Median")
+WB$add_data(sheet = "Daily User Median", DT)
+
+
+wsName <- "Daily User Median"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+}
+
+
+if(!SUPPRESS_TABLES){
+  kbl(DT, 
+        caption =  "Daily User Median",
+      booktabs = TRUE,
+      longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+}
+
+
+
+#export charts for use
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2024/outputs/tables/med_user/"))) {
+  unlink(here("./2024/outputs/tables/med_user/"), recursive = T)
+}
+dir.create(here("./2024/outputs/tables/med_user"), recursive = T)
+write.csv(DT, here("2024/outputs/tables/med_user/med_user.csv"), row.names = FALSE)
+FT <- DT[, .(`Park Name`,"Users" = round(Users,0))] %>% regulartable() %>% autofit()
+
+read_docx() %>%
+body_add_flextable(FT) %>%
+print(target = paste0("./outputs/tables/med_user/med_user.docx"))  
+
+
+```
+
+### average number of park users by time period
+
+The average number of users within each time period.
 
 For each park:
 
@@ -1968,6 +2036,128 @@ for(park in unique(SOPARCAggregated$park_name)) {
 if(!SUPPRESS_TABLES){
   kbl(DT,
       caption = "Daily Average Number of Users Per Time Period",
+      booktabs = TRUE,
+      longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+}
+
+```
+
+Notes:
+
+-   User counts are more accurately understood as "person time of use per target
+    area"
+    -   "Person using target area during the observation"
+-   If taken strictly as "people using a park" then this may be an over or under
+    count
+    -   If in the first morning observation 2 people are observed, and the
+        second 3, this may be 3 unique people, or as many as 5, but we calculate
+        this as 2.5 and round up to 3.
+    -   If two people walk across all target areas during an observation period,
+        they would be counted each time. With 10 target areas, this would be 20
+        people observed.
+
+### median number of users within each time period
+
+The median people within a given time period and day is defined as the median
+number of people observed in a time period across all days of a given park.
+
+$$
+\text{(Median Park Users By Period)} = m({\sum_{d=1}^{3}{(\text{People}_p)_d}})
+$$
+
+where $_d$ is the day of study and $(\text{People}_p)$ are the sum of number of
+people observed in a time period of a given day.
+
+```{r median park users by period, fig.cap = "Median Park Users By Period"}
+#| output: true
+
+DT <- SOPARCAggregated[order(park_name),.("Users" = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .("Park Name" = park_name, "Time Period" = period, "Date" = datePOSIX)][, .(Users = round(median(Users),0)), by = c("Park Name", "Time Period")]
+
+
+DT$`Time Period` <- factor(DT$`Time Period`, level = c("Morning","Lunch","Afternoon","Evening"))
+
+WB$add_worksheet("Med Users x Period")
+WB$add_data(sheet = "Med Users x Period", DT)
+
+wsName <- "Med Users x Period"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+}
+
+
+if(!SUPPRESS_CHARTS) {
+PT <- ggplot(DT, (aes(x = `Time Period`, y = Users))) +
+  geom_col() +
+  facet_wrap(vars(DT$"Park Name"), scales = "free")
+  
+
+  print(PT)
+}
+
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2024/outputs/charts/med_users_x_period/"))) {
+  unlink(here("./2024/outputs/charts/med_users_x_period/"), recursive = T)
+}
+dir.create(here("./2024/outputs/charts/med_users_x_period"), recursive = T)
+
+for(park in unique(SOPARCAggregated$park_name)) {
+  if(max(DT[`Park Name` %in% park]$Users) < 11) {
+    topOfY <- 10
+  } else if(max(DT[`Park Name` %in% park]$Users) < 26){
+    topOfY <- 25
+  } else if(max(DT[`Park Name` %in% park]$Users) < 51){
+    topOfY <- 50
+  } else if(max(DT[`Park Name` %in% park]$Users) < 101){
+    topOfY <- 100
+  } else if(max(DT[`Park Name` %in% park]$Users) < 251){
+    topOfY <- 250
+  } else if(max(DT[`Park Name` %in% park]$Users) < 501){
+    topOfY <- 500
+  } else if(max(DT[`Park Name` %in% park]$Users) < 1001) {
+    topOfY <- 1000
+  } else {
+    topOfY <- max(DT[`Park Name` %in% park]$Users)
+  }
+  tooLow <- topOfY *.30
+  cityName <- first(SOPARCAggregated[park_name == park, City])
+  
+  PTExport <- ggplot(DT[`Park Name` %in% park], (aes(x = `Time Period`, y = `Users`))) +
+  geom_col()  +
+  #labs(title = paste0(park,"\n", cityName,"\n", "2024"), subtitle = paste("Median Users Per Period")) +
+  labs(title = paste0(park," ", cityName," ", "2024"), subtitle = paste("Median Users Per Period")) +
+  geom_label(aes(label = `Users`, colour = "#000000", vjust =  ifelse(`Users` > tooLow, 1.5, 0) )) +
+  scale_color_manual(values=c("#000000")) +
+  scale_y_continuous(limits=c(0,topOfY), breaks = integer_breaks()) +
+  theme(plot.title = element_text(size = 8),
+        plot.subtitle = element_text(size = 14,),
+        #axis.title.x = element_text(size = 12))
+        axis.title.x = element_blank(),
+        legend.position = "none")
+
+  ggsave(paste0(park,"_med_users_x_period.pdf"), plot = PTExport, path = paste0("./outputs/charts/med_users_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
+  ggsave(paste0(park,"_med_users_x_period.png"), plot = PTExport, path = paste0("./outputs/charts/med_users_x_period"),width = CHARTWIDTH, height = CHARTHEIGHT)
+  
+}
+
+
+
+if(!SUPPRESS_TABLES){
+  kbl(DT,
+      caption = "Media Number of Users Per Time Period",
       booktabs = TRUE,
       longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
 }
@@ -2235,6 +2425,141 @@ Notes:
         people observed.
 -   "Teens" were not a category in 2022, meaning all apparant minors are
     classified as "child". Teens may be underweighted for affected parks.
+
+### median number of park users by age
+
+The median number of users observed in each age group.
+
+Computationally this measure is similar to the median users by time period
+above.
+
+```{r median park users by age, fig.cap="Average Park Users By Age"}
+#| output: true
+
+DT <- SOPARCAggregated[order(park_name), .( "Age Group" = rep(c("child","teen","adult","senior")), 
+                                           "Users" = c(sum(num_child_prim, 
+                                                                num_child_snd,
+                                                                num_child_tert,
+                                                                num_child_quat,
+                                                                na.rm = TRUE),
+                                                            sum(num_teen_prim, 
+                                                                num_teen_snd, 
+                                                                num_teen_tert,
+                                                                num_teen_quat,
+                                                                na.rm = TRUE),
+                                                            sum(num_adult_prim, 
+                                                                num_adult_snd, 
+                                                                num_adult_tert,
+                                                                num_adult_quat,
+                                                                na.rm = TRUE),
+                                                            sum(num_senior_prim, 
+                                                                num_senior_snd, 
+                                                                num_senior_tert,
+                                                                num_senior_quat,
+                                                                na.rm = TRUE))), 
+                       by = .("Park Name" = park_name, datePOSIX)][,.(Users = round(median(Users),0)), by = c("Park Name", "Age Group")]
+
+DT$`Age Group` <- factor(DT$`Age Group`, level = c("child", "teen", "adult", "senior"))
+
+WB$add_worksheet("Med Users x Age")
+WB$add_data(sheet = "Med Users x Age", DT)
+
+wsName <- "Med Users x Age"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+}
+
+
+if(!SUPPRESS_CHARTS) {
+  PT <- ggplot(DT, (aes(x = `Age Group`, y = `Users`))) +
+    geom_col() +
+    facet_wrap(vars(`Park Name`), scales = "free") +
+     theme(axis.text.x = element_text(angle = 0, vjust = 0, hjust=0))
+    
+  print(PT)
+}
+
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2024/outputs/charts/med_users_x_age/"))) {
+  unlink(here("./2024/outputs/charts/med_users_x_age/"), recursive = T)
+}
+dir.create(here("./2024/outputs/charts/med_users_x_age"), recursive = T)
+
+for(park in unique(SOPARCAggregated$park_name)) {
+  if(max(DT[`Park Name` %in% park]$Users) < 11) {
+    topOfY <- 10
+  } else if(max(DT[`Park Name` %in% park]$Users) < 26){
+    topOfY <- 25
+  } else if(max(DT[`Park Name` %in% park]$Users) < 51){
+    topOfY <- 50
+  } else if(max(DT[`Park Name` %in% park]$Users) < 101){
+    topOfY <- 100
+  } else if(max(DT[`Park Name` %in% park]$Users) < 251){
+    topOfY <- 250
+  } else if(max(DT[`Park Name` %in% park]$Users) < 501){
+    topOfY <- 500
+  } else if(max(DT[`Park Name` %in% park]$Users) < 1001) {
+    topOfY <- 1000
+  } else {
+    topOfY <- max(DT[`Park Name` %in% park]$Users)
+  }
+  tooLow <- topOfY *.30
+  cityName <- first(SOPARCAggregated[park_name == park, City])
+  
+  PTExport <- ggplot(DT[`Park Name` %in% park,], (aes(x = `Age Group`, y = `Users`))) +
+  geom_col()  +
+  labs(title = paste0(park," ", cityName," ", "2024"), subtitle = paste("Median Users Per Age")) +
+  geom_label(aes(label = `Users`, colour = "#000000", vjust =  ifelse(`Users` > tooLow, 1.5, 0))) +
+  scale_color_manual(values=c("#000000")) +
+  scale_y_continuous(limits=c(0,topOfY), breaks = integer_breaks()) +
+  theme(plot.title = element_text(size = 8),
+        plot.subtitle = element_text(size = 14,),
+        #axis.title.x = element_text(size = 12))
+        axis.title.x = element_blank(),
+        legend.position = "none")
+
+  ggsave(paste0(park,"_med_users_x_age.pdf"), plot = PTExport, path = paste0("./outputs/charts/med_users_x_age"),width = CHARTWIDTH, height = CHARTHEIGHT)
+  ggsave(paste0(park,"_med_users_x_age.png"), plot = PTExport, path = paste0("./outputs/charts/med_users_x_age"),width = CHARTWIDTH, height = CHARTHEIGHT)
+}
+
+if(!SUPPRESS_TABLES){
+  kbl(DT,
+    caption = "Median Number of Users Per Age Group",
+    booktabs = TRUE,
+    longtable = TRUE) %>% kable_styling(latex_options = c("striped", "repeat_header", "hold_position"))
+
+}
+
+```
+
+Notes:
+
+-   User counts are more accurately understood as "person time of use per target
+    area"
+-   If taken strictly as "people using a park" then this may be an over or under
+    count
+    -   If in the first morning observation 2 people are observed, and the
+        second 3, this may be 3 unique people, or as many as 5, but we calculate
+        this as 2.5 and round up to 3.
+    -   If two people walk across all target areas during an observation period,
+        they would be counted each time. With 10 target areas, this would be 20
+        people observed.
+-   "Teens" were not a category in 2022, meaning all apparent minors are
+    classified as "child". Teens may be under weighted for affected parks.
 
 ### rate of daily average park use by age
 
