@@ -38,13 +38,11 @@ editor:
 -   Copy edit note: I have been trying to change the language from “target area”
     to “scan area”
 
-    ```         
     Q: do you want to do this now?
-    ```
 
--   ?create median analyses alongside the averages
+-   Create median analyses alongside the averages
 
-    For median within period
+    mid process. Median not yet created for activity counts
 
 # Q's for Seth,
 
@@ -99,6 +97,7 @@ Inputs to this script are contained at ./inputs/*.* and include
 dir.create("./outputs/charts", recursive = TRUE, showWarnings = FALSE)
 dir.create("./outputs/tables", recursive = TRUE, showWarnings = FALSE)
 dir.create("./outputs/data-metadata", recursive = TRUE, showWarnings = FALSE)
+dir.create("./outputs/QA", recursive = TRUE, showWarnings = FALSE)
 ```
 
 ## This is a quarto generated document
@@ -509,8 +508,8 @@ Additional data corrections based on sanity checks.
 SOPARCObservations <- copy(RawSOPARCObservations)
 
 #report non Complete observations
-write.csv(RawSOPARCObservations,file = here(OUPUTS_LOCALE,"./all_data.csv"))
-write.csv(RawSOPARCObservations[park_scan_data_collection_complete != "Complete",] ,file = here(OUPUTS_LOCALE,"./incomplete_data.csv"))
+write.csv(RawSOPARCObservations,file = here(OUPUTS_LOCALE,"./QA/all_data.csv"))
+write.csv(RawSOPARCObservations[park_scan_data_collection_complete != "Complete",] ,file = here(OUPUTS_LOCALE,"./QA/incomplete_data.csv"))
 
 #test if any observations are missing park name
 #drop observations with missing park names, we cannot use these
@@ -594,7 +593,7 @@ SOPARCActivities <- data.table()
   }
   SOPARCActivities$studyDescription <- "2024 annual study"
   write.csv(SOPARCActivities, here("2024/inputs/generated/SOPARCActivities.csv"), row.names = FALSE)
-  write.csv(SOPARCActivities, here("2024/outputs/data-metadata/SOPARCActivities.csv"), row.names = FALSE)
+  #write.csv(SOPARCActivities, here("2024/outputs/data-metadata/SOPARCActivities.csv"), row.names = FALSE)
 } else {
   SOPARCActivities <-  fread(here("2024/inputs/generated/SOPARCActivities.csv"))
 }
@@ -722,13 +721,13 @@ SOPARCObservations <- rbind(SOPARCObservations[sub_area == "",], SOPARCCollapsed
 #save newly updated activity table
 
 
-write.csv(SOPARCActivities, here("2024/outputs/data-metadata/Park Activities.csv"), row.names = F)
+#write.csv(SOPARCActivities, here("2024/outputs/data-metadata/Park Activities.csv"), row.names = F)
 
 
 ```
 
 ```{r save pre QA observations}
-write.csv(SOPARCObservations,here("2024/outputs/data-metadata/PrepForQASOPARCObservations.csv"), row.names = FALSE)
+#write.csv(SOPARCObservations,here("2024/outputs/data-metadata/PrepForQASOPARCObservations.csv"), row.names = FALSE)
 
 ```
 
@@ -783,13 +782,13 @@ parkStats[, passQA := ifelse(meetsExpected &
                                numberDaysUnder == 0, TRUE, FALSE)]
 
 #save QA results to file for review
-write.csv(parkStats, here("2024/outputs/data-metadata/QA_report.csv"), row.names = F)
+write.csv(parkStats, here("2024/outputs/QA/QA_report.csv"), row.names = F)
 
 
 SOPARCObservationsOK <- SOPARCObservations[park_name %in% parkStats[passQA %in% TRUE, park_name],]
 SOPARCObservationsToFix <- SOPARCObservations[park_name %in% parkStats[passQA %in% FALSE, park_name],]
-write.csv(SOPARCObservationsOK, here("2024/outputs/data-metadata/QAPassSOPARCObservations.csv"), row.names = F)
-write.csv(SOPARCObservationsToFix, here("2024/outputs/data-metadata/QAFailSOPARCObservations.csv"), row.names = F)
+write.csv(SOPARCObservationsOK, here("2024/outputs/QA/QAPassSOPARCObservations.csv"), row.names = F)
+write.csv(SOPARCObservationsToFix, here("2024/outputs/QA/QAFailSOPARCObservations.csv"), row.names = F)
 
 
 
@@ -974,14 +973,14 @@ for(park in parkStatscheck$park_name) {
 }
 
 #write updated QA results
-write.csv(parkStats, here("2024/outputs/data-metadata/QA_report.csv"), row.names = F)
+write.csv(parkStats, here("2024/outputs/QA/QA_report.csv"), row.names = F)
 
 SOPARCObservationsCorrected <- copy(SOPARCObservationsToFix[park_name %in% parkStats[passQA == TRUE, park_name],])
 
 SOPARCObservationsOK <- rbind(SOPARCObservationsOK, SOPARCObservationsCorrected)
 SOPARCObservationsToFix <- copy(SOPARCObservationsToFix[park_name %in% parkStats[passQA == FALSE, park_name],])
-write.csv(SOPARCObservationsOK, here("2024/outputs/data-metadata/QAPassSOPARCObservations.csv"), row.names = F)
-write.csv(SOPARCObservationsToFix, here("2024/outputs/data-metadata/QAFailSOPARCObservations.csv"), row.names = F)
+write.csv(SOPARCObservationsOK, here("2024/outputs/QA/QAPassSOPARCObservations.csv"), row.names = F)
+write.csv(SOPARCObservationsToFix, here("2024/outputs/QA/QAFailSOPARCObservations.csv"), row.names = F)
 
 
 ```
@@ -3095,7 +3094,6 @@ openxlsx2::wb_save(WB, file = "./outputs/tables/pivot_ready/analysis_tables.xlsx
     -   fix broken results prints
 -   The sub area aggregation code was not updated this year because no sub areas
     were observed.
--   
 
 ## REDCap maintanence
 
@@ -3122,7 +3120,7 @@ Study
     observers.
 -   A participant was able to choose "other" activity but not enter something in
     the other description. This shouldn't have been possible. Fix the instrument
-    validation to rpevent this. (2024 study, record_id 15651 in raw, 9553 in
+    validation to prevent this. (2024 study, record_id 15651 in raw, 9553 in
     prepared)
 
 ## Documentation
