@@ -424,8 +424,9 @@ RawSOPARCObservations <- RawSOPARCObservations[!(record_id %in% DataToRemove$rec
 
 ## Disaggregation of pocket parks
 
-Pocket parks were analyzed as one park in this year's data collection. Seth has
-provided a crosswalk for unpacking these into multiple parks.
+Pocket parks were classified as one park (with the target areas being the pocket
+parks) in this year's data collection. Seth has provided a crosswalk for
+unpacking these into multiple parks for analysis.
 
 ```{r disagregation of pocket parks}
 PocketParkCrosswalk <- readxl::read_xlsx(here("2024/inputs/Parks_MiniParkReclassCrosswalk.xlsx"), "Sheet1")
@@ -495,13 +496,13 @@ RawSOPARCObservations[, weekend := ifelse(day %in% c("Saturday", "Sunday"), 1, 0
 
 Additional data corrections based on sanity checks.
 
-| Description                                  | Details                                                                                                                                                                                       |
-|----------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Drop pre-study data                          | Study start date is 7/1/24 with the first park being Garfield Playfield. Observations prior to this date or the first observation of Garfield are dropped                                     |
-| Drop incomplete entries                      | observations where the REDCap status is not "Complete", that are missing a timestamp, or missing a park name are dropped                                                                      |
-| Drop duplicates                              | duplicate entries (exclusive of redcapID) are dropped. Note that where this creates incomplete days, this is corrected in later QA                                                            |
-| Drop inacurate subareas                      | Some parks were identified as having having sub area data input without having multiple sub areas (and so shouldn't be processed as sub areas). The subarea entry for these parks is removed. |
-| Drop observations identified by human review | Some observations were identified through review of base data by program managers. These are identified in the file "Records-to-Remove.xlsx"                                                  |
+| Description | Details |
+|----|----|
+| Drop pre-study data | Study start date is 7/1/24 |
+| Drop incomplete entries | observations where the REDCap status is not "Complete", that are missing a timestamp, or missing a park name are dropped |
+| Drop duplicates | duplicate entries (exclusive of redcapID) are dropped. Note that where this creates incomplete days, this is corrected in later QA |
+| Drop inacurate subareas | Some parks were identified as having having sub area data input without having multiple sub areas (and so shouldn't be processed as sub areas). The subarea entry for these parks is removed. |
+| Drop observations identified by human review | Some observations were identified through review of base data by program managers. These are identified in the file "Records-to-Remove.xlsx" |
 
 ```{r identify and drop incorrect observations}
 
@@ -626,7 +627,7 @@ In this step we also append changed record_ids to our activity table as
 
 ```{r collapse sub areas into a single area}
 #| eval: false
-#no sub areas this year
+#no sub areas were added in 2024. This code chunk was not updated for 2024.
 
 SOPARCObservationsSubAreas <- copy(SOPARCObservations[sub_area != "",])
 
@@ -799,8 +800,8 @@ write.csv(SOPARCObservationsToFix, here("2024/outputs/QA/QAFailSOPARCObservation
 This strategy looks at the number of days of data observed, and, if only 3 days
 are observed, then checks to confirm that, for each target area, 8 or fewer
 observations are made. If both of these conditions are met, this strategy
-attempts to insert the missing observations as blank entries in the part of the
-day that appeaer to be missing them.
+attempts to insert the missing observations as blank entries in the parts of the
+day that appear to be missing them.
 
 ```{r create helper function for adding empty observations}
 createEmptyObservation <- function(park, expectedTargetArea, areasExpected, periodCount) {
@@ -985,17 +986,18 @@ write.csv(SOPARCObservationsToFix, here("2024/outputs/QA/QAFailSOPARCObservation
 
 ```
 
-When executing this script, the user may choose to use all data, or only data
-that have passed QA. It is generally suggested to only use data that have passed
-QA.
+## Subset to OK data
+
+The below steps assume that complete data are being used. Data that did not pass
+QA are not utilized in the rest of the preperation or analysis.
 
 ```{r select analysis set to use}
-if(USEGOODDATA) {
-  SOPARCAnalysisSet <- copy(SOPARCObservationsOK) #only use parks that have expected number of observation
-  SOPARCActivities <- SOPARCActivities[record_id_aggregated %in% SOPARCAnalysisSet$record_id]
-} else {
-  SOPARCAnalysisSet <- copy(rbind(SOPARCObservationsOK, SOPARCObservationsToFix)) #use all parks
-}
+#depreciated. Always use good data
+
+SOPARCAnalysisSet <- copy(SOPARCObservationsOK) #only use parks that have expected number of observation
+SOPARCActivities <- SOPARCActivities[record_id_aggregated %in% SOPARCAnalysisSet$record_id]
+
+
 ```
 
 ## Caclulated time of day variables
@@ -1057,19 +1059,27 @@ for(park in unique(SOPARCAnalysisSet$park_name)) {
 
 ## Study descriptors
 
+A descriptor is added to this year's results:
+
+| Variable         | Value                                      |
+|------------------|--------------------------------------------|
+| StartDate        | "2024-07-08"                               |
+| StudyDescription | "2024 annual study"                        |
+| study_count      | "1" (this will be adjusted in later steps) |
+
 ```{r}
 SOPARCAnalysisSet$studyStartDate <- "2024-07-08"
 SOPARCAnalysisSet$studyDescription <- "2024 annual study"
 SOPARCAnalysisSet$study_count <- 1 #this needs to be adjusted after combing earlier data
 ```
 
-# Update Study tracker
+## Update Study tracker
 
 For the 2023 analysis we advised creating a study tracker. For each time a park
-is studied, a new entry is created. Each entry should include the park name, the
+is studied a new entry is created. Each entry should include the park name, the
 date the study started, and a brief description of the study.
 
-In a later step we will use this table to append a study count to our parks
+In a later step we will use this table to update the study count to our parks
 
 ```{r update park study tracker}
 
@@ -1085,13 +1095,8 @@ write.csv(ParksStudyRecord, here("2024/outputs/data-metadata/RecordOfParkStudies
 
 Going forward, we intend to conduct analyses over all available years of data.
 Previous year's data is provided in the inputs folder. Future executions should
-only need the last and current years data, as the saved tables will include all
-prior data.
-
-Note that after this step, the resulting observations and activities files are
-renumbered to maintain their alignment for the aggregated data set. That part of
-the routine should be updated next year and repeated when conducting the annual
-update.
+only need the last and the current years data, as the saved tables will include
+all prior data.
 
 ## Import observations
 
@@ -1166,7 +1171,8 @@ SOPARC2023Fixed[park_name == "Salmon Creek",]$park_name <-  "Salmon Creek Park"
 # unique(SOPARC2023Fixed$park_name)[(!unique(SOPARC2023Fixed$park_name) %in% ParksMetaData$`Park Name`)]
 ```
 
-For 2022 data there are 6 observation days per park.
+For 2022 data there are 6 observation days per park. These have been
+parameterized as 2 studies of 3 days each.
 
 per Seth 4/25/2024:
 
@@ -1279,7 +1285,6 @@ SOPARC2022Fixed[park_name == "Steel Lake Park",]$park_name <-  "Steel Lake Annex
 ```{r}
 SOPARCAnalysisSetAllYears <- rbind(SOPARCAnalysisSet, SOPARC2022Fixed, SOPARC2023Fixed)
 
-SOPARCAnalysisSetAllYears[, `:=`(prim_act_name = tolower(prim_act_name), snd_act_name = tolower(snd_act_name), tert_act_name = tolower(tert_act_name), quat_act_name = tolower(quat_act_name))]
 ```
 
 ## Import activities
@@ -1298,6 +1303,8 @@ names(SOPARCActivities2022)
 ```
 
 ```{r}
+
+
 SOPARCActivitiesAllYears <- rbind(SOPARCActivities[,.(record_id, record_id_aggregated, activity = tolower(activity), children, teen, adult, senior, studyDescription)], SOPARCActivities2022[,.(record_id, record_id_aggregated, activity = tolower(activity), children, teen, adult, senior, studyDescription)], SOPARCActivities2023[,.(record_id, record_id_aggregated, activity = tolower(activity), children, teen, adult, senior, studyDescription)])
 ```
 
@@ -1306,8 +1313,8 @@ SOPARCActivitiesAllYears <- rbind(SOPARCActivities[,.(record_id, record_id_aggre
 Several activities can be reclassified for more accurate analysis. This is a
 manual step, so information is provided below to assist.
 
-Here is a list of activities presented to observers. They may also enter "other"
-and type a custom entry.
+Here is a list of activities presented to observers in 2023 and 2024. They may
+also enter "other" and type a custom entry.
 
 ```{r generate crosswalk candidates}
 
@@ -1346,7 +1353,28 @@ this list.
 We also identified one 2024 activity where the observer entered "other" but did
 not enter something into the box. this has been changed to "other".
 
+Procedure:
+
+For 2022 activities
+
+Where an activity was not classified as "other" AND appears to match, but not
+precisely conform to, the 2024 activities list, update both the activity table
+and the observations table, keeping the activity in its observation step
+(primary, secondary, or tertary activity).
+
+If the activity was not classified as "other" AND does NOT appear to match the
+2024 activities list, then, in the observations table, change the activity to
+"other" and move the unmatched name to "other description" of the approprate
+observation step. Leave unchanged in the activity table
+
+```{r make all activities lower case}
+SOPARCAnalysisSetAllYears[, `:=`(prim_act_name = tolower(prim_act_name), snd_act_name = tolower(snd_act_name), tert_act_name = tolower(tert_act_name), quat_act_name = tolower(quat_act_name))]
+
+```
+
 ```{r implement corrections}
+
+
 
 #an activity with "1"
 SOPARCActivitiesAllYears <- SOPARCActivitiesAllYears[!(studyDescription == "2022 annual study round 1" & record_id == 131),] 
@@ -1437,7 +1465,7 @@ SOPARCActivitiesAllYears[, activity :=paste(toupper(substr(activity,1,1)), tolow
 ```
 
 After making corrections, here are activities in our data that are not in the
-above list. Is this ok or are further adjustments needed?
+above list. These should be manually reviewed for possible further correction.
 
 `r unique(SOPARCActivitiesAllYears$activity)[!(unique(SOPARCActivitiesAllYears$activity) %in% activities)]`
 
@@ -1460,7 +1488,7 @@ The following parks (if any) are missing from the Parks Master sheet:
 
 `r parksMissingFromList`
 
-The following parks (if any) are missing Longitute and/or Latitute:
+The following parks (if any) are missing Longitude and/or Latitude:
 
 `r parksMissingLongLat`
 
@@ -1536,15 +1564,15 @@ For all analyses, we do not want to distinguish between the first and second of
 a period (e.g. morning1 and morning2). We aggregate these according to the
 following:
 
-| positive indicaters | aggregate to |
-|---------------------|--------------|
-| accessible          | Yes          |
-| usable              | Yes          |
-| lit                 | Yes          |
-| occupied            | Yes          |
-| supervised          | Yes          |
-| organized           | Yes          |
-| equipped            | Yes          |
+| positive indicaters | aggregate to   |
+|---------------------|----------------|
+| accessible          | Yes if any Yes |
+| usable              | Yes if any Yes |
+| lit                 | Yes if any Yes |
+| occupied            | Yes if any Yes |
+| supervised          | Yes if any Yes |
+| organized           | Yes if any Yes |
+| equipped            | Yes if any Yes |
 
 | counts of       | are aggregated as |
 |-----------------|-------------------|
@@ -1709,7 +1737,9 @@ for (i in unique(SOPARCAggregated$park_name_full)) {
 
 ```
 
-## Included parks
+## General analysis notes
+
+### Included parks
 
 ```{r report included parks}
 #| output: true
@@ -1721,21 +1751,25 @@ kbl(SOPARCAggregated[order(park_name), .("Park Name" = unique(park_name))],
 
 ```
 
-## Utilization
+### Observation of users across target areas and time
 
-The following metrics rely on counts of people observed. The underlying data are
-of people observed within an observation period (e.g. "morning1") and target
+Several of the metrics rely on counts of people observed. The underlying data
+are of people observed within an observation period (e.g. "morning1") and target
 area. It is possible that the same people may be observed across multiple blocks
 of time and multiple target areas.
-
-The below analyses include parks studied frome 2022 to present unless otherwise
-indicated. For these analyses all available data are used. This means that if
-the same park has been studied for multiple years, all years are included.
 
 Because of this user counts are more accurately understood as "person time of
 use per target area" and represents a target area being used by a person within
 the observation period. This explanation accounts for people being counted
 multiple times by crossing target areas during the observation period.
+
+### Parks studied in multiple years
+
+The below analyses include parks studied from 2022 to present unless otherwise
+indicated. For these analyses all available data are used. This means that if
+the same park has been studied for multiple years, all years are included.
+
+## Park Utilization
 
 ### number of park users
 
@@ -2661,7 +2695,7 @@ Notes:
     randomly distributed across all time periods, the less true this is.
 -   Rate is within-park (each park totals to 100%)
 
-## Occupancy
+## Park Occupancy
 
 ### occupancy rate
 
@@ -2973,7 +3007,7 @@ Notes:
     have an observation rate of 100%, and "sitting" may be observed in 6 periods
     and so have a rate of 25%.
 
-## Spatial analysees
+## Catchment
 
 ### ratio of use to half-mile catchment area
 
