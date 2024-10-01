@@ -5,56 +5,60 @@ Ronald Buie
 <link href="01_Parks_Analysis_files/libs/lightable-0.0.1/lightable.css" rel="stylesheet" />
 
 
-- [<span class="toc-section-number">1</span> Q’s for
+- [<span class="toc-section-number">1</span> changes to
+  apply](#changes-to-apply)
+- [<span class="toc-section-number">2</span> Q’s for
   Seth,](#qs-for-seth)
-  - [<span class="toc-section-number">1.1</span> Data
+  - [<span class="toc-section-number">2.1</span> Data
     quality](#data-quality)
-  - [<span class="toc-section-number">1.2</span> Analyses](#analyses)
-- [<span class="toc-section-number">2</span> Front
+  - [<span class="toc-section-number">2.2</span> Analyses](#analyses)
+- [<span class="toc-section-number">3</span> Front
   Matter](#front-matter)
-  - [<span class="toc-section-number">2.1</span> Major
+  - [<span class="toc-section-number">3.1</span> Major
     inputs](#major-inputs)
-  - [<span class="toc-section-number">2.2</span> Output
+  - [<span class="toc-section-number">3.2</span> Output
     categories](#output-categories)
-  - [<span class="toc-section-number">2.3</span> This is a quarto
+  - [<span class="toc-section-number">3.3</span> This is a quarto
     generated document](#this-is-a-quarto-generated-document)
-- [<span class="toc-section-number">3</span> Setup &
+- [<span class="toc-section-number">4</span> Setup &
   Environment](#setup--environment)
-  - [<span class="toc-section-number">3.1</span> Secrets and
+  - [<span class="toc-section-number">4.1</span> Secrets and
     tokens](#secrets-and-tokens)
-- [<span class="toc-section-number">4</span> Data
+- [<span class="toc-section-number">5</span> Data
   Preperation](#data-preperation)
-  - [<span class="toc-section-number">4.1</span>
+  - [<span class="toc-section-number">5.1</span>
     Extraction](#extraction)
-  - [<span class="toc-section-number">4.2</span> Disaggregation of
+  - [<span class="toc-section-number">5.2</span> Cleaning](#cleaning)
+  - [<span class="toc-section-number">5.3</span> Disaggregation of
     pocket parks](#disaggregation-of-pocket-parks)
-  - [<span class="toc-section-number">4.3</span>
+  - [<span class="toc-section-number">5.4</span>
     Transformation](#transformation)
-    - [<span class="toc-section-number">4.3.1</span> Date
+    - [<span class="toc-section-number">5.4.1</span> Date
       structures](#date-structures)
-  - [<span class="toc-section-number">4.4</span> Cleaning](#cleaning)
-  - [<span class="toc-section-number">4.5</span> Create table of
+  - [<span class="toc-section-number">5.5</span> Create table of
     activities including sub
     areas](#create-table-of-activities-including-sub-areas)
-  - [<span class="toc-section-number">4.6</span> Collapse sub
+  - [<span class="toc-section-number">5.6</span> Collapse sub
     areas](#collapse-sub-areas)
-  - [<span class="toc-section-number">4.7</span> Quality
+  - [<span class="toc-section-number">5.7</span> Quality
     Checks](#quality-checks)
-    - [<span class="toc-section-number">4.7.1</span> strategy 1: correct
+    - [<span class="toc-section-number">5.7.1</span> strategy 1: correct
       missingness where observations are only missing but correct number
       of
       days](#strategy-1-correct-missingness-where-observations-are-only-missing-but-correct-number-of-days)
-  - [<span class="toc-section-number">4.8</span> Caclulated time of day
+  - [<span class="toc-section-number">5.8</span> Subset to OK
+    data](#subset-to-ok-data)
+  - [<span class="toc-section-number">5.9</span> Caclulated time of day
     variables](#caclulated-time-of-day-variables)
-    - [<span class="toc-section-number">4.8.1</span> period labels in
+    - [<span class="toc-section-number">5.9.1</span> period labels in
       line with 2023 analysis
       functions](#period-labels-in-line-with-2023-analysis-functions)
-    - [<span class="toc-section-number">4.8.2</span> day numbers based
+    - [<span class="toc-section-number">5.9.2</span> day numbers based
       on sequence](#day-numbers-based-on-sequence)
-  - [<span class="toc-section-number">4.9</span> Study
+  - [<span class="toc-section-number">5.10</span> Study
     descriptors](#study-descriptors)
-- [<span class="toc-section-number">5</span> Update Study
-  tracker](#update-study-tracker)
+  - [<span class="toc-section-number">5.11</span> Update Study
+    tracker](#update-study-tracker)
 - [<span class="toc-section-number">6</span> Load and combine prior
   years](#load-and-combine-prior-years)
   - [<span class="toc-section-number">6.1</span> Import
@@ -75,26 +79,44 @@ Ronald Buie
   - [<span class="toc-section-number">8.2</span> Integrate metadata and
     analysis sets](#integrate-metadata-and-analysis-sets)
 - [<span class="toc-section-number">9</span> Results](#results)
-  - [<span class="toc-section-number">9.1</span> Included
-    parks](#included-parks)
-  - [<span class="toc-section-number">9.2</span>
-    Utilization](#utilization)
+  - [<span class="toc-section-number">9.1</span> General analysis
+    notes](#general-analysis-notes)
+    - [<span class="toc-section-number">9.1.1</span> Included
+      parks](#included-parks)
+    - [<span class="toc-section-number">9.1.2</span> Observation of
+      users across target areas and
+      time](#observation-of-users-across-target-areas-and-time)
+    - [<span class="toc-section-number">9.1.3</span> Parks studied in
+      multiple years](#parks-studied-in-multiple-years)
+  - [<span class="toc-section-number">9.2</span> Park
+    Utilization](#park-utilization)
     - [<span class="toc-section-number">9.2.1</span> number of park
       users](#number-of-park-users)
     - [<span class="toc-section-number">9.2.2</span> daily average
       number of park users](#daily-average-number-of-park-users)
-    - [<span class="toc-section-number">9.2.3</span> daily average
-      number of park users by time
-      period](#daily-average-number-of-park-users-by-time-period)
-    - [<span class="toc-section-number">9.2.4</span> rate of daily
+    - [<span class="toc-section-number">9.2.3</span> daily median number
+      of park users](#daily-median-number-of-park-users)
+    - [<span class="toc-section-number">9.2.4</span> average number of
+      park users by time
+      period](#average-number-of-park-users-by-time-period)
+    - [<span class="toc-section-number">9.2.5</span> median number of
+      users within each time
+      period](#median-number-of-users-within-each-time-period)
+    - [<span class="toc-section-number">9.2.6</span> rate of daily
       average park use by time
       period](#rate-of-daily-average-park-use-by-time-period)
-    - [<span class="toc-section-number">9.2.5</span> daily average
+    - [<span class="toc-section-number">9.2.7</span> daily average
       number of park users by
       age](#daily-average-number-of-park-users-by-age)
-    - [<span class="toc-section-number">9.2.6</span> rate of daily
+    - [<span class="toc-section-number">9.2.8</span> median number of
+      park users by age](#median-number-of-park-users-by-age)
+    - [<span class="toc-section-number">9.2.9</span> rate of daily
       average park use by age](#rate-of-daily-average-park-use-by-age)
-  - [<span class="toc-section-number">9.3</span> Occupancy](#occupancy)
+    - [<span class="toc-section-number">9.2.10</span> ratio of use to
+      half-mile catchment
+      area](#ratio-of-use-to-half-mile-catchment-area)
+  - [<span class="toc-section-number">9.3</span> Park
+    Occupancy](#park-occupancy)
     - [<span class="toc-section-number">9.3.1</span> occupancy
       rate](#occupancy-rate)
   - [<span class="toc-section-number">9.4</span>
@@ -105,11 +127,6 @@ Ronald Buie
       activity](#rate-of-user-activity)
     - [<span class="toc-section-number">9.4.3</span> rate of activity
       observed](#rate-of-activity-observed)
-  - [<span class="toc-section-number">9.5</span> Spatial
-    analysees](#spatial-analysees)
-    - [<span class="toc-section-number">9.5.1</span> ratio of use to
-      half-mile catchment
-      area](#ratio-of-use-to-half-mile-catchment-area)
 - [<span class="toc-section-number">10</span> Closure and Next
   Steps](#closure-and-next-steps)
   - [<span class="toc-section-number">10.1</span> Data
@@ -125,6 +142,17 @@ Ronald Buie
     Documentation](#documentation)
     - [<span class="toc-section-number">10.3.1</span> problem
       notes:](#problem-notes)
+
+# changes to apply
+
+- Copy edit note: I have been trying to change the language from “target
+  area” to “scan area”
+
+  Q: do you want to do this now?
+
+- Create median analyses alongside the averages
+
+  mid process. Median not yet created for activity counts
 
 # Q’s for Seth,
 
@@ -208,10 +236,27 @@ secrets.txt. They are only stored on your machine.
 
 Data are extracted directly from REDCap via API.
 
+This script requires the data and headers both be label format.
+
+**rawOrLabel=‘label’**
+
+and
+
+**rawOrLabelHeaders=‘label’**
+
+## Cleaning
+
+The program manager, Seth Schromen-Warren, provided corrections to data
+that failed QA (described below). These corrections included a list of
+observations requiring modification, and a list of observation that
+should be drooped from the data. This was based on their knowledge of
+the parks and study procesees.
+
 ## Disaggregation of pocket parks
 
-Pocket parks were analyzed as one park in this year’s data collection.
-Seth has provided a crosswalk for unpacking these into multiple parks.
+Pocket parks were classified as one park (with the target areas being
+the pocket parks) in this year’s data collection. Seth has provided a
+crosswalk for unpacking these into multiple parks for analysis.
 
 ## Transformation
 
@@ -222,15 +267,15 @@ Data types are assigned. And character dates configured to POSIX dates.
 POSIX dates are used to generate individual variables for the day,
 month, and a weekend indicator variable.
 
-## Cleaning
+Additional data corrections based on sanity checks.
 
-| Description                                  | Details                                                                                                                                                                                       |
-|----------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Drop pre-study data                          | Study start date is 7/1/24 with the first park being Garfield Playfield. Observations prior to this date or the first observation of Garfield are dropped                                     |
-| Drop incomplete entries                      | observations where the REDCap status is not “Complete”, that are missing a timestamp, or missing a park name are dropped                                                                      |
-| Drop duplicates                              | duplicate entries (exclusive of redcapID) are dropped. Note that where this creates incomplete days, this is corrected in later QA                                                            |
-| Drop inacurate subareas                      | Some parks were identified as having having sub area data input without having multiple sub areas (and so shouldn’t be processed as sub areas). The subarea entry for these parks is removed. |
-| Drop observations identified by human review | Some observations were identified through review of base data by program managers. These are identified in the file “Records-to-Remove.xlsx”                                                  |
+| Description | Details |
+|----|----|
+| Drop pre-study data | Study start date is 7/1/24 |
+| Drop incomplete entries | observations where the REDCap status is not “Complete”, that are missing a timestamp, or missing a park name are dropped |
+| Drop duplicates | duplicate entries (exclusive of redcapID) are dropped. Note that where this creates incomplete days, this is corrected in later QA |
+| Drop inacurate subareas | Some parks were identified as having having sub area data input without having multiple sub areas (and so shouldn’t be processed as sub areas). The subarea entry for these parks is removed. |
+| Drop observations identified by human review | Some observations were identified through review of base data by program managers. These are identified in the file “Records-to-Remove.xlsx” |
 
 ## Create table of activities including sub areas
 
@@ -271,7 +316,7 @@ initially performs a series of checks on all park data and reports
 results. For each park that fails QA, various strategies are executed to
 attempt to cure that park’s data. The final results, including which
 strategies were executed, and the final QA status are saved in a csv
-file for review.
+file for review and manual correction where necessary.
 
 ### strategy 1: correct missingness where observations are only missing but correct number of days
 
@@ -279,11 +324,12 @@ This strategy looks at the number of days of data observed, and, if only
 3 days are observed, then checks to confirm that, for each target area,
 8 or fewer observations are made. If both of these conditions are met,
 this strategy attempts to insert the missing observations as blank
-entries in the part of the day that appeaer to be missing them.
+entries in the parts of the day that appear to be missing them.
 
-When executing this script, the user may choose to use all data, or only
-data that have passed QA. It is generally suggested to only use data
-that have passed QA.
+## Subset to OK data
+
+The below steps assume that complete data are being used. Data that did
+not pass QA are not utilized in the rest of the preperation or analysis.
 
 ## Caclulated time of day variables
 
@@ -302,31 +348,35 @@ add a counter for 1st through 3rd day of observation.
 
 ## Study descriptors
 
-# Update Study tracker
+A descriptor is added to this year’s results:
+
+| Variable         | Value                                      |
+|------------------|--------------------------------------------|
+| StartDate        | “2024-07-08”                               |
+| StudyDescription | “2024 annual study”                        |
+| study_count      | “1” (this will be adjusted in later steps) |
+
+## Update Study tracker
 
 For the 2023 analysis we advised creating a study tracker. For each time
-a park is studied, a new entry is created. Each entry should include the
+a park is studied a new entry is created. Each entry should include the
 park name, the date the study started, and a brief description of the
 study.
 
-In a later step we will use this table to append a study count to our
+In a later step we will use this table to update the study count to our
 parks
 
 # Load and combine prior years
 
 Going forward, we intend to conduct analyses over all available years of
 data. Previous year’s data is provided in the inputs folder. Future
-executions should only need the last and current years data, as the
+executions should only need the last and the current years data, as the
 saved tables will include all prior data.
-
-Note that after this step, the resulting observations and activities
-files are renumbered to maintain their alignment for the aggregated data
-set. That part of the routine should be updated next year and repeated
-when conducting the annual update.
 
 ## Import observations
 
-For 2022 data there are 6 observation days per park.
+For 2022 data there are 6 observation days per park. These have been
+parameterized as 2 studies of 3 days each.
 
 per Seth 4/25/2024:
 
@@ -350,8 +400,8 @@ opportunities for a park construction project.
 Several activities can be reclassified for more accurate analysis. This
 is a manual step, so information is provided below to assist.
 
-Here is a list of activities presented to observers. They may also enter
-“other” and type a custom entry.
+Here is a list of activities presented to observers in 2023 and 2024.
+They may also enter “other” and type a custom entry.
 
 Baseball/softball, Basketball, Bike Riding, Catch (any sport), Climbing,
 Dance/Aerobics (dance/step aerobics), Fitness stations, Football,
@@ -367,8 +417,66 @@ We also identified one 2024 activity where the observer entered “other”
 but did not enter something into the box. this has been changed to
 “other”.
 
+Procedure:
+
+For 2022 activities
+
+Where an activity was not classified as “other” AND appears to match,
+but not precisely conform to, the 2024 activities list, update both the
+activity table and the observations table, keeping the activity in its
+observation step (primary, secondary, or tertary activity).
+
+If the activity was not classified as “other” AND does NOT appear to
+match the 2024 activities list, then, in the observations table, change
+the activity to “other” and move the unmatched name to “other
+description” of the approprate observation step. Leave unchanged in the
+activity table
+
 After making corrections, here are activities in our data that are not
-in the above list. Is this ok or are further adjustments needed?
+in the above list. These should be manually reviewed for possible
+further correction.
+
+Swinging, Bike riding, Pickle ball , Fishing, Fishing , Construction ,
+Dance/aerobics (dance/step aerobics), Riding a scooter , Scooters,
+Planting, Guardening, Stroller, Kite flying , Grilling, Rolling in
+grass, Driving, Handball, Hand ball, Water activities, Concert in the
+park , Concert in the park, Water activities , Cooking, Picking up
+trash, Flying kite, Wheelchair , Carpentry, Gardening, Gardening ,
+Gathering of people doing various stuff.. sports, eating and dancing ,
+Organized events - various sport, food and activities , Group event of f
+sports, food, dance and running around , Sorting produce , Lawn mowing ,
+Lawn mowing, Organized play at the park and drink and dance, Musical in
+the play in city of burien town square park , Musical play in city of
+burien town square park , Mowing grass, Dancing, Motor dirt bike, Dirt
+bike riding, Driving , Pathway construction , Leafblowing, Pressure
+washing on crane, Paddle boarding , Games, Kids plying, Playing,
+Supervise, Pushing kid, Wlking dog, Play area, Stretching, Wking out,
+Tennis, Watching, Kck ball, Spectator, Throw/ball, Wthg game,
+Skateboardg, Wtchg, Exercise, Napping, Reading, Laying down, Jump rope,
+Exercising, Jogging, Sleeping, Play/dog, Bbq, Yoga, Plyg w/dog,
+Skateboard, Kickball, Riding bikes, Running tag, Biking, Skating,
+Picknicking, Catch, Park empl, Parent/supervise, Garden wk, Picking,
+B-ball, V-ball, Picnic, Laying dwn, W-out, Jumping rope, Runnng, Laying,
+Supervising, Jumping, Sliding, Jogger, Riding, Runing, Slide, swing,
+climb, Lying, Picnicking, Skateboarding, Tag, Horseshoe, Horseshoes,
+Horse shoes, Bicking, Ring toss, Picnicing, Kick ball, Rollerblading,
+Park bench, Playground, Picnic shelter, Grass play area, Ticket stand,
+Pathway, Teen garden, Grass, Playing swimming, Illegal activity , King
+county worker changing trash cans, Pickle ball, Worker cutting grass,
+Worker open all gates, Worker grass, 2 staff pushing stadiums seats to
+place on field, Worker driving a cart, Workers setting up, Staff
+cleaning , Woman stretching , Drills on sidewalk, Working, Working snack
+stand, Swimming, Paddleboarding, Standing in the water, Kayaking,
+Playing in the water, Sleeping in tents , Sleeping in tent , Working on
+construction , Construction, Working on excavator , Sleeping in sleeping
+bag , Sleeping , Working , Playing in city field water sprinkler,
+Playing in the sand, Staff cleaning empty trash, Kids playing in
+waterfall area, Staff cleaning from chase, Staff cleaning skate area,
+Boating, Riding segways, Park staff cleaner, Waterfall , Soccer
+volleyball , Sleeping under sleeping bag , Sleeping in sleeping bag,
+Children set up cones for exercise., Packing bikes, Play golfing, Park
+cleaner, Driving county car, Setting up chairs, Breaking down chairs,
+Frisbee
 
 # Parks metadata
 
@@ -379,7 +487,7 @@ be appended to the analysis table.
 
 The following parks (if any) are missing from the Parks Master sheet:
 
-The following parks (if any) are missing Longitute and/or Latitute:
+The following parks (if any) are missing Longitude and/or Latitude:
 
 ## Add population within half-mile radius to metadata
 
@@ -398,15 +506,15 @@ For all analyses, we do not want to distinguish between the first and
 second of a period (e.g. morning1 and morning2). We aggregate these
 according to the following:
 
-| positive indicaters | aggregate to |
-|---------------------|--------------|
-| accessible          | Yes          |
-| usable              | Yes          |
-| lit                 | Yes          |
-| occupied            | Yes          |
-| supervised          | Yes          |
-| organized           | Yes          |
-| equipped            | Yes          |
+| positive indicaters | aggregate to   |
+|---------------------|----------------|
+| accessible          | Yes if any Yes |
+| usable              | Yes if any Yes |
+| lit                 | Yes if any Yes |
+| occupied            | Yes if any Yes |
+| supervised          | Yes if any Yes |
+| organized           | Yes if any Yes |
+| equipped            | Yes if any Yes |
 
 | counts of       | are aggregated as |
 |-----------------|-------------------|
@@ -450,7 +558,9 @@ Results are saved in multiple locations:
 - outputs of various steps of the metadata, QA, and final analysis ready
   sets
 
-## Included parks
+## General analysis notes
+
+### Included parks
 
 | Park Name                         |
 |:----------------------------------|
@@ -524,9 +634,9 @@ Results are saved in multiple locations:
 
 Parks Included In Analysis
 
-## Utilization
+### Observation of users across target areas and time
 
-The following metrics rely on counts of people observed. The underlying
+Several of the metrics rely on counts of people observed. The underlying
 data are of people observed within an observation period
 (e.g. “morning1”) and target area. It is possible that the same people
 may be observed across multiple blocks of time and multiple target
@@ -537,6 +647,15 @@ time of use per target area” and represents a target area being used by
 a person within the observation period. This explanation accounts for
 people being counted multiple times by crossing target areas during the
 observation period.
+
+### Parks studied in multiple years
+
+The below analyses include parks studied from 2022 to present unless
+otherwise indicated. For these analyses all available data are used.
+This means that if the same park has been studied for multiple years,
+all years are included.
+
+## Park Utilization
 
 ### number of park users
 
@@ -555,9 +674,14 @@ Notes:
 The average number of users observed in the park per day across all
 available data.
 
-### daily average number of park users by time period
+### daily median number of park users
 
-The daily average number of users within each time period.
+The median number of users observed in the park in a given day across
+all available data.
+
+### average number of park users by time period
+
+The average number of users within each time period.
 
 For each park:
 
@@ -576,6 +700,33 @@ precalculated in the SOPARCAggregated table.
 $$
 \text{People}_p = \sum_{t=1}^{n}{\left( \lceil\frac{\text{(people observed first half of period)}+\text{(people observed second half of period)}}{2}\rceil\right) _t}
 $$
+
+Notes:
+
+- User counts are more accurately understood as “person time of use per
+  target area”
+  - “Person using target area during the observation”
+- If taken strictly as “people using a park” then this may be an over or
+  under count
+  - If in the first morning observation 2 people are observed, and the
+    second 3, this may be 3 unique people, or as many as 5, but we
+    calculate this as 2.5 and round up to 3.
+  - If two people walk across all target areas during an observation
+    period, they would be counted each time. With 10 target areas, this
+    would be 20 people observed.
+
+### median number of users within each time period
+
+The median people within a given time period and day is defined as the
+median number of people observed in a time period across all days of a
+given park.
+
+$$
+\text{(Median Park Users By Period)} = m({\sum_{d=1}^{3}{(\text{People}_p)_d}})
+$$
+
+where $_d$ is the day of study and $(\text{People}_p)$ are the sum of
+number of people observed in a time period of a given day.
 
 Notes:
 
@@ -648,6 +799,28 @@ Notes:
 - “Teens” were not a category in 2022, meaning all apparant minors are
   classified as “child”. Teens may be underweighted for affected parks.
 
+### median number of park users by age
+
+The median number of users observed in each age group.
+
+Computationally this measure is similar to the median users by time
+period above.
+
+Notes:
+
+- User counts are more accurately understood as “person time of use per
+  target area”
+- If taken strictly as “people using a park” then this may be an over or
+  under count
+  - If in the first morning observation 2 people are observed, and the
+    second 3, this may be 3 unique people, or as many as 5, but we
+    calculate this as 2.5 and round up to 3.
+  - If two people walk across all target areas during an observation
+    period, they would be counted each time. With 10 target areas, this
+    would be 20 people observed.
+- “Teens” were not a category in 2022, meaning all apparent minors are
+  classified as “child”. Teens may be under weighted for affected parks.
+
 ### rate of daily average park use by age
 
 The proportion of the total users observed within each age group.
@@ -662,7 +835,23 @@ Notes:
   is.
 - Rate is within-park (each park totals to 100%)
 
-## Occupancy
+### ratio of use to half-mile catchment area
+
+The ratio of how many users were observed per day on average relative to
+how many people live within 0.5 miles of the park.
+
+This is provided per 1,000 residents to improve readability.
+
+Notes:
+
+- The ratios are calculated on non-rounded data, and then rounded. The
+  average number of users and populations provided in the formatted word
+  document are rounded. This causes a rounding error where you wouldn’t
+  get the exact ratio if you were to divide these users and populations.
+  For accurate results use the numbers provided in the pivot ready
+  tables.
+
+## Park Occupancy
 
 ### occupancy rate
 
@@ -699,8 +888,8 @@ Notes:
 The percentage users observed doing the activity in the park.
 
 For each park, the number of users engaged in an activity is divided by
-the total number of users observed in the park throughout the study
-duration.
+the total number of users observed in the park throughout all days and
+studies observed.
 
 Notes:
 
@@ -725,25 +914,7 @@ Notes:
   additive meaning. This is because multiple activities may be observed
   in a single observation period. E.g. “walking” may be observed in all
   24 periods, and so have an observation rate of 100%, and “sitting” may
-  be observed in 6 periods and so have a rate of 25%.
-
-## Spatial analysees
-
-### ratio of use to half-mile catchment area
-
-The ratio of how many users were observed per day on average relative to
-how many people live within 0.5 miles of the park.
-
-This is provided per 1,000 residents to improve readability.
-
-Notes:
-
-- The ratios are calculated on non-rounded data, and then rounded. The
-  average number of users and populations provided in the formatted word
-  document are rounded. This causes a rounding error where you wouldn’t
-  get the exact ratio if you were to divide these users and populations.
-  For accurate results use the numbers provided in the pivot ready
-  tables.
+  be observed in 6 periods and so have a rate of 25% for the same park.
 
 # Closure and Next Steps
 
@@ -778,7 +949,6 @@ folder](https://kc1.sharepoint.com/teams/DPH-APDEWork/ParkObservationStudies/For
   - fix broken results prints
 - The sub area aggregation code was not updated this year because no sub
   areas were observed.
-- 
 
 ## REDCap maintanence
 
@@ -806,7 +976,7 @@ Park Observations: 2024 Annual Study
   problems for observers.
 - A participant was able to choose “other” activity but not enter
   something in the other description. This shouldn’t have been possible.
-  Fix the instrument validation to rpevent this. (2024 study, record_id
+  Fix the instrument validation to prevent this. (2024 study, record_id
   15651 in raw, 9553 in prepared)
 
 ## Documentation

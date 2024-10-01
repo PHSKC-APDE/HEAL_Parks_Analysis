@@ -17,12 +17,6 @@ format:
     df-print: kable
     fig-height: 12
     fig-width: 16
-  html:
-    toc: true
-    number-sections: true
-    df-print: kable
-    fig-height: 12
-    fig-width: 16
 execute: 
   echo: false
   warning: false
@@ -2695,6 +2689,81 @@ Notes:
     randomly distributed across all time periods, the less true this is.
 -   Rate is within-park (each park totals to 100%)
 
+### ratio of use to half-mile catchment area
+
+The ratio of how many users were observed per day on average relative to how
+many people live within 0.5 miles of the park.
+
+This is provided per 1,000 residents to improve readability.
+
+```{r ratio of use to catchment}
+#| output: true
+#calculate average users
+DT <- SOPARCAggregated[order(park_name),.("Users" = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)/(3* unique(study_count) )), by = .("Park Name" = park_name)]
+
+#attac
+DT <- merge(DT, ParkPopulationTable, by.x =  "Park Name", by.y = "parkNameFull")
+
+DT <- DT[order(`Park Name`), .("Ratio" = Users / populationHalfMile, "Population in Half Mile" = populationHalfMile, Users), by = `Park Name`][, .("Ratio Per 1000" = Ratio *1000,"Average Daily Users" = Users, `Population in Half Mile`), by = "Park Name"]
+
+
+
+WB$add_worksheet("Ratio Use Catchment")
+WB$add_data(sheet = "Ratio Use Catchment", DT)
+
+wsName <- "Ratio Use catchment"
+
+for(i in unique(DT$`Park Name`)) {
+  if(file.exists(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
+    wb <- openxlsx2::wb_load(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+    if(wsName %in% wb$sheet_names){
+      wb$remove_worksheet(wsName)
+    }
+    
+    
+  } else {
+    wb <- openxlsx2::wb_workbook()
+  }
+  wb$add_worksheet(wsName)
+  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
+  openxlsx2::wb_save(wb, file = here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
+}
+
+#export charts for use
+#save charts as individual files
+#cleanup old images of this chart
+if(file.exists(here("./2024/outputs/tables/ratio_use_catch/"))) {
+  unlink(here("./2024/outputs/tables/ratio_use_catch/"), recursive = T)
+}
+dir.create(here("./2024/outputs/tables/ratio_use_catch"), recursive = T)
+  write.csv(DT, here("2024/outputs/tables/ratio_use_catch/ratio_use_catch.csv"), row.names = FALSE)
+
+  # KBObject <- kbl(DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)],
+  #     caption = "Rate of User Activy",
+  #     booktabs = TRUE,
+  #     longtable = TRUE) %>%
+  #   kable_styling(latex_options = c("striped", "repeat_header"))
+  # 
+  #   save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_user_activity/",park,"rate_user_activity.pdf")))
+  
+  FT <- DT[, .(`Park Name`, "Ratio Per 1000" = round(`Ratio Per 1000`,2),"Average Daily Users" = round(`Average Daily Users`,0), "Population in Half Mile" = round(`Population in Half Mile`,0))] %>% regulartable() %>% autofit()
+
+  read_docx() %>%
+  body_add_flextable(FT) %>%
+  print(target = paste0("./outputs/tables/ratio_use_catch/ratio_use_catch.docx"))
+
+
+
+```
+
+Notes:
+
+-   The ratios are calculated on non-rounded data, and then rounded. The average
+    number of users and populations provided in the formatted word document are
+    rounded. This causes a rounding error where you wouldn't get the exact ratio
+    if you were to divide these users and populations. For accurate results use
+    the numbers provided in the pivot ready tables.
+
 ## Park Occupancy
 
 ### occupancy rate
@@ -2851,7 +2920,8 @@ Notes:
 The percentage users observed doing the activity in the park.
 
 For each park, the number of users engaged in an activity is divided by the
-total number of users observed in the park throughout the study duration.
+total number of users observed in the park throughout all days and studies
+observed.
 
 ```{r Rate of User Activity}
 #| output: true
@@ -3005,84 +3075,7 @@ Notes:
     meaning. This is because multiple activities may be observed in a single
     observation period. E.g. "walking" may be observed in all 24 periods, and so
     have an observation rate of 100%, and "sitting" may be observed in 6 periods
-    and so have a rate of 25%.
-
-## Catchment
-
-### ratio of use to half-mile catchment area
-
-The ratio of how many users were observed per day on average relative to how
-many people live within 0.5 miles of the park.
-
-This is provided per 1,000 residents to improve readability.
-
-```{r ratio of use to catchment}
-#| output: true
-#calculate average users
-DT <- SOPARCAggregated[order(park_name),.("Users" = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)/(3* unique(study_count) )), by = .("Park Name" = park_name)]
-
-#attac
-DT <- merge(DT, ParkPopulationTable, by.x =  "Park Name", by.y = "parkNameFull")
-
-DT <- DT[order(`Park Name`), .("Ratio" = Users / populationHalfMile, "Population in Half Mile" = populationHalfMile, Users), by = `Park Name`][, .("Ratio Per 1000" = Ratio *1000,"Average Daily Users" = Users, `Population in Half Mile`), by = "Park Name"]
-
-
-
-WB$add_worksheet("Ratio Use Catchment")
-WB$add_data(sheet = "Ratio Use Catchment", DT)
-
-wsName <- "Ratio Use catchment"
-
-for(i in unique(DT$`Park Name`)) {
-  if(file.exists(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))) {
-    wb <- openxlsx2::wb_load(here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-    if(wsName %in% wb$sheet_names){
-      wb$remove_worksheet(wsName)
-    }
-    
-    
-  } else {
-    wb <- openxlsx2::wb_workbook()
-  }
-  wb$add_worksheet(wsName)
-  wb$add_data(sheet = wsName, DT[`Park Name` == i,])
-  openxlsx2::wb_save(wb, file = here(paste0("./2024/outputs/tables/pivot_ready/park_specific/",i,"_analysis_tables.xlsx")))
-}
-
-#export charts for use
-#save charts as individual files
-#cleanup old images of this chart
-if(file.exists(here("./2024/outputs/tables/ratio_use_catch/"))) {
-  unlink(here("./2024/outputs/tables/ratio_use_catch/"), recursive = T)
-}
-dir.create(here("./2024/outputs/tables/ratio_use_catch"), recursive = T)
-  write.csv(DT, here("2024/outputs/tables/ratio_use_catch/ratio_use_catch.csv"), row.names = FALSE)
-
-  # KBObject <- kbl(DT[`Park Name` == park,.(Activity, Rate = paste0(round(Rate * 100), "%"))][order(Activity)],
-  #     caption = "Rate of User Activy",
-  #     booktabs = TRUE,
-  #     longtable = TRUE) %>%
-  #   kable_styling(latex_options = c("striped", "repeat_header"))
-  # 
-  #   save_kable(x = KBObject,file =  here(paste0("./2023/outputs/tables/rate_user_activity/",park,"rate_user_activity.pdf")))
-  
-  FT <- DT[, .(`Park Name`, "Ratio Per 1000" = round(`Ratio Per 1000`,2),"Average Daily Users" = round(`Average Daily Users`,0), "Population in Half Mile" = round(`Population in Half Mile`,0))] %>% regulartable() %>% autofit()
-
-  read_docx() %>%
-  body_add_flextable(FT) %>%
-  print(target = paste0("./outputs/tables/ratio_use_catch/ratio_use_catch.docx"))
-
-
-
-```
-
-Notes:
-
--   The ratios are calculated on non-rounded data, and then rounded. The average
-    number of users and populations provided in the formatted word document are
-    rounded. This causes a rounding error where you wouldn't get the exact ratio
-    if you were to divide these users and populations. For accurate results use
-    the numbers provided in the pivot ready tables.
+    and so have a rate of 25% for the same park.
 
 # Closure and Next Steps
 
