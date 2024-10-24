@@ -1,147 +1,5 @@
 # HEAL Parks: 2024 Playground Analysis
-Ronald Buie
-
-- [<span class="toc-section-number">1</span> Front
-  Matter](#front-matter)
-  - [<span class="toc-section-number">1.1</span> Major
-    inputs](#major-inputs)
-  - [<span class="toc-section-number">1.2</span> Output
-    categories](#output-categories)
-  - [<span class="toc-section-number">1.3</span> This is a quarto
-    generated document](#this-is-a-quarto-generated-document)
-- [<span class="toc-section-number">2</span> Setup &
-  Environment](#setup--environment)
-- [<span class="toc-section-number">3</span> Data
-  Preperation](#data-preperation)
-  - [<span class="toc-section-number">3.1</span> retrieving child
-    populations within .5 mile
-    radius](#retrieving-child-populations-within-5-mile-radius)
-- [<span class="toc-section-number">4</span> Analyses](#analyses)
-  - [<span class="toc-section-number">4.0.1</span> How does the observed
-    use of playgrounds differ between parks located in opportunity areas
-    and parks not located in opportunity
-    areas?](#how-does-the-observed-use-of-playgrounds-differ-between-parks-located-in-opportunity-areas-and-parks-not-located-in-opportunity-areas)
-  - [<span class="toc-section-number">4.1</span> Chart of Park
-    Catchment, sorted by Opportunity
-    Area](#chart-of-park-catchment-sorted-by-opportunity-area)
-  - [<span class="toc-section-number">4.2</span> Chart of Youth Park
-    Catchment, sorted by Opportunity
-    Area](#chart-of-youth-park-catchment-sorted-by-opportunity-area)
-    - [<span class="toc-section-number">4.2.1</span> Chart of Average
-      Playground Use, sorted by Opportunity
-      Area](#chart-of-average-playground-use-sorted-by-opportunity-area)
-    - [<span class="toc-section-number">4.2.2</span> Chart of Median
-      Playground Use, sorted by Opportunity
-      Area](#chart-of-median-playground-use-sorted-by-opportunity-area)
-    - [<span class="toc-section-number">4.2.3</span> Chart of Peak
-      Playground Use, sorted by Opportunity
-      Area](#chart-of-peak-playground-use-sorted-by-opportunity-area)
-  - [<span class="toc-section-number">4.3</span> How does the observed
-    use of playgrounds differ between parks of similar park
-    categories?](#how-does-the-observed-use-of-playgrounds-differ-between-parks-of-similar-park-categories)
-    - [<span class="toc-section-number">4.3.1</span> Chart of Park
-      Catchment, sorted by Park
-      Category](#chart-of-park-catchment-sorted-by-park-category)
-    - [<span class="toc-section-number">4.3.2</span> Chart of Youth Park
-      Catchment, sorted by Park
-      Category](#chart-of-youth-park-catchment-sorted-by-park-category)
-    - [<span class="toc-section-number">4.3.3</span> Chart of Average
-      Playground Use, sorted by Park
-      Category](#chart-of-average-playground-use-sorted-by-park-category)
-    - [<span class="toc-section-number">4.3.4</span> Chart of Median
-      Playground Use, sorted by Park
-      Category](#chart-of-median-playground-use-sorted-by-park-category)
-    - [<span class="toc-section-number">4.3.5</span> Chart of Peak
-      Playground Use, sorted by Park
-      Category](#chart-of-peak-playground-use-sorted-by-park-category)
-    - [<span class="toc-section-number">4.3.6</span> Chart of Average
-      Playground Popularity, sorted by Park
-      Category](#chart-of-average-playground-popularity-sorted-by-park-category)
-  - [<span class="toc-section-number">4.4</span> How does the observed
-    use of playgrounds differ between playgrounds with different
-    complexities of
-    playgrounds?](#how-does-the-observed-use-of-playgrounds-differ-between-playgrounds-with-different-complexities-of-playgrounds)
-    - [<span class="toc-section-number">4.4.1</span> Chart of Average
-      Playground Use, sorted by Play
-      Elements](#chart-of-average-playground-use-sorted-by-play-elements)
-    - [<span class="toc-section-number">4.4.2</span> Chart of Median
-      Playground Use, sorted by Play
-      Elements](#chart-of-median-playground-use-sorted-by-play-elements)
-    - [<span class="toc-section-number">4.4.3</span> Chart of Peak
-      Playground Use, sorted by Play
-      Elements](#chart-of-peak-playground-use-sorted-by-play-elements)
-    - [<span class="toc-section-number">4.4.4</span> Chart of Average
-      Playground Popularity, sorted by Play
-      Elements](#chart-of-average-playground-popularity-sorted-by-play-elements)
-  - [<span class="toc-section-number">4.5</span> How does the observed
-    use of playgrounds compare to the age of the
-    playground?](#how-does-the-observed-use-of-playgrounds-compare-to-the-age-of-the-playground)
-    - [<span class="toc-section-number">4.5.1</span> Chart of Average
-      Playground Use, sorted by Playground Installation
-      Date](#chart-of-average-playground-use-sorted-by-playground-installation-date)
-    - [<span class="toc-section-number">4.5.2</span> Chart of Median
-      Playground Use, sorted by Playground Installation
-      Date](#chart-of-median-playground-use-sorted-by-playground-installation-date)
-    - [<span class="toc-section-number">4.5.3</span> Chart of Peak
-      Playground Use, sorted by Playground Installation
-      Date](#chart-of-peak-playground-use-sorted-by-playground-installation-date)
-    - [<span class="toc-section-number">4.5.4</span> Chart of Playground
-      Installation Date and Opportunity Area (denoting differences in
-      Park
-      Category)](#chart-of-playground-installation-date-and-opportunity-area-denoting-differences-in-park-category)
-  - [<span class="toc-section-number">4.6</span> How does the observed
-    use of playgrounds differ when a park includes certain
-    features?](#how-does-the-observed-use-of-playgrounds-differ-when-a-park-includes-certain-features)
-    - [<span class="toc-section-number">4.6.1</span> Chart of Average
-      Playground Use, based on if park contains a restroom, separated by
-      park
-      category](#chart-of-average-playground-use-based-on-if-park-contains-a-restroom-separated-by-park-category)
-    - [<span class="toc-section-number">4.6.2</span> Chart of Median
-      Playground Use, based on if park contains a restroom, separated by
-      park
-      category](#chart-of-median-playground-use-based-on-if-park-contains-a-restroom-separated-by-park-category)
-    - [<span class="toc-section-number">4.6.3</span> Chart of Average
-      Playground Use, based on if park contains a picnic area, separated
-      by park
-      category](#chart-of-average-playground-use-based-on-if-park-contains-a-picnic-area-separated-by-park-category)
-    - [<span class="toc-section-number">4.6.4</span> Chart of Median
-      Playground Use, based on if park contains a picnic area, separated
-      by park
-      category](#chart-of-median-playground-use-based-on-if-park-contains-a-picnic-area-separated-by-park-category)
-    - [<span class="toc-section-number">4.6.5</span> Chart of Average
-      Playground Use, based on if park contains a sports field,
-      separated by park
-      category](#chart-of-average-playground-use-based-on-if-park-contains-a-sports-field-separated-by-park-category)
-    - [<span class="toc-section-number">4.6.6</span> Chart of Median
-      Playground Use, based on if park contains a sports field,
-      separated by park
-      category](#chart-of-median-playground-use-based-on-if-park-contains-a-sports-field-separated-by-park-category)
-  - [<span class="toc-section-number">4.7</span> How does the age of
-    observed playground users differ between park groups (size, feature
-    qualities,
-    etc.)?](#how-does-the-age-of-observed-playground-users-differ-between-park-groups-size-feature-qualities-etc)
-    - [<span class="toc-section-number">4.7.1</span> Chart of Average
-      Playground Use, sorted by Play Element, separated by Primary Age
-      Group](#chart-of-average-playground-use-sorted-by-play-element-separated-by-primary-age-group)
-    - [<span class="toc-section-number">4.7.2</span> Chart of Peak
-      Playground Use, sorted by Play Element, separated by Primary Age
-      Group](#chart-of-peak-playground-use-sorted-by-play-element-separated-by-primary-age-group)
-    - [<span class="toc-section-number">4.7.3</span> Chart of Playground
-      Popularity, sorted by Play Element, separated by Primary Age
-      Group](#chart-of-playground-popularity-sorted-by-play-element-separated-by-primary-age-group)
-    - [<span class="toc-section-number">4.7.4</span> Chart of Playground
-      Popularity specifically of observed child and teen, sorted by Play
-      Element, separated by Primary Age
-      Group](#chart-of-playground-popularity-specifically-of-observed-child-and-teen-sorted-by-play-element-separated-by-primary-age-group)
-  - [<span class="toc-section-number">4.8</span> How accessible is the
-    park by
-    transportation?](#how-accessible-is-the-park-by-transportation)
-  - [<span class="toc-section-number">4.9</span> By walking: Chart of
-    Playground Use by Walkscore of
-    park](#by-walking-chart-of-playground-use-by-walkscore-of-park)
-  - [<span class="toc-section-number">4.10</span> By transit: Chart of
-    Playground Use by Transitscore of
-    park](#by-transit-chart-of-playground-use-by-transitscore-of-park)
+Ronald W. Buie
 
 # Front Matter
 
@@ -157,13 +15,19 @@ Schromen-Wawrin.
 
 ## Major inputs
 
-Inputs to this script are contained at ./inputs/*.* and include
+The following inputs to this script are contained at ./inputs/*.* and
+include
 
 - A file of park meta data, including address, zip, city, neighborhood,
   official name, and REDCap name for each park
 - A file of collected SOPARC observations, aggregated to the period
-  level
-- An accompanying file of SOPARC activities
+  level, currently updated for 2022-2024
+- An accompanying file of SOPARC activities, currently updated for
+  2022-2024
+
+In addition, access to APDE’s population estimates, or calculated
+population estimates for children living within 1/2 mile for all parks
+included in the analysis.
 
 ## Output categories
 
@@ -174,7 +38,7 @@ Inputs to this script are contained at ./inputs/*.* and include
 
 By rendering/knitting the qmd file, the analysis is re-executed, this
 document rebuilt, and new outputs are generated. To learn more about
-Quarto see \[https://quarto.org\].
+Quarto see (https://quarto.org).
 
 # Setup & Environment
 
@@ -183,7 +47,8 @@ This script was last executed using R version 4.4.1 (2024-06-14 ucrt).
 # Data Preperation
 
 This analysis relies on park observations and park activity tables
-created in the annual SOPARC study
+created in the annual SOPARC study. Please contact Ronald W. Buie or
+Seth Schromen-Wawrin for details on this prior work.
 
 Some parks were included in the data set because observers practiced
 there. However these are not part of the playground study
@@ -191,231 +56,347 @@ there. However these are not part of the playground study
 Remove garfield Remove brighton \*no playgrounds Remoev steel lake
 Remove midway
 
-## retrieving child populations within .5 mile radius
+## Park catchment
+
+Some analyses require park catchment information. We use the population
+within .5 miles of a central coordinate for the park. All ages
+population is provided in the data set generated by our annual analysis.
+For this playground study we also calculate the population of 0-14 year
+olds within 0.5 miles of each park.
 
 # Analyses
 
+The below analyses are exploratory, descriptive, statistics to support
+further investigation into the equitable use and maintenance of
+municipal parks across King County. In providing these results we hope
+to facilitate discussion around this work and how to proceed going
+forward.
+
+Some important questions to ask as you review these results are:
+
+- Do the results appear reasonable, or do the numbers for some parks
+  appear unlikely to be accurate?
+- Do the proposed questions seem valuable to ask?
+- For a given analysis, is it well defined and are the data accurate?
+- For a given analysis, is this a helpful way to present the results?
+- Do any results suggest that we should investigate further, if
+  possible?
+- Do any results suggest that we should not investigate further?
+
 Notes:
 
-- Analyses of “average park use” aggregate all playground within the
-  park (effectively calculated as one large playground)
-- Multiple park characteristics in the supplamental information file
+- The below analyses are limited to 2024 observation data. In future
+  versions, we expect to include data from all years.
+
+<!-- -->
+
+- Analyses of “average park use” aggregate all playground target areas
+  within the park (effectively calculated as one large playground)
+
+- Multiple park characteristics in the supplemental information file
   have n/a or tbd for parks that, including for parks that have
-  playgrounds. Depending on the analysis, these may show up as NA, tbd,
-  or 0
+  playgrounds. Depending on the analysis, these may be suppressed, or
+  show up as NA, tbd, or 0
 
-### How does the observed use of playgrounds differ between parks located in opportunity areas and parks not located in opportunity areas?
+## Analyses of park catchment and status
 
-## Chart of Park Catchment, sorted by Opportunity Area
+These analyses explore the relationship between classification and
+funding status of a park and the surrounding population. Park catchment
+may, additionally, provide context for later analyses below.
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-1-1.png)
-
-## Chart of Youth Park Catchment, sorted by Opportunity Area
+### chart of park catchment
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-2-1.png)
 
-### Chart of Average Playground Use, sorted by Opportunity Area
+### chart of 0-14 park catchment
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-3-1.png)
 
-### Chart of Median Playground Use, sorted by Opportunity Area
+### chart of park catchment by opportunity area
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-4-1.png)
 
-### Chart of Peak Playground Use, sorted by Opportunity Area
+### chart of 0-14 park catchment by opportunity area
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-5-1.png)
 
-## How does the observed use of playgrounds differ between parks of similar park categories?
-
-### Chart of Park Catchment, sorted by Park Category
+### chart of park catchment by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-6-1.png)
 
 Notes:
 
 The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Skyway Park
+Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
+Steve Cox Playfield
 
-### Chart of Youth Park Catchment, sorted by Park Category
+### chart of 0-14 park catchment by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-7-1.png)
 
 Notes:
 
 The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Skyway Park
+Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
+Steve Cox Playfield
 
-### Chart of Average Playground Use, sorted by Park Category
+## Analyses of playground use
+
+The below analyses explore relationships of the number of people
+observed in playgrounds and other characteristics or status of the park.
+We refer to this number of observed users as “use”. For most of these
+analyses, use is provided in three forms, the average number of users
+observed across all observed days, the median number of users across all
+days, and the peak number of users across all days.
+
+### playground use by opportunity area
+
+#### chart of average playground use by opportunity area
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-8-1.png)
 
-Notes:
-
-The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Skyway Park
-
-### Chart of Median Playground Use, sorted by Park Category
+#### chart of median playground use by opportunity area
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-9-1.png)
 
-Notes:
-
-The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Skyway Park
-
-### Chart of Peak Playground Use, sorted by Park Category
+#### chart of peak playground use by opportunity area
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-10-1.png)
 
-Notes:
+### playground use by park category
 
-The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Skyway Park
-
-### Chart of Average Playground Popularity, sorted by Park Category
-
-Average Popularity is the average of the daily popularity rate, where
-popularity rate is the proportion of park users (in a day) who were in
-the playground
+#### chart of average playground use by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-11-1.png)
 
 Notes:
 
 The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Skyway Park
+Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
+Steve Cox Playfield
 
-## How does the observed use of playgrounds differ between playgrounds with different complexities of playgrounds?
-
-### Chart of Average Playground Use, sorted by Play Elements
+#### chart of median playground use by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-12-1.png)
 
-### Chart of Median Playground Use, sorted by Play Elements
+Notes:
+
+The following parks were excluded for not having category status: Dick
+Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
+Steve Cox Playfield
+
+#### chart of peak playground use by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-13-1.png)
 
-### Chart of Peak Playground Use, sorted by Play Elements
+Notes:
+
+The following parks were excluded for not having category status: Dick
+Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
+Steve Cox Playfield
+
+### playground use by play elements
+
+#### chart of average playground use by play elements
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-14-1.png)
 
-### Chart of Average Playground Popularity, sorted by Play Elements
+#### chart of median playground use by play elements
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-15-1.png)
 
-## How does the observed use of playgrounds compare to the age of the playground?
-
-### Chart of Average Playground Use, sorted by Playground Installation Date
+#### chart of peak playground use by play elements
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-16-1.png)
 
-### Chart of Median Playground Use, sorted by Playground Installation Date
+### playground use by playground age
+
+#### chart of average playground use by playground age
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-17-1.png)
 
-### Chart of Peak Playground Use, sorted by Playground Installation Date
+Notes:
+
+The following parks were excluded for not having playground age: Roxhill
+Park
+
+#### chart of median playground use by playground age
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-18-1.png)
 
-### Chart of Playground Installation Date and Opportunity Area (denoting differences in Park Category)
+Notes:
+
+The following parks were excluded for not having playground age: Roxhill
+Park
+
+#### chart of peak playground use by playground age
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-19-1.png)
 
-## How does the observed use of playgrounds differ when a park includes certain features?
+Notes:
 
-### Chart of Average Playground Use, based on if park contains a restroom, separated by park category
+The following parks were excluded for not having playground age: Roxhill
+Park
+
+### playground use by restroom status and park category
+
+#### chart of average playground use by restroom status and by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-20-1.png)
 
 Notes:
 
 The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Skyway Park
+Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
+Steve Cox Playfield
 
-### Chart of Median Playground Use, based on if park contains a restroom, separated by park category
+#### chart of median playground use by restroom status and by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-21-1.png)
 
 Notes:
 
 The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Skyway Park
+Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
+Steve Cox Playfield
 
-### Chart of Average Playground Use, based on if park contains a picnic area, separated by park category
+### playground use by picnic area status and park category
+
+#### chart of average playground use by picnic area status and by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-22-1.png)
 
 Notes:
 
 The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Skyway Park
+Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
+Steve Cox Playfield
 
-### Chart of Median Playground Use, based on if park contains a picnic area, separated by park category
+#### chart of median playground use by picnic area status and by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-23-1.png)
 
 Notes:
 
 The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Skyway Park
+Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
+Steve Cox Playfield
 
-### Chart of Average Playground Use, based on if park contains a sports field, separated by park category
+### playground use by sports field status and park category
+
+#### chart of average playground use by sports field status and by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-24-1.png)
 
 Notes:
 
 The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Skyway Park
+Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
+Steve Cox Playfield
 
-### Chart of Median Playground Use, based on if park contains a sports field, separated by park category
+#### chart of median playground use by sports field status and by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-25-1.png)
 
 Notes:
 
 The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Skyway Park
+Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
+Steve Cox Playfield
 
-## How does the age of observed playground users differ between park groups (size, feature qualities, etc.)?
+### playground use by number of play elements and primary age groups
 
-### Chart of Average Playground Use, sorted by Play Element, separated by Primary Age Group
+Primary age group is a status provided by parks managers that designates
+the age groups that the playground is target for. The two age groups are
+5-12 and 2-5. A playground may be designed to serve both.
+
+#### chart of average playground use by number of play elements and by primary age group
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-26-1.png)
 
-### Chart of Peak Playground Use, sorted by Play Element, separated by Primary Age Group
-
-garfield is missing, not actually “no”
+#### chart of median playground use by number of play elements and by primary age group
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-27-1.png)
 
-### Chart of Playground Popularity, sorted by Play Element, separated by Primary Age Group
+#### chart of peak playground use by number of play elements and by primary age group
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-28-1.png)
 
-### Chart of Playground Popularity specifically of observed child and teen, sorted by Play Element, separated by Primary Age Group
+### playground use by walkscore
 
-Here, popularity is parameter as
-
-$\frac{\text{num of children and teens in playground}} {\text{num of children and teens in park}}$
+#### chart of average playground use by walkscore of park
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-29-1.png)
 
-## How accessible is the park by transportation?
-
-## By walking: Chart of Playground Use by Walkscore of park
+#### chart of median playground use by walkscore of park
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-30-1.png)
 
-    <ScaleContinuousPosition>
-     Range:  
-     Limits:    0 --    1
+### playground use by transit score
 
-## By transit: Chart of Playground Use by Transitscore of park
+#### chart of average playground use by transit score of park
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-31-1.png)
 
-    <ScaleContinuousPosition>
-     Range:  
-     Limits:    0 --    1
+Notes:
+
+The following parks were excluded for not having a transit score: Dick
+Thurnau Memorial Park, North Shorewood Park, Skyway Park
+
+#### chart of median playground use by transit score of park
+
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-32-1.png)
+
+Notes:
+
+The following parks were excluded for not having a transit score: Dick
+Thurnau Memorial Park, North Shorewood Park, Skyway Park
+
+## Analyses of playground popularity
+
+These analyses explore the relationship between popularity of a park’s
+playground relative to other characteristics of the park. Playground
+popularity is defined as the proportion of users who are observed in the
+playground versus all users. For example, if 20 users were observed in
+the park, and 10 of those were in the playground, the playground
+popularity would be 50%. Popularity is based on the total users observed
+across all days, rather than a daily average.
+
+### chart of playground popularity by park category
+
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-33-1.png)
+
+Notes:
+
+The following parks were excluded for not having category status: Dick
+Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
+Steve Cox Playfield
+
+### chart of playground popularity by play elements
+
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-34-1.png)
+
+### chart of playground popularity by number of play elements and by primary age group
+
+Primary age group is a status provided by parks managers that designates
+the age groups that the playground is target for. The two age groups are
+5-12 and 2-5. A playground may be designed to serve both.
+
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-35-1.png)
+
+### chart of playground popularity among children and teens by number of play elements and by primary age group
+
+Here, popularity is:
+
+$\frac{\text{num of children and teens in playground}} {\text{num of children and teens in park}}$
+
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-36-1.png)
+
+Notes:
+
+The following parks were excluded for not having a playground
+installation date:
+
+## Analysis of playground age opportunity area by park categtory
+
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-37-1.png)
