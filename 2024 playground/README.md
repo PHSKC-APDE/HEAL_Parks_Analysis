@@ -6,12 +6,76 @@ Ronald W. Buie
 This document outlines procedures, technical considerations, and
 analytic results for a 2024 analysis of playgrounds within parks
 participating in the HEAL Parks Study. The primary purpose of this PDF
-is technical review by analyst and project managers to confirm the
+is technical review by analysts and project managers to confirm the
 process and data quality.
 
 For general information about the project please review the
-[git](https://github.com/PHSKC-APDE/HEAL_Parks_Analysis) or contact Seth
+[git](https://github.com/PHSKC-APDE/HEAL_Parks_Analysis), contact Seth
 Schromen-Wawrin.
+
+## Goal
+
+Identify differences in park use access and share findings with parks
+agencies to inform their planning and investments
+
+## Objective
+
+Test the ability of park use observation data to compare how park
+features are used between parks. Use the results from this analysis to
+inform the understanding of facility access and quality. This pilot will
+focus on comparing use of playground features
+
+## Partners
+
+Public Health – Seattle & King County
+
+King County Parks
+
+Tukwila Parks and Recreation
+
+Burien Parks, Recreation, and Cultural Services
+
+King County Play Equity Coalition
+
+## Geography
+
+The contiguous area of Burien, North Highline, Skyway, Tukwila, and
+White Center
+
+# Background
+
+The Healthy Eating Active Living (HEAL) initiative includes a family of
+studies aimed at identifying the availability and impact of parks on
+King County residents. This effort includes an annual study measuring
+who is using the parks, when they are using them, and what they are
+doing. In 2024, parks’ managers identified playground use as an area of
+possible interest to focus their efforts. The below analysis has been
+conducted in response to research questions proposed by the parks’
+managers. These exploratory analyses are intended to inform further
+discussion of how we may pursue research and reporting of playground use
+that supports parks’ and the county’s interest in the public health and
+our broader equity and social justice goals.
+
+## Research Questions
+
+The below research questions were proposed by the parks’ managers in
+collaboration with the HEAL team.
+
+- How does the observed use of playgrounds differ between parks located
+  in opportunity areas and parks not located in opportunity areas ?
+- How does the observed use of playgrounds differ between parks of
+  similar park categories?
+- How does the observed use of playgrounds differ between playgrounds
+  with different complexities of playgrounds?
+- How does the observed use of playgrounds compare to the age of the
+  playground?
+- How does the observed use of playgrounds differ when a park includes
+  certain features?
+- How does the age of observed playground users differ between park
+  groups (size, feature qualities, etc.)?
+- How accessible is the park by transportation?
+
+# Analytical Methods
 
 ## Major inputs
 
@@ -31,32 +95,72 @@ included in the analysis.
 
 ## Output categories
 
+- documentation - this documentation and analysis results as document
+  files
 - tables - tabular outputs of analysis, generally in xlsx format
 - charts - chart outputs of analysis, generally in pdf and/or png format
 
-## This is a quarto generated document
-
-By rendering/knitting the qmd file, the analysis is re-executed, this
-document rebuilt, and new outputs are generated. To learn more about
-Quarto see (https://quarto.org).
-
-# Setup & Environment
+## Setup & Environment
 
 This script was last executed using R version 4.4.1 (2024-06-14 ucrt).
 
 # Data Preperation
 
-This analysis relies on park observations and park activity tables
-created in the annual SOPARC study. Please contact Ronald W. Buie or
-Seth Schromen-Wawrin for details on this prior work.
+This analysis relies on the below data sources. Please contact Ronald W.
+Buie or Seth Schromen-Wawrin for details.
 
-Some parks were included in the data set because observers practiced
-there. However these are not part of the playground study
+*2022-2024 park observation data (PHSKC * Park Category – (Burien,
+Tukwila, KC Parks) \* Playground Age – installation date (Burien,
+Tukwila, KC Parks) \* Playground and Park additional features (Burien,
+Tukwila, KC Parks) \* Restroom \* Sports field \* Picnic area \*
+Playground age group \* Playground complexity \* Opportunity areas (KC
+Parks) *Walkscore/Transitscore of park (derived from walkscore.com)
+*Census data on population surrounding park (within ½ mile): \* Total
+population \* Population of people 0 to 15 years of age
 
-Remove garfield Remove brighton \*no playgrounds Remoev steel lake
-Remove midway
+## Variable Definitions
 
-## Park catchment
+- “Park Category”: category of park’s intended reach, set by Parks
+  Department
+- ‘Neighborhood Park’ = park intended to draw from more local area
+- ‘Regional Park’ = park intended to draw from the entire city or region
+- “Opportunity Areas”: yes/no field for if park is located in an
+  Opportunity Area for health and economics, per King County Parks
+  analysis.
+- “Park Includes”: Yes/no fields if the park contains this feature (each
+  individual).
+- ‘Restroom’ = restroom facility (permanent or temporary)
+- ‘Picnic Area’ = area with tables and benches
+- ‘Sport Fields’ = area designated for organized team sports (all
+  conditions).
+- “Play Structures”: number of unique play structures that are
+  physically separated and designed for use by more than one person at a
+  time.
+- “Play Elements”: number of unique opportunities in playground for a
+  type movement/activity. Movement/activities include: climbing,
+  sliding, spinning, crawling, swinging, balancing, playing with sand,
+  and water play (e.g., splash pads).
+- Additional variables for:
+- ‘Water’ = Includes water play area / splashpad.
+- ‘Inclusive’ = Design goes beyond ADA compliance for different
+  physical, sensory, social, and intellectual abilities to play together
+- “Playground Age”: Year that the playground was installed or last
+  significantly updated.
+- “Primary Age Group”: Category of ‘2-5 years old’ or ‘5-12 years old’.
+  Swing features included in 5-12; a playground is not fit 2-5 if it
+  only has toddler bucket swings. Can be both categories.
+- “Average Playground Use”: Average number of observed users across all
+  observation days.
+- “Peak Playground Use”: Most number of observed users found during a
+  single observation day.
+- “Playground Popularity”: Proportion of park users observed in
+  playground.
+- “Park Catchment”: Population within ½ mile of park (park of original
+  data analysis).
+- “Youth Park Catchment”: Population less than 15 years of age within ½
+  mile of park.
+
+### Park catchment
 
 Some analyses require park catchment information. We use the population
 within .5 miles of a central coordinate for the park. All ages
@@ -106,39 +210,41 @@ may, additionally, provide context for later analyses below.
 
 ### chart of park catchment
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-2-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-3-1.png)
 
 ### chart of 0-14 park catchment
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-3-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-4-1.png)
 
 ### chart of park catchment by opportunity area
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-4-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-5-1.png)
 
 ### chart of 0-14 park catchment by opportunity area
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-5-1.png)
-
-### chart of park catchment by park category
-
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-6-1.png)
 
-Notes:
-
-The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
-Steve Cox Playfield
-
-### chart of 0-14 park catchment by park category
+### chart of park catchment by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-7-1.png)
 
 Notes:
 
-The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
-Steve Cox Playfield
+The following parks were excluded for not having category status:
+Boulevard Lane Park (KC), Dick Thurnau Park (KC), Lake Geneva Park (KC),
+Maple Valley Heights Park (KC), Maplewood Park (KC), North Shorewood
+Park (KC), Roxhill Park (SPR), Skyway Park (KC), Gary Grant Park (KC)
+
+### chart of 0-14 park catchment by park category
+
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-8-1.png)
+
+Notes:
+
+The following parks were excluded for not having category status:
+Boulevard Lane Park (KC), Dick Thurnau Park (KC), Lake Geneva Park (KC),
+Maple Valley Heights Park (KC), Maplewood Park (KC), North Shorewood
+Park (KC), Roxhill Park (SPR), Skyway Park (KC), Gary Grant Park (KC)
 
 ## Analyses of playground use
 
@@ -153,156 +259,180 @@ days, and the peak number of users across all days.
 
 #### chart of average playground use by opportunity area
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-8-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-9-1.png)
 
 #### chart of median playground use by opportunity area
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-9-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-10-1.png)
 
 #### chart of peak playground use by opportunity area
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-10-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-11-1.png)
 
 ### playground use by park category
 
 #### chart of average playground use by park category
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-11-1.png)
-
-Notes:
-
-The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
-Steve Cox Playfield
-
-#### chart of median playground use by park category
-
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-12-1.png)
 
 Notes:
 
-The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
-Steve Cox Playfield
+The following parks were excluded for not having category status:
+Boulevard Lane Park (KC), Dick Thurnau Park (KC), Lake Geneva Park (KC),
+Maple Valley Heights Park (KC), Maplewood Park (KC), North Shorewood
+Park (KC), Roxhill Park (SPR), Skyway Park (KC), Gary Grant Park (KC)
 
-#### chart of peak playground use by park category
+#### chart of median playground use by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-13-1.png)
 
 Notes:
 
-The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
-Steve Cox Playfield
+The following parks were excluded for not having category status:
+Boulevard Lane Park (KC), Dick Thurnau Park (KC), Lake Geneva Park (KC),
+Maple Valley Heights Park (KC), Maplewood Park (KC), North Shorewood
+Park (KC), Roxhill Park (SPR), Skyway Park (KC), Gary Grant Park (KC)
+
+#### chart of peak playground use by park category
+
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-14-1.png)
+
+Notes:
+
+The following parks were excluded for not having category status:
+Boulevard Lane Park (KC), Dick Thurnau Park (KC), Lake Geneva Park (KC),
+Maple Valley Heights Park (KC), Maplewood Park (KC), North Shorewood
+Park (KC), Roxhill Park (SPR), Skyway Park (KC), Gary Grant Park (KC)
 
 ### playground use by play elements
 
 #### chart of average playground use by play elements
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-14-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-15-1.png)
 
 #### chart of median playground use by play elements
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-15-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-16-1.png)
 
 #### chart of peak playground use by play elements
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-16-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-17-1.png)
 
 ### playground use by playground age
 
 #### chart of average playground use by playground age
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-17-1.png)
-
-Notes:
-
-The following parks were excluded for not having playground age: Roxhill
-Park
-
-#### chart of median playground use by playground age
-
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-18-1.png)
 
 Notes:
 
-The following parks were excluded for not having playground age: Roxhill
-Park
+The following parks were excluded for not having playground age: Beverly
+Park El Sch (HSD), Cedarhurst El Sch (HSD), GB: N Playground (KCHA), GB:
+W4 Playground (KCHA), GB: Wave Playground (KCHA), GB: W Playground
+(KCHA), Gregory Heights El Sch (HSD), Hazel Valley El Sch (HSD), Mount
+View El Sch (HSD), Roxhill Park (SPR), Seola Gardens: N Playground
+(KCHA), Seola Gardens: Park (KCHA), Seola Gardens: S Playground (KCHA),
+Shorewood El Sch (HSD)
 
-#### chart of peak playground use by playground age
+#### chart of median playground use by playground age
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-19-1.png)
 
 Notes:
 
-The following parks were excluded for not having playground age: Roxhill
-Park
+The following parks were excluded for not having playground age: Beverly
+Park El Sch (HSD), Cedarhurst El Sch (HSD), GB: N Playground (KCHA), GB:
+W4 Playground (KCHA), GB: Wave Playground (KCHA), GB: W Playground
+(KCHA), Gregory Heights El Sch (HSD), Hazel Valley El Sch (HSD), Mount
+View El Sch (HSD), Roxhill Park (SPR), Seola Gardens: N Playground
+(KCHA), Seola Gardens: Park (KCHA), Seola Gardens: S Playground (KCHA),
+Shorewood El Sch (HSD)
 
-### playground use by restroom status and park category
-
-#### chart of average playground use by restroom status and by park category
+#### chart of peak playground use by playground age
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-20-1.png)
 
 Notes:
 
-The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
-Steve Cox Playfield
+The following parks were excluded for not having playground age: Beverly
+Park El Sch (HSD), Cedarhurst El Sch (HSD), GB: N Playground (KCHA), GB:
+W4 Playground (KCHA), GB: Wave Playground (KCHA), GB: W Playground
+(KCHA), Gregory Heights El Sch (HSD), Hazel Valley El Sch (HSD), Mount
+View El Sch (HSD), Roxhill Park (SPR), Seola Gardens: N Playground
+(KCHA), Seola Gardens: Park (KCHA), Seola Gardens: S Playground (KCHA),
+Shorewood El Sch (HSD)
 
-#### chart of median playground use by restroom status and by park category
+### playground use by restroom status and park category
+
+#### chart of average playground use by restroom status and by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-21-1.png)
 
 Notes:
 
-The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
-Steve Cox Playfield
+The following parks were excluded for not having category status:
+Boulevard Lane Park (KC), Dick Thurnau Park (KC), Lake Geneva Park (KC),
+Maple Valley Heights Park (KC), Maplewood Park (KC), North Shorewood
+Park (KC), Roxhill Park (SPR), Skyway Park (KC), Gary Grant Park (KC)
 
-### playground use by picnic area status and park category
-
-#### chart of average playground use by picnic area status and by park category
+#### chart of median playground use by restroom status and by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-22-1.png)
 
 Notes:
 
-The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
-Steve Cox Playfield
+The following parks were excluded for not having category status:
+Boulevard Lane Park (KC), Dick Thurnau Park (KC), Lake Geneva Park (KC),
+Maple Valley Heights Park (KC), Maplewood Park (KC), North Shorewood
+Park (KC), Roxhill Park (SPR), Skyway Park (KC), Gary Grant Park (KC)
 
-#### chart of median playground use by picnic area status and by park category
+### playground use by picnic area status and park category
+
+#### chart of average playground use by picnic area status and by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-23-1.png)
 
 Notes:
 
-The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
-Steve Cox Playfield
+The following parks were excluded for not having category status:
+Boulevard Lane Park (KC), Dick Thurnau Park (KC), Lake Geneva Park (KC),
+Maple Valley Heights Park (KC), Maplewood Park (KC), North Shorewood
+Park (KC), Roxhill Park (SPR), Skyway Park (KC), Gary Grant Park (KC)
 
-### playground use by sports field status and park category
-
-#### chart of average playground use by sports field status and by park category
+#### chart of median playground use by picnic area status and by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-24-1.png)
 
 Notes:
 
-The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
-Steve Cox Playfield
+The following parks were excluded for not having category status:
+Boulevard Lane Park (KC), Dick Thurnau Park (KC), Lake Geneva Park (KC),
+Maple Valley Heights Park (KC), Maplewood Park (KC), North Shorewood
+Park (KC), Roxhill Park (SPR), Skyway Park (KC), Gary Grant Park (KC)
 
-#### chart of median playground use by sports field status and by park category
+### playground use by sports field status and park category
+
+#### chart of average playground use by sports field status and by park category
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-25-1.png)
 
 Notes:
 
-The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
-Steve Cox Playfield
+The following parks were excluded for not having category status:
+Boulevard Lane Park (KC), Dick Thurnau Park (KC), Lake Geneva Park (KC),
+Maple Valley Heights Park (KC), Maplewood Park (KC), North Shorewood
+Park (KC), Roxhill Park (SPR), Skyway Park (KC), Gary Grant Park (KC)
+
+#### chart of median playground use by sports field status and by park category
+
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-26-1.png)
+
+Notes:
+
+The following parks were excluded for not having category status:
+Boulevard Lane Park (KC), Dick Thurnau Park (KC), Lake Geneva Park (KC),
+Maple Valley Heights Park (KC), Maplewood Park (KC), North Shorewood
+Park (KC), Roxhill Park (SPR), Skyway Park (KC), Gary Grant Park (KC)
 
 ### playground use by number of play elements and primary age groups
 
@@ -312,45 +442,57 @@ the age groups that the playground is target for. The two age groups are
 
 #### chart of average playground use by number of play elements and by primary age group
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-26-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-27-1.png)
 
 #### chart of median playground use by number of play elements and by primary age group
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-27-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-28-1.png)
 
 #### chart of peak playground use by number of play elements and by primary age group
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-28-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-29-1.png)
 
 ### playground use by walkscore
 
 #### chart of average playground use by walkscore of park
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-29-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-30-1.png)
 
 #### chart of median playground use by walkscore of park
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-30-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-31-1.png)
 
 ### playground use by transit score
 
 #### chart of average playground use by transit score of park
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-31-1.png)
-
-Notes:
-
-The following parks were excluded for not having a transit score: Dick
-Thurnau Memorial Park, North Shorewood Park, Skyway Park
-
-#### chart of median playground use by transit score of park
-
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-32-1.png)
 
 Notes:
 
-The following parks were excluded for not having a transit score: Dick
-Thurnau Memorial Park, North Shorewood Park, Skyway Park
+The following parks were excluded for not having a transit score:
+Beverly Park El Sch (HSD), Dick Thurnau Park (KC), Five Mile Lake Park
+(KC), GB: N Playground (KCHA), GB: W4 Playground (KCHA), GB: Wave
+Playground (KCHA), GB: W Playground (KCHA), Lake Geneva Park (KC), Maple
+Valley Heights Park (KC), Maplewood Park (KC), North Shorewood Park
+(KC), Seola Gardens: N Playground (KCHA), Seola Gardens: Park (KCHA),
+Seola Gardens: S Playground (KCHA), Skyway Park (KC), S County
+Ballfields (KC)
+
+#### chart of median playground use by transit score of park
+
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-33-1.png)
+
+Notes:
+
+The following parks were excluded for not having a transit score:
+Beverly Park El Sch (HSD), Dick Thurnau Park (KC), Five Mile Lake Park
+(KC), GB: N Playground (KCHA), GB: W4 Playground (KCHA), GB: Wave
+Playground (KCHA), GB: W Playground (KCHA), Lake Geneva Park (KC), Maple
+Valley Heights Park (KC), Maplewood Park (KC), North Shorewood Park
+(KC), Seola Gardens: N Playground (KCHA), Seola Gardens: Park (KCHA),
+Seola Gardens: S Playground (KCHA), Skyway Park (KC), S County
+Ballfields (KC)
 
 ## Analyses of playground popularity
 
@@ -364,17 +506,18 @@ across all days, rather than a daily average.
 
 ### chart of playground popularity by park category
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-33-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-34-1.png)
 
 Notes:
 
-The following parks were excluded for not having category status: Dick
-Thurnau Memorial Park, North Shorewood Park, Roxhill Park, Skyway Park,
-Steve Cox Playfield
+The following parks were excluded for not having category status:
+Boulevard Lane Park (KC), Dick Thurnau Park (KC), Lake Geneva Park (KC),
+Maple Valley Heights Park (KC), Maplewood Park (KC), North Shorewood
+Park (KC), Roxhill Park (SPR), Skyway Park (KC), Gary Grant Park (KC)
 
 ### chart of playground popularity by play elements
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-34-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-35-1.png)
 
 ### chart of playground popularity by number of play elements and by primary age group
 
@@ -382,7 +525,7 @@ Primary age group is a status provided by parks managers that designates
 the age groups that the playground is target for. The two age groups are
 5-12 and 2-5. A playground may be designed to serve both.
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-35-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-36-1.png)
 
 ### chart of playground popularity among children and teens by number of play elements and by primary age group
 
@@ -390,13 +533,18 @@ Here, popularity is:
 
 $\frac{\text{num of children and teens in playground}} {\text{num of children and teens in park}}$
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-36-1.png)
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-37-1.png)
+
+## Analysis of playground age opportunity area by park categtory
+
+![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-38-1.png)
 
 Notes:
 
 The following parks were excluded for not having a playground
-installation date:
-
-## Analysis of playground age opportunity area by park categtory
-
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-37-1.png)
+installation date: Beverly Park El Sch (HSD), Cedarhurst El Sch (HSD),
+GB: N Playground (KCHA), GB: W4 Playground (KCHA), GB: Wave Playground
+(KCHA), GB: W Playground (KCHA), Gregory Heights El Sch (HSD), Hazel
+Valley El Sch (HSD), Mount View El Sch (HSD), Roxhill Park (SPR), Seola
+Gardens: N Playground (KCHA), Seola Gardens: Park (KCHA), Seola Gardens:
+S Playground (KCHA), Shorewood El Sch (HSD)
