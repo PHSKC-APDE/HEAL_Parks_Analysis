@@ -958,18 +958,18 @@ Primary age group is a status provided by parks managers that designates the age
 DT <- copy(ParkFull)
 
 DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Elements,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "")][, Age_Group := ifelse(`Primary_Age_Group_2-5` != "" & `Primary_Age_Group_5-12` != "", paste0(`Primary_Age_Group_2-5` ," & ", `Primary_Age_Group_5-12`),paste0(`Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`) )]
-
-ggplot(DTplot[!is.na(Elements)]) +
-   geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = avg_Daily_Users, fill = Elements)) +
-   facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y", nrow = 3) +
-   #facet_grid(`Primary_Age_Group_2-5` ~ `Primary_Age_Group_5-12`, scales = "free_y") +
-   xlab("Average Daily number of playground users") +
-   ylab("Park Name") +
-   ggtitle("Average Daily Number of Playground Users Given \n Primary Age Group and Elements") +
-   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-   scale_y_discrete(limits = rev) +
-   scale_x_continuous(labels = scales::comma) +
-   scale_fill_gradient(low = "orange", high = "aquamarine")
+# 
+# ggplot(DTplot[!is.na(Elements)]) +
+#    geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = avg_Daily_Users, fill = Elements)) +
+#    facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y", nrow = 3) +
+#    #facet_grid(`Primary_Age_Group_2-5` ~ `Primary_Age_Group_5-12`, scales = "free_y") +
+#    xlab("Average Daily number of playground users") +
+#    ylab("Park Name") +
+#    ggtitle("Average Daily Number of Playground Users Given \n Primary Age Group and Elements") +
+#    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+#    scale_y_discrete(limits = rev) +
+#    scale_x_continuous(labels = scales::comma) +
+#    scale_fill_gradient(low = "orange", high = "aquamarine")
 
 
 ggplot(DTplot[!is.na(Elements)]) +
@@ -998,11 +998,24 @@ The following parks were excluded for not having element status: `r unique(DTplo
 ```{r}
 DT <- copy(ParkFull)
 
-DTplot <- DT[playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( Elements,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "")]
+DTplot <- DT[playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( Elements,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "")][, Age_Group := ifelse(`Primary_Age_Group_2-5` != "" & `Primary_Age_Group_5-12` != "", paste0(`Primary_Age_Group_2-5` ," & ", `Primary_Age_Group_5-12`),paste0(`Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`) )]
+# 
+# ggplot(DTplot[!is.na(Elements)]) +
+#   geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = med_Daily_Users, fill = Elements)) +
+#   facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y", nrow = 3) +
+#   #facet_grid(`Primary_Age_Group_2-5` ~ `Primary_Age_Group_5-12`, scales = "free_y") +
+#   xlab("Median Daily number of playground users") +
+#   ylab("Park Name") +
+#   ggtitle("Median Daily Number of Playground Users Given \n Primary Age Group and Elements") +
+#   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+#   scale_y_discrete(limits = rev) +
+#   scale_x_continuous(labels = scales::comma) +
+#   scale_fill_gradient(low = "orange", high = "aquamarine")
+
 
 ggplot(DTplot[!is.na(Elements)]) +
   geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = med_Daily_Users, fill = Elements)) +
-  facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y", nrow = 3) +
+  facet_wrap(~Age_Group, scales = "free_y", nrow = 3) +
   #facet_grid(`Primary_Age_Group_2-5` ~ `Primary_Age_Group_5-12`, scales = "free_y") +
   xlab("Median Daily number of playground users") +
   ylab("Park Name") +
@@ -1011,6 +1024,7 @@ ggplot(DTplot[!is.na(Elements)]) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
   scale_fill_gradient(low = "orange", high = "aquamarine")
+
 #The following parks do not have playground age designated: `r unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])`
 
 ```
@@ -1027,11 +1041,24 @@ The following parks were excluded for not having element status: `r unique(DTplo
 ```{r}
 DT <- copy(ParkFull)
 
-DTplot <- DT[playground == 1, .(max_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Users") ,by = .( Elements,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "")]
+DTplot <- DT[playground == 1, .(max_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Users") ,by = .( Elements,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "")][, Age_Group := ifelse(`Primary_Age_Group_2-5` != "" & `Primary_Age_Group_5-12` != "", paste0(`Primary_Age_Group_2-5` ," & ", `Primary_Age_Group_5-12`),paste0(`Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`) )]
+
+# ggplot(DTplot[!is.na(Elements)]) +
+#   geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = max_Daily_Users, fill = Elements)) +
+#   facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y", nrow = 3) +
+#   #facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y") +
+#   xlab("Max Daily number of playground users") +
+#   ylab("Park Name") +
+#   ggtitle("Max Daily Number of Playground Users Given \n Primary Age Group and Elements") +
+#   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+#   scale_y_discrete(limits = rev) +
+#   scale_x_continuous(labels = scales::comma) +
+#   scale_fill_gradient(low = "orange", high = "aquamarine")
+
 
 ggplot(DTplot[!is.na(Elements)]) +
   geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = max_Daily_Users, fill = Elements)) +
-  facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y", nrow = 3) +
+  facet_wrap(~Age_Group, scales = "free_y", nrow = 3) +
   #facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y") +
   xlab("Max Daily number of playground users") +
   ylab("Park Name") +
@@ -1209,12 +1236,25 @@ Primary age group is a status provided by parks managers that designates the age
 
 DT <- copy(ParkFull[occupied == "Yes"])
 
-DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, park_name,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, playground)][, .(users = sum(users)),by = .(Elements, park_name,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, playground)][,allusers := sum(users), by = .( Elements, park_name,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`)][playground == 1, popularity := users/allusers][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("popularity") ,by = .(Elements, park_name, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "")]
+DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, park_name,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, playground)][, .(users = sum(users)),by = .(Elements, park_name,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, playground)][,allusers := sum(users), by = .( Elements, park_name,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`)][playground == 1, popularity := users/allusers][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("popularity") ,by = .(Elements, park_name, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "")][, Age_Group := ifelse(`Primary_Age_Group_2-5` != "" & `Primary_Age_Group_5-12` != "", paste0(`Primary_Age_Group_2-5` ," & ", `Primary_Age_Group_5-12`),paste0(`Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`) )]
+
+# 
+# ggplot(DTplot[!is.na(Elements)]) +
+#   geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = popularity, fill = Elements)) +
+#   facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y", nrow = 3) +
+#   #facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y") +
+#   xlab("Popularity") +
+#   ylab("Park Name") +
+#   ggtitle("Playground Popularity Given \n Primary Age Group and Elements") +
+#   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+#   scale_y_discrete(limits = rev) +
+#   scale_x_continuous(labels = scales::comma) +
+#   scale_fill_gradient(low = "orange", high = "aquamarine")
 
 
 ggplot(DTplot[!is.na(Elements)]) +
   geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = popularity, fill = Elements)) +
-  facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y", nrow = 3) +
+  facet_wrap(~Age_Group, scales = "free_y", nrow = 3) +
   #facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y") +
   xlab("Popularity") +
   ylab("Park Name") +
@@ -1243,12 +1283,24 @@ $\frac{\text{num of children and teens in playground}} {\text{num of children an
 
 DT <- copy(ParkFull[occupied == "Yes"])
 
-DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat,  na.rm = TRUE)), by = .(datePOSIX, Elements, park_name,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, playground)][, .(users = sum(users)),by = .(Elements, park_name,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, playground)][,allusers := sum(users), by = .( Elements, park_name,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`)][playground == 1, popularity := users/allusers][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("popularity") ,by = .(Elements, park_name, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "")]
+DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat,  na.rm = TRUE)), by = .(datePOSIX, Elements, park_name,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, playground)][, .(users = sum(users)),by = .(Elements, park_name,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, playground)][,allusers := sum(users), by = .( Elements, park_name,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`)][playground == 1, popularity := users/allusers][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("popularity") ,by = .(Elements, park_name, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "")][, Age_Group := ifelse(`Primary_Age_Group_2-5` != "" & `Primary_Age_Group_5-12` != "", paste0(`Primary_Age_Group_2-5` ," & ", `Primary_Age_Group_5-12`),paste0(`Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`) )]
 
+
+# ggplot(DTplot[!is.na(Elements)]) +
+#   geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = popularity, fill = Elements)) +
+#   facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y", nrow = 3) +
+#   #facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y") +
+#   xlab("Popularity") +
+#   ylab("Park Name") +
+#   ggtitle("Playground Popularity Among Children Given \n Primary Age Group and Elements") +
+#   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+#   scale_y_discrete(limits = rev) +
+#   scale_x_continuous(labels = scales::comma) +
+#   scale_fill_gradient(low = "orange", high = "aquamarine")
 
 ggplot(DTplot[!is.na(Elements)]) +
   geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = popularity, fill = Elements)) +
-  facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y", nrow = 3) +
+  facet_wrap(~Age_Group, scales = "free_y", nrow = 3) +
   #facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y") +
   xlab("Popularity") +
   ylab("Park Name") +
@@ -1257,6 +1309,7 @@ ggplot(DTplot[!is.na(Elements)]) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
   scale_fill_gradient(low = "orange", high = "aquamarine")
+
 
 #The following parks do not have playground age designated: `r unique(DTplot["Primary_Age_Group_2-5" == "" & "Primary_Age_Group_5-12" == "", park_name])`
 
