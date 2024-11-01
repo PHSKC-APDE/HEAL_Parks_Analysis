@@ -1,6 +1,10 @@
 # HEAL Parks Analysis
 
+<<<<<<< HEAD
 Maintained by Ronald Buie
+=======
+Last updated 10/30/2024 by Ronald Buie
+>>>>>>> 01ad74f34e4e2fd2e8631be79486cad7555fa293
 
 # Project Description
 
