@@ -120,7 +120,8 @@ options(knitr.table.format = "latex")
 #CHARTWIDTH <- 3.5 #width for charts to generate for reproduciton
 #CHARTHEIGHT <- 2.3 #height of charts to generate for reproduction
 RECALCULATEPOPULATIONS <- FALSE
-PARALLEL_PROCESS <- TRUE
+TITLESIZE <- 25
+SUBTITLESIZE <- TITLESIZE * .66
 ```
 
 ## Major inputs
@@ -235,6 +236,15 @@ for(park in unique(ParkFull$park_name)) {
 #unique(ParkFull[studyDescription == "2024 annual study",park_name])
 #unique(ParkFacilities[,`Park Name`])
 #unique(ParkFull[studyDescription == "2024 annual study",park_name]) %in% unique(ParkFacilities[playground == 1,`Park Name`])
+
+
+```
+
+```{r}
+
+# While indicated as having playgrounds, Brighton, Midway, and Garfield parks are excluded from this work.
+
+ParkFull <- ParkFull[!(park_name %in% c("Midway Park", "Garfield Playfield", "Brighton Playfield")),]
 
 
 ```
@@ -374,7 +384,7 @@ ParkFull <- merge(ParkFull, ChildParkPopulationTable, by = "park_name")
 
 # Analyses
 
-The below analyses are exploratory, descriptive, statistics to support further investigation into the equitable use and maintenance of municipal parks across King County. In providing these results we hope to facilitate discussion around this work and how to proceed going forward. 
+The below analyses are exploratory, descriptive, statistics to support investigation into data and reporting systems that support the equitable use and maintenance of municipal parks across King County. In providing these results we hope to facilitate discussion around this work and how to proceed going forward. 
 
 Some important questions these results are meant to solicit or facilitate are:
 
@@ -415,11 +425,11 @@ ggplot(DTplot) +
   #facet_wrap(.~Opportunity_Area, scales = "free_y") +
   xlab("Population Within 1/2 Mile") +
   ylab("Park Name") +
-  ggtitle("Park Catchment") +
+  ggtitle("Population Within 1/2 Mile Of Park") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
-
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 
 ```
@@ -436,37 +446,43 @@ ggplot(DTplot) +
   #facet_wrap(.~Opportunity_Area, scales = "free_y") +
   xlab("Children 0-14 within 1/2 Mile") +
   ylab("Park Name") +
-  ggtitle("0-14 Year Old Park Catchment") +
+  ggtitle("Child Population Within 1/2 Mile Of Park") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 
 
 ```
 
-### chart of park catchment by opportunity area
+### chart of park catchment by opportunity area status
 
 ```{r}
 DT <- copy(ParkFull)
 
 DTplot <- unique(DT[, .(park_name, populationHalfMile, Opportunity_Area)])
 
+
+DTplot[,Opportunity_Area := ifelse(Opportunity_Area == "No",  "Not Opportunity Area","Opportunity Area")]
+
 ggplot(DTplot) +
   geom_bar(stat = "identity", position = "stack", aes(y = reorder(park_name, populationHalfMile), x = populationHalfMile)) +
   facet_wrap(.~Opportunity_Area, scales = "free_y") +
   xlab("Population Within 1/2 Mile") +
   ylab("Park Name") +
-  ggtitle("Catchment Given Opportunity Area Status") +
+  labs(title = "Population Within 1/2 Mile Of Park", subtitle =  "By Opportunity Area for Health & Economics Status") +
+  
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 
 
 ```
 
-### chart of 0-14 park catchment by opportunity area
+### chart of 0-14 park catchment by opportunity area status
 
 ```{r}
 
@@ -474,15 +490,18 @@ DT <- copy(ParkFull)
 
 DTplot <- unique(DT[, .(park_name, childPopulationHalfMile, Opportunity_Area)])
 
+DTplot[,Opportunity_Area := ifelse(Opportunity_Area == "No",  "Not Opportunity Area","Opportunity Area")]
+
 ggplot(DTplot) +
   geom_bar(stat = "identity", position = "stack",aes(y = reorder(park_name, childPopulationHalfMile), x = childPopulationHalfMile)) +
   facet_wrap( ~Opportunity_Area, scales = "free_y") +
   xlab("0-14 Population Within 1/2 Mile") +
   ylab("Park Name") +
-  ggtitle("0-14 Year Old Catchment Given Opportunity Area Status") +
+  labs(title = "Child Population Within 1/2 Mile Of Park", subtitle = "By Opportunity Area for Health & Economics Status") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 ```
 
@@ -499,10 +518,12 @@ ggplot(DTplot[!is.na(Park_Category),]) +
   facet_wrap(~Park_Category, scales = "free_y", ncol = 2) +
   xlab("Population Within 1/2 Mile") +
   ylab("Park Name") +
-  ggtitle("Catchment Given Park Category") +
+  labs(title = "Population Within 1/2 Mile Of Park", 
+       subtitle = "By Park Category") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 
 ```
@@ -525,10 +546,13 @@ ggplot(DTplot[!is.na(Park_Category)]) +
   facet_wrap(~Park_Category, scales = "free_y", ncol = 2) +
   xlab("0-14 Population Within 1/2 Mile") +
   ylab("Park Name") +
-  ggtitle("0-14 Year Old Catchment Given Park Category") +
+  labs(title ="Child Population Within 1/2 Mile Of Park", 
+       subtitle =  "By Park Category") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 ```
 
@@ -537,68 +561,117 @@ Notes:
 The following parks were excluded for not having category status: `r unique(DTplot[is.na(Park_Category),park_name])`
 
 
+## Analyses of playground structure and classifications
+
+### chart of playground equipment age by opportunity area status and by park categtory
+
+```{r}
+DT <- copy(ParkFull)
+
+DTplot <- unique(DT[, Playground_Age := (2024-as.numeric(DT$Playground_Age)) +1][, .(park_name, Playground_Age, Opportunity_Area)])
+
+
+DTplot[,Opportunity_Area := ifelse(Opportunity_Area == "No",  "Not Opportunity Area","Opportunity Area")]
+
+ggplot(DTplot) +
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = Playground_Age)) +
+  facet_wrap(~Opportunity_Area, scales = "free_y") +
+  xlab("Years Age of Playground Equipment (1 = Built in 2024)") +
+  ylab("Park Name") +
+  labs(title = "Playground Age", 
+       subtitle = "By Opportunity Area for Health & Economics Status") +
+  scale_y_discrete(limits = rev) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
+
+#The following parks do not have playground equipment age designated: `r unique(DTplot["Primary_Age_Group_2-5" == "" & "Primary_Age_Group_5-12" == "", park_name])`
+
+```
+
+Notes:
+
+The following parks were excluded for not having a playground installation date: `r unique(DTplot[is.na(Playground_Age),park_name])`
+
 ## Analyses of playground use
 
 The below analyses explore relationships of the number of people observed in playgrounds and other characteristics or status of the park. We refer to this number of observed users as "use". For most of these analyses, use is provided in three forms, the average number of users observed across all observed days, the median number of users across all days, and the peak number of users across all days.
 
 ### playground use by opportunity area
 
-#### chart of average playground use by opportunity area
+#### chart of average playground use by opportunity area status
 
 ```{r}
 DT <- copy(ParkFull)
 
 DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Opportunity_Area, park_name)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Opportunity_Area, park_name)]
 
+
+DTplot[,Opportunity_Area := ifelse(Opportunity_Area == "No",  "Not Opportunity Area","Opportunity Area")]
+
 ggplot(DTplot) +
   geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = avg_Daily_Users)) +
   facet_wrap(~Opportunity_Area, scales = "free_y") +
   xlab("Average Daily number of playground users") +
   ylab("Park Name") +
-  ggtitle("Average Daily Number of Playground Users Given \n Opportunity Area Status") +
+  labs(title = "Average Daily Number of Playground Users",
+  subtitle = "By Opportunity Area for Health & Economics Status") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
 
-#### chart of median playground use by opportunity area
+#### chart of median playground use by opportunity area status
 
 ```{r}
 DT <- copy(ParkFull)
 
 DTplot <- DT[playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Opportunity_Area, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( Opportunity_Area, park_name)]
 
+
+DTplot[,Opportunity_Area := ifelse(Opportunity_Area == "No",  "Not Opportunity Area","Opportunity Area")]
+
 ggplot(DTplot) +
   geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = med_Daily_Users)) +
   facet_wrap(~Opportunity_Area, scales = "free_y") +
   xlab("Median Daily number of playground users") +
   ylab("Park Name") +
-  ggtitle("Median Daily Number of Playground Users Given \n Opportunity Area Status") +
+  labs(title = "Median Daily Number of Playground Users",
+       subtitle = "By Opportunity Area for Health & Economics Status") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
 
-#### chart of peak playground use by opportunity area
+#### chart of peak playground use by opportunity area status
 
 ```{r}
 DT <- copy(ParkFull)
 
 DTplot <- DT[playground == 1, .(max_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Opportunity_Area, park_name)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Users") ,by = .( Opportunity_Area, park_name)]
 
+
+DTplot[,Opportunity_Area := ifelse(Opportunity_Area == "No",  "Not Opportunity Area","Opportunity Area")]
+
 ggplot(DTplot) +
   geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = max_Daily_Users)) +
   facet_wrap(~Opportunity_Area, scales = "free_y") +
   xlab("Max Daily number of playground users") +
   ylab("Park Name") +
-  ggtitle("Max Daily number of Playground Users Given \n Opportunity Area Status") +
+  labs(title = "Max Daily number of Playground Users",
+       subtitle = "By Opportunity Area for Health & Economics Status") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
@@ -618,10 +691,13 @@ ggplot(DTplot[!(is.na(Park_Category)),]) +
   facet_wrap(~Park_Category, scales = "free_y", ncol = 2) +
   xlab("Average daily number of playground users") +
   ylab("Park Name") +
-  ggtitle("Average Daily Number of Playground Users Given \n Park Category") +
+  labs(title = "Average Daily Number of Playground Users", 
+       subtitle = "By Park Category") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
@@ -643,10 +719,13 @@ ggplot(DTplot[!(is.na(Park_Category)),]) +
   facet_wrap(~Park_Category, scales = "free_y", ncol = 2) +
   xlab("Median daily number of playground users") +
   ylab("Park Name") +
-  ggtitle("Median Daily Number of Playground Users Given \n Park Category") +
+  labs(title = "Median Daily Number of Playground Users", 
+       subtitle = "By Park Category") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
@@ -668,10 +747,13 @@ ggplot(DTplot[!(is.na(Park_Category)),]) +
   facet_wrap(~Park_Category, scales = "free_y", ncol = 2) +
   xlab("Max daily number of playground users") +
   ylab("Park Name") +
-  ggtitle("Max Daily Number of Playground Users Given \n Park Category") +
+  labs(title = "Max Daily Number of Playground Users",
+       subtitle = "By Park Category") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
@@ -680,9 +762,9 @@ Notes:
 
 The following parks were excluded for not having category status: `r unique(DTplot[is.na(Park_Category),park_name])`
 
-### playground use by play elements
+### playground use by number of playground  elements
 
-#### chart of average playground use by play elements
+#### chart of average playground use by number of playground elements
 
 ```{r}
 DT <- copy(ParkFull)
@@ -695,15 +777,18 @@ ggplot(DTplot) +
   xlab("Number of Elements") +
   ylab("Park Name") +
   guides(fill=guide_legend(title="Average Daily Users")) +
-  ggtitle("Average Daily Number of Playground Users Given \n Number of Elements") +
+  labs(title = "Average Daily Number of Playground Users",
+       subtitle = "By Number of Elements") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine")
+  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
 
-#### chart of median playground use by play elements
+#### chart of median playground use by number of playground elements
 
 ```{r}
 DT <- copy(ParkFull)
@@ -716,15 +801,18 @@ ggplot(DTplot) +
   xlab("Number of Elements") +
   ylab("Park Name") +
   guides(fill=guide_legend(title="Median Daily Users")) +
-  ggtitle("Median Daily Number of Playground Users Given \n Number of Elements") +
+  labs(title = "Median Daily Number of Playground Users", 
+       subtitle = "By Number of Elements") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine")
+  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
 
-#### chart of peak playground use by play elements
+#### chart of peak playground use by number of playground elements
 
 ```{r}
 DT <- copy(ParkFull)
@@ -736,10 +824,13 @@ ggplot(DTplot) +
   xlab("Number of Elements") +
   ylab("Park Name") +
   guides(fill=guide_legend(title="Max Daily Users")) +
-  ggtitle("Max Daily Number of Playground Users Given \n Number of Elements") +
+  labs(title = "Max Daily Number of Playground Users", 
+       subtitle = "By Number of Elements") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine")
+  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 ```
 
 ### playground use by playground equipment age
@@ -756,10 +847,13 @@ ggplot(DTplot) +
   xlab("Years Age of Playground (1 = Built in 2024)") +
   ylab("Park Name") +
   guides(fill=guide_legend(title="Average Daily Users")) +
-  ggtitle("Average Daily Number of Playground Users Given \n playground equipment age") +
+  labs(title = "Average Daily Number of Playground Users",
+       subtitle = "By Playground Equipment Age") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine")
+  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
@@ -780,10 +874,13 @@ ggplot(DTplot) +
   xlab("Years Age of Playground (1 = Built in 2024)") +
   ylab("Park Name") +
   guides(fill=guide_legend(title="Median Daily Users")) +
-  ggtitle("Median Daily Number of Playground Users Given \n playground equipment age") +
+  labs(title = "Median Daily Number of Playground Users", 
+       subtitle ="By Playground Equipment Age") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine")
+  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
@@ -804,10 +901,13 @@ ggplot(DTplot) +
   xlab("Years Age of Playground (1 = Built in 2024)") +
   ylab("Park Name") +
   guides(fill=guide_legend(title="Max Daily Users")) +
-  ggtitle("Max Number of Playground Users Given \n playground equipment age") +
+  labs(title = "Max Number of Playground Users", 
+       subtitle ="By Playground Equipment Age") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine")
+  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
@@ -831,10 +931,12 @@ ggplot(DTplot[!is.na(Park_Category),]) +
   facet_grid(Restroom~Park_Category, scales = "free_y") +
   xlab("Average Daily number of playground users") +
   ylab("Park Name") +
-  ggtitle("Average Daily Number of Playground Users Given \n Category and Restroom") +
+  labs(title = "Average Daily Number of Playground Users", subtitle = "By Park Category and Restroom Status") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
@@ -855,10 +957,12 @@ ggplot(DTplot[!is.na(Park_Category),]) +
   facet_grid(Restroom~Park_Category, scales = "free_y") +
   xlab("Median Daily number of playground users") +
   ylab("Park Name") +
-  ggtitle("Median Daily Number of Playground Users Given \n Category and Restroom") +
+  labs(title = "Median Daily Number of Playground Users", subtitle = "By Park Category and Restroom Status") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
@@ -881,10 +985,13 @@ ggplot(DTplot[!is.na(Park_Category),]) +
   facet_grid(PicnicArea~Park_Category, scales = "free_y") +
   xlab("Average Daily number of playground users") +
   ylab("Park Name") +
-  ggtitle("Average Daily Number of Playground Users Given \n Category and Picnic Area") +
+  labs(title = "Average Daily Number of Playground Users",
+       subtitle = "By Park Category and Picnic Area Status") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
@@ -905,10 +1012,13 @@ ggplot(DTplot[!is.na(Park_Category),]) +
   facet_grid(PicnicArea~Park_Category, scales = "free_y") +
   xlab("Median Daily number of playground users") +
   ylab("Park Name") +
-  ggtitle("Median Daily Number of Playground Users Given \n Category and Picnic Area") +
+  labs(title = "Median Daily Number of Playground Users", 
+       subtitle = "By Park Category and Picnic Area Status") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
@@ -932,10 +1042,12 @@ ggplot(DTplot[!is.na(Park_Category),]) +
   facet_grid(SportsField~Park_Category, scales = "free_y") +
   xlab("Average Daily number of playground users") +
   ylab("Park Name") +
-  ggtitle("Average Daily Number of Playground Users Given \n Category and SportsField") +
+  labs(title = "Average Daily Number of Playground Users", subtitle = "By Park Category and Sports Field Status") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
@@ -956,10 +1068,12 @@ ggplot(DTplot[!is.na(Park_Category),]) +
   facet_grid(SportsField~Park_Category, scales = "free_y") +
   xlab("Median Daily number of playground users") +
   ylab("Park Name") +
-  ggtitle("Median Daily Number of Playground Users Given \n Category and SportsField") +
+  labs(title = "Median Daily Number of Playground Users", subtitle = "By Park Category and Sports Field Status") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
@@ -972,7 +1086,7 @@ The following parks were excluded for not having category status: `r unique(DTpl
 
 Primary age group is a status provided by parks managers that designates the age groups that the playground is intended to be used by. The two age groups are 5-12 and 2-5. A playground may be designed to serve both.  
 
-#### chart of average playground use by number of play elements and by primary age group
+#### chart of average playground use by number of playground elements and by primary age group
 
 ```{r}
 DT <- copy(ParkFull)
@@ -998,11 +1112,14 @@ ggplot(DTplot[!is.na(Elements)]) +
    #facet_grid(`Primary_Age_Group_2-5` ~ `Primary_Age_Group_5-12`, scales = "free_y") +
    xlab("Average Daily number of playground users") +
    ylab("Park Name") +
-   ggtitle("Average Daily Number of Playground Users Given \n Primary Age Group and Elements") +
+   labs(title = "Average Daily Number of Playground Users", 
+        subtitle = "By Primary Age Group and Number of Playground Elements") +
    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
    scale_y_discrete(limits = rev) +
    scale_x_continuous(labels = scales::comma) +
-   scale_fill_gradient(low = "orange", high = "aquamarine")
+   scale_fill_gradient(low = "orange", high = "aquamarine") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 #The following parks do not have playground equipment age designated: `r unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])`
 ```
@@ -1013,7 +1130,7 @@ The following parks were excluded for not having element status: `r unique(DTplo
 
 
 
-#### chart of median playground use by number of play elements and by primary age group
+#### chart of median playground use by number of playground elements and by primary age group
 
 ```{r}
 DT <- copy(ParkFull)
@@ -1039,13 +1156,13 @@ ggplot(DTplot[!is.na(Elements)]) +
   #facet_grid(`Primary_Age_Group_2-5` ~ `Primary_Age_Group_5-12`, scales = "free_y") +
   xlab("Median Daily number of playground users") +
   ylab("Park Name") +
-  ggtitle("Median Daily Number of Playground Users Given \n Primary Age Group and Elements") +
+   labs(title = "Median Daily Number of Playground Users", 
+        subtitle = "By Primary Age Group and Number of Playground Elements") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine")
-
-#The following parks do not have playground equipment age designated: `r unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])`
+  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 ```
 
@@ -1056,7 +1173,7 @@ The following parks were excluded for not having element status: `r unique(DTplo
 
 
 
-#### chart of peak playground use by number of play elements and by primary age group
+#### chart of peak playground use by number of playground elements and by primary age group
 
 ```{r}
 DT <- copy(ParkFull)
@@ -1082,20 +1199,20 @@ ggplot(DTplot[!is.na(Elements)]) +
   #facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y") +
   xlab("Max Daily number of playground users") +
   ylab("Park Name") +
-  ggtitle("Max Daily Number of Playground Users Given \n Primary Age Group and Elements") +
+  labs(title = "Max Daily Number of Playground Users", 
+       subtitle = "By Primary Age Group and Number of Playground Elements") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine")
+  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 #The following parks do not have playground equipment age designated: `r unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])`
 ```
 
 Notes:
 
 The following parks were excluded for not having element status: `r unique(DTplot[is.na(Elements),park_name])`
-
-
-
 
 ### playground use by walkscore
 
@@ -1113,10 +1230,13 @@ ggplot(DTplot) +
   xlab("Walkability Score") +
   ylab("Park Name") +
   guides(fill=guide_legend(title="Average Daily Users")) +
-  ggtitle("Average Daily Number of Playground Users Given \n Walkability Score") +
+  labs(title = "Average Daily Number of Playground Users", 
+       subtitle = "By Walkability Score") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine")
+  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
@@ -1134,11 +1254,14 @@ ggplot(DTplot) +
   geom_bar(stat = "identity", position = "stack", aes(x = as.numeric(WalkScore), fill = med_Daily_Users, y = reorder(park_name, WalkScore))) +
   xlab("Walkability Score") +
   ylab("Park Name") +
-  guides(fill=guide_legend(title="Average Daily Users")) +
-  ggtitle("Average Daily Number of Playground Users Given \n Walkability Score") +
+  guides(fill=guide_legend(title="Median Daily Users")) +
+  labs(title = "Median Daily Number of Playground Users", 
+       subtitle = "By Walkability Score") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine")
+  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
@@ -1159,10 +1282,13 @@ ggplot(DTplot[!is.na(TransitScore),]) +
   xlab("Transit Score") +
   ylab("Park Name") +
   guides(fill=guide_legend(title="Average Daily Users")) +
-  ggtitle("Average Daily Number of Playground Users Given \n Transit Score") +
+  labs(title = "Average Daily Number of Playground Users", 
+       subtitle = "By Public Transit Score") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine")
+  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
@@ -1185,10 +1311,13 @@ ggplot(DTplot[!is.na(TransitScore),]) +
   xlab("Transit Score") +
   ylab("Park Name") +
   guides(fill=guide_legend(title="Median Daily Users")) +
-  ggtitle("Median Daily Number of Playground Users Given \n Transit Score") +
+  labs(title = "Median Daily Number of Playground Users", 
+       subtitle = "By Transit Score") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine")
+  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 ```
@@ -1216,10 +1345,13 @@ ggplot(DTplot[!(is.na(Park_Category)),]) +
   facet_wrap(~Park_Category, scales = "free_y", ncol = 2) +
   xlab("Playground Popularity Rate") +
   ylab("Park Name") +
-  ggtitle("Playground Popularity Given \n Category") +
+  labs(title = "Playground Popularity Rate", 
+       subtitle = "By Park Category") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma)
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 ```
 
 Notes:
@@ -1238,11 +1370,14 @@ ggplot(DTplot) +
   geom_bar(stat = "identity", position = "stack", aes(x = Elements, fill = popularity, y = reorder(park_name, Elements))) +
   xlab("Number of Elements") +
   ylab("Park Name") +
-  guides(fill=guide_legend(title="Popularity Rate")) +
-  ggtitle("Playground Popularity Rate Given \n Number of Elements") +
+  guides(fill=guide_legend(title="Playground \nPopularity Rate")) +
+  labs(title = "Playground Popularity Rate", 
+       subtitle = "By Number of Playground Elements") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine")
+  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 ```
 Notes:
 
@@ -1276,13 +1411,16 @@ ggplot(DTplot[!is.na(Elements)]) +
   geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = popularity, fill = Elements)) +
   facet_wrap(~Age_Group, scales = "free_y", nrow = 3) +
   #facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y") +
-  xlab("Popularity") +
+  xlab("Playground Popularity Rate") +
   ylab("Park Name") +
-  ggtitle("Playground Popularity Given \n Primary Age Group and Elements") +
+  labs(title = "Playground Popularity Rate", 
+       subtitle = "By Primary Age Group and Number of Playground Elements") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine")
+  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 #The following parks do not have playground equipment age designated: `r unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])`
 ```
@@ -1322,13 +1460,16 @@ ggplot(DTplot[!is.na(Elements)]) +
   geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = popularity, fill = Elements)) +
   facet_wrap(~Age_Group, scales = "free_y", nrow = 3) +
   #facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y") +
-  xlab("Popularity") +
+  xlab("Playground Popularity Rate") +
   ylab("Park Name") +
-  ggtitle("Playground Popularity Among Children Given \n Primary Age Group and Elements") +
+  labs(title = "Playground Popularity Rate Among Children and Teens", 
+       subtitle = "By Primary Age Group and Number of Playground Elements") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine")
+  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
 
 
 #The following parks do not have playground equipment age designated: `r unique(DTplot["Primary_Age_Group_2-5" == "" & "Primary_Age_Group_5-12" == "", park_name])`
@@ -1339,28 +1480,3 @@ ggplot(DTplot[!is.na(Elements)]) +
 Notes:
 
 The following parks were excluded for not having element status: `r unique(DTplot[is.na(Elements),park_name])`
-
-
-
-## Analysis of playground equipment age by opportunity area status and by park categtory
-
-```{r}
-DT <- copy(ParkFull)
-
-DTplot <- unique(DT[, Playground_Age := (2024-as.numeric(DT$Playground_Age)) +1][, .(park_name, Playground_Age, Opportunity_Area)])
-
-ggplot(DTplot) +
-  geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = Playground_Age)) +
-  facet_wrap(~Opportunity_Area, scales = "free_y") +
-  xlab("Years Age of Playground (1 = Built in 2024)") +
-  ylab("Park Name") +
-  ggtitle("Playground Age Given Opportunity Area Status") +
-  scale_y_discrete(limits = rev)
-
-#The following parks do not have playground equipment age designated: `r unique(DTplot["Primary_Age_Group_2-5" == "" & "Primary_Age_Group_5-12" == "", park_name])`
-
-```
-
-Notes:
-
-The following parks were excluded for not having a playground installation date: `r unique(DTplot[is.na(Playground_Age),park_name])`
