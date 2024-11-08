@@ -69,11 +69,11 @@ The contiguous area of Burien, North Highline, Skyway, Tukwila, and White Center
 
 The Healthy Eating Active Living (HEAL) initiative includes a family of studies aimed at identifying the availability and impact of parks on King County residents. This effort includes an annual study measuring who is using the parks, when they are using them, and what they are doing. In 2024, parks' managers identified playground use as an area of possible interest to focus their efforts. The below analysis has been conducted in response to research questions proposed by the parks' managers. These exploratory analyses are intended to inform further discussion of how we may pursue research and reporting of playground use that supports parks' and the county's interest in the public health and our broader equity and social justice goals.
 
-## Research Questions
+## Research questions
 
 The below research questions were proposed by the parks' managers in collaboration with the HEAL team.
 
-* How does the observed use of playgrounds differ between parks located in opportunity areas and parks not located in opportunity areas  ?
+* How does the observed use of playgrounds differ between parks located in opportunity areas and parks not located in opportunity areas?
 * How does the observed use of playgrounds differ between parks of similar park categories?
 * How does the observed use of playgrounds differ between playgrounds with different complexities of playgrounds?
 * How does the observed use of playgrounds compare to the age of the playground?
@@ -146,7 +146,7 @@ dir.create("./outputs/tables", recursive = TRUE, showWarnings = FALSE)
 # dir.create("./2024 playground/outputs/data-metadata", recursive = TRUE, showWarnings = FALSE)
 ```
 
-## Setup & Environment
+## Setup & environment
 
 This script was last executed using `r version$version.string`.
 
@@ -168,25 +168,16 @@ return(fxn)
 
 ```
 
-# Data Preparation
+# Data Preperation
 
 This analysis relies on the below data sources. Please contact Ronald W. Buie or Seth Schromen-Wawrin for details.
 
-*2022-2024 park observation data (PHSKC
-* Park Category – (Burien, Tukwila, KC Parks) 
-* Playground Age – installation date (Burien, Tukwila, KC Parks)
-* Playground and Park additional features (Burien, Tukwila, KC Parks)
-  * Restroom
-  * Sports field
-  * Picnic area
-  * Playground age group
-  * Playground complexity
-  * Opportunity areas (KC Parks)
-*Walkscore/Transitscore of park (derived from walkscore.com)
-*Census data on population surrounding park (within ½ mile):
-  * Total population
-  * Population of people 0 to 15 years of age
-
+* 2022-2024 park observation data (conducted by PHSKC) 
+* Park features, category, and age data (provided by Burien, Tukwila, and KC Parks)
+* Play Elements (assessed by PHSKC)
+* Opportunity areas (assess by KC Parks)  
+* Walkscore/Transitscore of park (from walkscore.com) 
+* Census data on population surrounding park (from Census data calculated by PHSKC)
 
 ```{r import data}
 ParkObservations <- fread("./inputs/SOPARCAnalysisSetAggregatedPeriodsAllYears.csv")
@@ -248,31 +239,60 @@ for(park in unique(ParkFull$park_name)) {
 
 ```
 
-## Variable Definitions
+## Variable definitions
 
-*	“Park Category”:   category of park’s intended reach, set by Parks Department
-  *	‘Neighborhood Park’ = park intended to draw from more local area 
-  *	‘Regional Park’ = park intended to draw from the entire city or region
-*	“Opportunity Areas”: yes/no field for if park is located in an Opportunity Area for health and economics, per King County Parks analysis.
-*	“Park Includes”: Yes/no fields if the park contains this feature (each individual).
-  *	‘Restroom’ = restroom facility (permanent or temporary)
-  *	‘Picnic Area’ = area with tables and benches
-  *	‘Sport Fields’ = area designated for organized team sports (all conditions). 
-*	“Play Structures ”: number of unique play structures that are physically separated and designed for use by more than one person at a time.
-*	“Play Elements ”: number of unique opportunities in playground for a type movement/activity. Movement/activities include: climbing, sliding, spinning, crawling, swinging, balancing, playing with sand, and water play (e.g., splash pads).
+*	"Park Category":   category of park"s intended reach, set by Parks Department
+  * "Mini Park" = park intended to draw from immediate neighbors 
+  * "Community Park" = park intended to draw from more local area, includes schools
+  * "Regional Park" = park intended to draw from the entire city or region 
+*	"Opportunity Areas": indicates if park is located in an Opportunity Area for health and economics, per King County Parks analysis.
+*	"Park Includes": indicates if the park contains this feature (each individual).
+  *	"Restroom" = restroom facility (permanent or temporary)
+  *	"Picnic Area" = area with tables and benches
+  *	"Sport Fields" = area designated for organized team sports (all conditions). 
+*	"Play Structures ": number of unique play structures that are physically separated and designed for use by more than one person at a time.
+*	"Play Elements ": number of unique opportunities in playground for a type movement/activity. Movement/activities include: climbing, sliding, spinning, crawling, swinging, balancing, playing with sand, and water play (e.g., splash pads).
 *	Additional variables for: 
-  *	‘Water’ = Includes water play area / splashpad.
-  *	‘Inclusive’ = Design goes beyond ADA compliance for different physical, sensory, social, and intellectual abilities to play together
-*	“Playground Age”: Year that the playground was installed or last significantly updated.
-*	“Primary Age Group”: Category of ‘2-5 years old’ or ‘5-12 years old’. Swing features included in 5-12; a playground is not fit 2-5 if it only has toddler bucket swings. Can be both categories.
-*	“Average Playground Use”: Average number of observed users across all observation days.
-*	“Peak Playground Use”: Most number of observed users found during a single observation day.
-*	“Playground Popularity”: Proportion of park users observed in playground.
-*	“Park Catchment”: Population within ½ mile of park (park of original data analysis).
-*	“Youth Park Catchment”: Population less than 15 years of age within ½ mile of park.
+  *	"Water" = Includes water play area / splashpad.
+  *	"Inclusive" = Design goes beyond ADA compliance for different physical, sensory, social, and intellectual abilities to play together
+*	"Playground Age": Year that the playground was installed or last significantly updated.
+*	"Primary Age Group": Category of "2-5 years old" or "5-12 years old". Swing features included in 5-12; a playground is not fit 2-5 if it only has toddler bucket swings. Can be both categories.
+*	"Average Playground Use": Average number of observed users across all observation days.
+*	"Peak Playground Use": Most number of observed users found during a single observation day.
+*	"Playground Popularity": Proportion of park users observed in playground.
+*	"Park Catchment": Population within ½ mile of park (park of original data analysis).
+*	"Youth Park Catchment": Population less than 15 years of age within ½ mile of park.
+---
 
+* "Park Category": category of park"s intended reach, set by Parks Department 
+  * "Mini Park" = park intended to draw from immediate neighbors 
+  * "Community Park" = park intended to draw from more local area, includes schools 
+  * "Regional Park" = park intended to draw from the entire city or region 
+* "Opportunity Areas": indicator of  field for if park is located in an Opportunity Area for health and economics, per King County Parks analysis. 
+* "Restroom": indicator of if park has restroom facility (permanent or temporary) 
+* "Picnic Area": indicator of if park has area with tables and benches 
+* "Sport Fields": indicator of if park has area designated for organized team sports (all conditions). 
+* "Play Elements": number of unique opportunities in playground for a type movement/activity. Movement/activities include: climbing, sliding, spinning, crawling, swinging, balancing, playing with sand, and water play (e.g., splash pads). 
+* "Playground Age": Year that the playground was installed or last significantly updated.
+* "Primary Age Group": Category of "2-5 years old" or "5-12 years old". Swing features included in 5-12; a playground is not fit 2-5 if it only has toddler bucket swings. Can be both categories. 
+* "Average Playground Use": Average number of observed users across all observation days.
+* "Peak Playground Use": Most number of observed users found during a single observation day. 
+* "Playground Popularity": Proportion of park users observed in playground. 
+* "Park Catchment": Population within ½ mile of park. 
+* "Youth Park Catchment": Population less than 15 years of age within ½ mile of park. 
+* "Park Name": for this study we used abbreviated names with an appended jurisdiction acronym. Jurisdictions include: 
+  * "T" = Managed by Tukwila Parks and Recreation 
+  * "B" = Managed by City of Burien – Parks, Recreation, and Cultural Services Department   * "KCHA" = Managed by King County Housing Authority 
+  * "KC" = Managed by King County Department of Natural Resources and Parks 
+  * "HSD" = Managed by Highline Public Schools 
 
-### Park catchment
+Currently unused variables include: 
+
+* "Play Structures": number of unique play structures that are physically separated and designed for use by more than one person at a time. 
+* "Water" = indicates if target area includes water play area / splashpad. 
+* "Inclusive" = Indicates if design goes beyond ADA compliance for different physical, sensory, social, and intellectual abilities to play together 
+
+### park catchment
 
 Some analyses require park catchment information. We use the population within .5 miles of a central coordinate for the park. All ages population is provided in the data set generated by our annual analysis. For this playground study we also calculate the population of 0-14 year olds within 0.5 miles of each park.
 
@@ -356,7 +376,7 @@ ParkFull <- merge(ParkFull, ChildParkPopulationTable, by = "park_name")
 
 The below analyses are exploratory, descriptive, statistics to support further investigation into the equitable use and maintenance of municipal parks across King County. In providing these results we hope to facilitate discussion around this work and how to proceed going forward. 
 
-Some important questions to ask as you review these results are:
+Some important questions these results are meant to solicit or facilitate are:
 
 - Do the results appear reasonable, or do the numbers for some parks appear unlikely to be accurate?
 - Do the proposed questions seem valuable to ask?
@@ -369,9 +389,9 @@ Some important questions to ask as you review these results are:
 Notes:
 
 
-- Analyses of "average park use" aggregate all playground target areas within the park (effectively calculated as one large playground)
+Analyses of “average playground use” aggregate all playground target areas within the park (effectively calculated as one large playground) 
 
-- Multiple park characteristics in the supplemental information file have n/a or tbd for parks that, including for parks that have playgrounds. Depending on the analysis, these may be suppressed, or show up as NA, tbd, or 0
+Multiple park characteristics in the supplemental information file have n/a or tbd status. Depending on the analysis, these may be suppressed, or show up as NA, tbd, or 0 
 
 ## Analyses of park catchment and status
 
@@ -722,9 +742,9 @@ ggplot(DTplot) +
   scale_fill_gradient(low = "orange", high = "aquamarine")
 ```
 
-### playground use by playground age
+### playground use by playground equipment age
 
-#### chart of average playground use by playground age
+#### chart of average playground use by playground equipment age
 
 ```{r}
 DT <- copy(ParkFull)
@@ -736,7 +756,7 @@ ggplot(DTplot) +
   xlab("Years Age of Playground (1 = Built in 2024)") +
   ylab("Park Name") +
   guides(fill=guide_legend(title="Average Daily Users")) +
-  ggtitle("Average Daily Number of Playground Users Given \n Playground Age") +
+  ggtitle("Average Daily Number of Playground Users Given \n playground equipment age") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
   scale_fill_gradient(low = "orange", high = "aquamarine")
@@ -746,9 +766,9 @@ ggplot(DTplot) +
 
 Notes:
 
-The following parks were excluded for not having playground age: `r unique(DTplot[is.na(Playground_Age),park_name])`
+The following parks were excluded for not having playground equipment age: `r unique(DTplot[is.na(Playground_Age),park_name])`
 
-#### chart of median playground use by playground age
+#### chart of median playground use by playground equipment age
 
 ```{r}
 DT <- copy(ParkFull)
@@ -760,7 +780,7 @@ ggplot(DTplot) +
   xlab("Years Age of Playground (1 = Built in 2024)") +
   ylab("Park Name") +
   guides(fill=guide_legend(title="Median Daily Users")) +
-  ggtitle("Median Daily Number of Playground Users Given \n Playground Age") +
+  ggtitle("Median Daily Number of Playground Users Given \n playground equipment age") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
   scale_fill_gradient(low = "orange", high = "aquamarine")
@@ -770,9 +790,9 @@ ggplot(DTplot) +
 
 Notes:
 
-The following parks were excluded for not having playground age: `r unique(DTplot[is.na(Playground_Age),park_name])`
+The following parks were excluded for not having playground equipment age: `r unique(DTplot[is.na(Playground_Age),park_name])`
 
-#### chart of peak playground use by playground age
+#### chart of peak playground use by playground equipment age
 
 ```{r}
 DT <- copy(ParkFull)
@@ -784,7 +804,7 @@ ggplot(DTplot) +
   xlab("Years Age of Playground (1 = Built in 2024)") +
   ylab("Park Name") +
   guides(fill=guide_legend(title="Max Daily Users")) +
-  ggtitle("Max Number of Playground Users Given \n Playground Age") +
+  ggtitle("Max Number of Playground Users Given \n playground equipment age") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
   scale_fill_gradient(low = "orange", high = "aquamarine")
@@ -794,7 +814,7 @@ ggplot(DTplot) +
 
 Notes:
 
-The following parks were excluded for not having playground age: `r unique(DTplot[is.na(Playground_Age),park_name])`
+The following parks were excluded for not having playground equipment age: `r unique(DTplot[is.na(Playground_Age),park_name])`
 
 
 ### playground use by restroom status and park category
@@ -950,7 +970,7 @@ The following parks were excluded for not having category status: `r unique(DTpl
 
 ### playground use by number of play elements and primary age groups
 
-Primary age group is a status provided by parks managers that designates the age groups that the playground is target for. The two age groups are 5-12 and 2-5. A playground may be designed to serve both. 
+Primary age group is a status provided by parks managers that designates the age groups that the playground is intended to be used by. The two age groups are 5-12 and 2-5. A playground may be designed to serve both.  
 
 #### chart of average playground use by number of play elements and by primary age group
 
@@ -984,7 +1004,7 @@ ggplot(DTplot[!is.na(Elements)]) +
    scale_x_continuous(labels = scales::comma) +
    scale_fill_gradient(low = "orange", high = "aquamarine")
 
-#The following parks do not have playground age designated: `r unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])`
+#The following parks do not have playground equipment age designated: `r unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])`
 ```
 
 Notes:
@@ -1025,7 +1045,7 @@ ggplot(DTplot[!is.na(Elements)]) +
   scale_x_continuous(labels = scales::comma) +
   scale_fill_gradient(low = "orange", high = "aquamarine")
 
-#The following parks do not have playground age designated: `r unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])`
+#The following parks do not have playground equipment age designated: `r unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])`
 
 ```
 
@@ -1067,7 +1087,7 @@ ggplot(DTplot[!is.na(Elements)]) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
   scale_fill_gradient(low = "orange", high = "aquamarine")
-#The following parks do not have playground age designated: `r unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])`
+#The following parks do not have playground equipment age designated: `r unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])`
 ```
 
 Notes:
@@ -1264,7 +1284,7 @@ ggplot(DTplot[!is.na(Elements)]) +
   scale_x_continuous(labels = scales::comma) +
   scale_fill_gradient(low = "orange", high = "aquamarine")
 
-#The following parks do not have playground age designated: `r unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])`
+#The following parks do not have playground equipment age designated: `r unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])`
 ```
 
 Notes:
@@ -1311,7 +1331,7 @@ ggplot(DTplot[!is.na(Elements)]) +
   scale_fill_gradient(low = "orange", high = "aquamarine")
 
 
-#The following parks do not have playground age designated: `r unique(DTplot["Primary_Age_Group_2-5" == "" & "Primary_Age_Group_5-12" == "", park_name])`
+#The following parks do not have playground equipment age designated: `r unique(DTplot["Primary_Age_Group_2-5" == "" & "Primary_Age_Group_5-12" == "", park_name])`
 
 #unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])
 ```
@@ -1322,7 +1342,7 @@ The following parks were excluded for not having element status: `r unique(DTplo
 
 
 
-## Analysis of playground age opportunity area by park categtory
+## Analysis of playground equipment age by opportunity area status and by park categtory
 
 ```{r}
 DT <- copy(ParkFull)
@@ -1337,7 +1357,7 @@ ggplot(DTplot) +
   ggtitle("Playground Age Given Opportunity Area Status") +
   scale_y_discrete(limits = rev)
 
-#The following parks do not have playground age designated: `r unique(DTplot["Primary_Age_Group_2-5" == "" & "Primary_Age_Group_5-12" == "", park_name])`
+#The following parks do not have playground equipment age designated: `r unique(DTplot["Primary_Age_Group_2-5" == "" & "Primary_Age_Group_5-12" == "", park_name])`
 
 ```
 
