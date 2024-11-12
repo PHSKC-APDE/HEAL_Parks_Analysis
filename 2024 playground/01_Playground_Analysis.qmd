@@ -243,6 +243,7 @@ for(park in unique(ParkFull$park_name)) {
 ```{r}
 
 # While indicated as having playgrounds, Brighton, Midway, and Garfield parks are excluded from this work.
+# these parks are outside of the geogaphy of interest
 
 ParkFull <- ParkFull[!(park_name %in% c("Midway Park", "Garfield Playfield", "Brighton Playfield")),]
 
