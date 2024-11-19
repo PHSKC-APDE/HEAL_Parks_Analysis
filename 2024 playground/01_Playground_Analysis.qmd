@@ -37,17 +37,17 @@ execute:
 
 # Front Matter
 
-This document outlines procedures, technical considerations, and analytic results for a 2024 analysis of playgrounds within parks participating in the HEAL Parks Study. The primary purpose of this PDF is technical review by analysts and project managers to confirm the process and data quality.
+This document outlines procedures, technical considerations, and analytic results for a 2024 analysis of playgrounds within parks participating in the HEAL Park Analysis for Park Equity Study. The primary purpose of this PDF is technical review by analysts and project managers to confirm the process and data quality.
 
-For general information about the project please review the [git](https://github.com/PHSKC-APDE/HEAL_Parks_Analysis) or contact Seth Schromen-Wawrin.
+For general information about the project please review the [GitHub - PHSKC-APDE/HEAL Parks Analysis](https://github.com/PHSKC-APDE/HEAL_Parks_Analysis) or contact Seth Schromen-Wawrin.
 
 ## Goal 
 
-Identify differences in park use access and share findings with parks agencies to inform their planning and investments
+Identify differences in park use and share findings with parks agencies to inform their planning and investments.
 
 ## Objective
 
-Test the ability of park use observation data to compare how park features are used between parks. Use the results from this analysis to inform the understanding of facility access and quality. This pilot will focus on comparing use of playground features
+Test the ability of park use observation data to compare utilization between parks. Use the results from this analysis to inform the understanding of facility access and quality. This pilot will focus on comparing use of playground features.
 
 ## Partners
 
@@ -67,7 +67,7 @@ The contiguous area of Burien, North Highline, Skyway, Tukwila, and White Center
 
 # Background
 
-The Healthy Eating Active Living (HEAL) initiative includes a family of studies aimed at identifying the availability and impact of parks on King County residents. This effort includes an annual study measuring who is using the parks, when they are using them, and what they are doing. In 2024, parks' managers identified playground use as an area of possible interest to focus their efforts. The below analysis has been conducted in response to research questions proposed by the parks' managers. These exploratory analyses are intended to inform further discussion of how we may pursue research and reporting of playground use that supports parks' and the county's interest in the public health and our broader equity and social justice goals.
+The Healthy Eating Active Living (HEAL) program aims to identify the availability and impact of parks on King County residents. This effort includes an annual study measuring who is using the parks, when they are using them, and what they are doing. In 2024, parks' managers identified playground use as an area of possible interest to focus data analysis. The below analysis has been conducted in response to research questions proposed by the parks' managers. These exploratory analyses are intended to inform further discussion of how we may pursue research and reporting of playground use that supports parks' and the county's interest in the public health and our broader equity and social justice goals.
 
 ## Research questions
 
@@ -132,7 +132,7 @@ The following inputs to this script are contained at ./inputs/*.* and include
 -   A file of collected SOPARC observations, aggregated to the period level, currently updated for 2022-2024
 -   An accompanying file of SOPARC activities, currently updated for 2022-2024
 
-In addition, access to APDE's population estimates, or calculated population estimates for children living within 1/2 mile for all parks included in the analysis.
+In addition, access to Public Health – Seattle & King County’s Assessment Policy Development and Evaluation (APDE) Division's population estimates, or calculated population estimates for children living within 1/2 mile for all parks included in the analysis.
 
 ## Output categories
 
@@ -169,9 +169,9 @@ return(fxn)
 
 ```
 
-# Data Preperation
+# Data Preparation
 
-This analysis relies on the below data sources. Please contact Ronald W. Buie or Seth Schromen-Wawrin for details.
+This analysis relies on the below data sources. Please contact Ronald W. Buie (rbuie@kingcounty.gov) or Seth Schromen-Wawrin (seth.schromen-wawrin@kingcounty.gov)for details.
 
 * 2022-2024 park observation data (conducted by PHSKC) 
 * Park features, category, and age data (provided by Burien, Tukwila, and KC Parks)
@@ -363,7 +363,7 @@ ParkFull <- merge(ParkFull, ChildParkPopulationTable, by = "park_name")
 
 # Analyses
 
-The below analyses are exploratory, descriptive, statistics to support investigation into data and reporting systems that support the equitable use and maintenance of municipal parks across King County. In providing these results we hope to facilitate discussion around this work and how to proceed going forward. 
+The below analyses are exploratory and descriptive statistics to support investigation into data and reporting systems that support the equitable use and maintenance of municipal parks across King County. In providing these results we hope to facilitate discussion around this work and how to proceed going forward. 
 
 Some important questions these results are meant to solicit or facilitate are:
 
@@ -390,7 +390,7 @@ ParkFull$full_name <- ParkFull$park_name
 ParkFull$park_name <- ParkFull$`Park Short Name`
 ```
 
-These analyses explore the relationship between classification and funding status of a park and the surrounding population. Park catchment may, additionally, provide context for later analyses below.
+These analyses explore the relationship between category, funding status, and the surrounding population (catchment) of a park. Park catchment may, additionally, provide context for later analyses below.
 
 ### chart of park catchment
 
@@ -575,7 +575,7 @@ The following parks were excluded for not having a playground installation date:
 
 The below analyses explore relationships of the number of people observed in playgrounds and other characteristics or status of the park. We refer to this number of observed users as "use". For several of these analyses, use is provided in three forms, the average number of users observed across all observed days, the median number of users across all days, and the peak number of users across all days.
 
-### playground use by opportunity area
+### playground use by opportunity area status
 
 #### chart of average playground use by opportunity area status
 
