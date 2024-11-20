@@ -122,6 +122,9 @@ options(knitr.table.format = "latex")
 RECALCULATEPOPULATIONS <- FALSE
 TITLESIZE <- 25
 SUBTITLESIZE <- TITLESIZE * .66
+
+THREECOLORS1 <-  c("purple","#AAA","orange")
+THREECOLORS2 <- c("#01665e","#FFFFFF", "#b35806" )
 ```
 
 ## Major inputs
@@ -743,9 +746,42 @@ The following parks were excluded for not having category status: `r unique(DTpl
 
 ### playground use by number of play elements
 
-#### TESTING chart of average playground use by number of play elements
+
+#### chart of average playground use by number of play elements
 
 ```{r}
+DT <- copy(ParkFull)
+
+DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, park_name)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Elements, park_name)][, Elements := as.numeric(Elements)]
+
+#per style advice, cap at 30 elements
+DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
+DTplot[Elements > 30, Elements := 31]
+
+
+
+ggplot(DTplot, aes(x = Elements, fill = avg_Daily_Users, y = reorder(park_name, Elements))) +
+  geom_bar(stat = "identity", position = "stack") +
+  xlab("Number of Play Elements") +
+  ylab("Park Name") +
+   labs(title = "Average Daily Number of Playground Users",
+       subtitle = "By Number of Play Elements") +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma) +
+  #scale_fill_gradient2(low = "orange",mid = "purple" ,high = "aquamarine", guide = "colourbar", midpoint = median(DTplot$avg_Daily_Users) , name = "Average Daily Users") +
+      scale_fill_gradientn(colors = c("purple","#AAA","orange"), guide = "colourbar", name = "Average Daily Users", trans = "reverse" ) +
+   #guides(fill=guide_legend(title="Average Daily Users")) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) +
+    geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
+
+ggsave("./outputs/charts/AverageUse x Elements.png", width = 10, height = 11, units = c("in"))
+```
+
+
+```{r}
+#| eval: false
+
+#### TESTING chart of average playground use by number of play elements
 DT <- copy(ParkFull)
 
 DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, park_name)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Elements, park_name)][, Elements := as.numeric(Elements)]
@@ -770,38 +806,10 @@ geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
 ```
 
-#### TESTING chart of average playground use by number of play elements
-
 ```{r}
-DT <- copy(ParkFull)
-
-DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, park_name)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Elements, park_name)][, Elements := as.numeric(Elements)]
-
-#per style advice, cap at 30 elements
-DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
-DTplot[Elements > 30, Elements := 31]
-
-
-
-ggplot(DTplot, aes(x = Elements, fill = avg_Daily_Users, y = reorder(park_name, Elements))) +
-  geom_bar(stat = "identity", position = "stack") +
-  xlab("Number of Play Elements") +
-  ylab("Park Name") +
-   labs(title = "TESTING Average Daily Number of Playground Users",
-       subtitle = "By Number of Play Elements") +
-  scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma) +
-  #scale_fill_gradient2(low = "orange",mid = "purple" ,high = "aquamarine", guide = "colourbar", midpoint = median(DTplot$avg_Daily_Users) , name = "Average Daily Users") +
-      scale_fill_gradientn(colors = c("orange","purple" ,"aquamarine"), guide = "colourbar", name = "Average Daily Users", trans = "reverse") +
-   #guides(fill=guide_legend(title="Average Daily Users")) +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) +
-    geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
-
-
-```
+#| eval: false
 #### TESTING2 chart of average playground use by number of play elements
 
-```{r}
 DT <- copy(ParkFull)
 
 DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, park_name)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Elements, park_name)][, Elements := as.numeric(Elements)]
@@ -835,20 +843,23 @@ DT <- copy(ParkFull)
 
 DTplot <- DT[playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( Elements, park_name)][, Elements := as.numeric(Elements)]
 
+#per style advice, cap at 30 elements
+DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
+DTplot[Elements > 30, Elements := 31]
 
-ggplot(DTplot) +
-  geom_bar(stat = "identity", position = "stack", aes(x = Elements, fill = med_Daily_Users, y = reorder(park_name, Elements))) +
+ggplot(DTplot, aes(x = Elements, fill = med_Daily_Users, y = reorder(park_name, Elements))) +
+  geom_bar(stat = "identity", position = "stack") +
   xlab("Number of Elements") +
   ylab("Park Name") +
-  guides(fill=guide_legend(title="Median Daily Users")) +
   labs(title = "Median Daily Number of Playground Users", 
        subtitle = "By Number of Elements") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine") +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+ scale_fill_gradientn(colors = c("purple","#AAA","orange"), guide = "colourbar", name = "Median Daily Users", trans = "reverse" ) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) +
+    geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
-
+ggsave("./outputs/charts/MedianUse x Elements.png", width = 10, height = 11, units = c("in"))
 
 ```
 
@@ -859,43 +870,48 @@ DT <- copy(ParkFull)
 
 DTplot <- DT[playground == 1, .(max_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, park_name)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Users") ,by = .( Elements, park_name)][, Elements := as.numeric(Elements)]
 
-ggplot(DTplot) +
-  geom_bar(stat = "identity", position = "stack", aes(x = Elements, fill = max_Daily_Users, y = reorder(park_name, Elements))) +
+#per style advice, cap at 30 elements
+DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
+DTplot[Elements > 30, Elements := 31]
+
+ggplot(DTplot, aes(x = Elements, fill = max_Daily_Users, y = reorder(park_name, Elements))) +
+  geom_bar(stat = "identity", position = "stack") +
   xlab("Number of Elements") +
   ylab("Park Name") +
-  guides(fill=guide_legend(title="Max Daily Users")) +
   labs(title = "Max Daily Number of Playground Users", 
        subtitle = "By Number of Elements") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine") +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+ scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Max Daily Users", trans = "reverse" ) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) +
+  
+    geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
+
+ggsave("./outputs/charts/MaxUse x Elements.png", width = 10, height = 11, units = c("in"))
 
 ```
 
 ### playground use by playground equipment age
 
-#### TESTING chart of average playground use by playground equipment age
+#### chart of average playground use by playground equipment age
 
 ```{r}
 DT <- copy(ParkFull)
 
 DTplot <- DT[, Playground_Age := (2024-as.numeric(DT$Playground_Age)) +1][playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Playground_Age, park_name)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Playground_Age, park_name)]
 
-ggplot(DTplot[!is.na(Playground_Age),]) +
-  geom_bar(stat = "identity", position = "stack", aes(x = as.numeric(Playground_Age), fill = avg_Daily_Users, y = reorder(park_name, Playground_Age))) +
+ggplot(DTplot[!is.na(Playground_Age),], aes(x = as.numeric(Playground_Age), fill = avg_Daily_Users, y = reorder(park_name, Playground_Age))) +
+  geom_bar(stat = "identity", position = "stack") +
   xlab("Years Age of Playground (1 = Built in 2024)") +
   ylab("Park Name") +
-  #guides(fill=guide_legend(title="Average Daily Users")) +
-  labs(title = "TESTING Average Daily Number of Playground Users",
+  labs(title = "Average Daily Number of Playground Users",
        subtitle = "By Playground Equipment Age") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  #scale_fill_gradient(low = "orange", high = "aquamarine") +
-        scale_fill_gradientn(colors = c("orange","purple" ,"aquamarine"), guide = "colourbar", name = "Average Daily Users") +
+        scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Average Daily Users", trans = "reverse" ) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
-
+ggsave("./outputs/charts/AverageUse x EquipmentAge.png", width = 10, height = 11, units = c("in"))
 
 ```
 
@@ -910,19 +926,18 @@ DT <- copy(ParkFull)
 
 DTplot <- DT[, Playground_Age := (2024-as.numeric(DT$Playground_Age)) +1][playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Playground_Age, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( Playground_Age, park_name)]
 
-ggplot(DTplot[!is.na(Playground_Age),]) +
-  geom_bar(stat = "identity", position = "stack", aes(x = as.numeric(Playground_Age), fill = med_Daily_Users, y = reorder(park_name, Playground_Age))) +
+ggplot(DTplot[!is.na(Playground_Age),], aes(x = as.numeric(Playground_Age), fill = med_Daily_Users, y = reorder(park_name, Playground_Age))) +
+  geom_bar(stat = "identity", position = "stack") +
   xlab("Years Age of Playground (1 = Built in 2024)") +
   ylab("Park Name") +
-  guides(fill=guide_legend(title="Median Daily Users")) +
   labs(title = "Median Daily Number of Playground Users", 
        subtitle ="By Playground Equipment Age") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine") +
+        scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Median Daily Users", trans = "reverse" ) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
-
+ggsave("./outputs/charts/MedianUse x EquipmentAge.png", width = 10, height = 11, units = c("in"))
 
 ```
 
@@ -941,13 +956,14 @@ ggplot(DTplot[!is.na(Playground_Age),]) +
   geom_bar(stat = "identity", position = "stack", aes(x = as.numeric(Playground_Age), fill = max_Daily_Users, y = reorder(park_name, Playground_Age))) +
   xlab("Years Age of Playground (1 = Built in 2024)") +
   ylab("Park Name") +
-  guides(fill=guide_legend(title="Max Daily Users")) +
   labs(title = "Max Number of Playground Users", 
        subtitle ="By Playground Equipment Age") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Max Daily Users", trans = "reverse" ) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
+ggsave("./outputs/charts/MaxUse x EquipmentAge.png", width = 10, height = 11, units = c("in"))
 
 
 
@@ -1146,9 +1162,50 @@ The following parks were excluded for not having category status: `r unique(DTpl
 
 Primary age group is a status provided by parks managers that designates the age groups that the playground is intended to be used by. The two age groups are 5-12 and 2-5. A playground may be designed to serve both.  
 
-#### chart of average playground use by number of play elements and by primary age group
+
+
+#### chart of average playground use by number of play elements and by primary age group, population as color
 
 ```{r}
+DT <- copy(ParkFull)
+
+DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Elements,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "")][, Age_Group := ifelse(`Primary_Age_Group_2-5` != "" & `Primary_Age_Group_5-12` != "", paste0(`Primary_Age_Group_2-5` ," & ", `Primary_Age_Group_5-12`),paste0(`Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`) )]
+
+#per style advice, cap at 30 elements
+DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
+DTplot[Elements > 30, Elements := 31]
+
+ggplot(DTplot[!is.na(Elements)], aes(y = reorder(park_name, Elements), x = Elements, fill = avg_Daily_Users)) +
+   #geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = Elements, fill = avg_Daily_Users)) +
+  geom_bar(stat = "identity", position = "stack") +
+   facet_wrap(~Age_Group, scales = "free_y", nrow = 3) +
+   #facet_grid(`Primary_Age_Group_2-5` ~ `Primary_Age_Group_5-12`, scales = "free_y") +
+   xlab("Number of Play Elements") +
+   ylab("Park Name") +
+   labs(title = "Average Daily Number of Playground Users", 
+        subtitle = "By Primary Age Group and Number of Play Elements") +
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+   scale_y_discrete(limits = rev) +
+   scale_x_continuous(labels = scales::comma) +
+   scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Average Daily Users", trans = "reverse") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))+
+  geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
+
+
+ggsave("./outputs/charts/AverageUse x AgeGroup x Elements.png", width = 10, height = 11, units = c("in"))
+
+```
+
+Notes:
+
+The following parks were excluded for not having element status: `r unique(DTplot[is.na(Elements),park_name])`
+
+
+
+```{r}
+#| eval: false
+
+#### chart of average playground use by number of play elements and by primary age group
 DT <- copy(ParkFull)
 
 DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Elements,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "")][, Age_Group := ifelse(`Primary_Age_Group_2-5` != "" & `Primary_Age_Group_5-12` != "", paste0(`Primary_Age_Group_2-5` ," & ", `Primary_Age_Group_5-12`),paste0(`Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`) )]
@@ -1181,64 +1238,17 @@ ggplot(DTplot[!is.na(Elements)]) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 
-#The following parks do not have playground equipment age designated: `r unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])`
+#Notes:
+
+#The following parks were excluded for not having element status: `r unique(DTplot[is.na(Elements),park_name])`
 ```
 
-Notes:
 
-The following parks were excluded for not having element status: `r unique(DTplot[is.na(Elements),park_name])`
-
-#### TESTING chart of average playground use by number of play elements and by primary age group, population as color
 
 ```{r}
-DT <- copy(ParkFull)
-
-DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Elements,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "")][, Age_Group := ifelse(`Primary_Age_Group_2-5` != "" & `Primary_Age_Group_5-12` != "", paste0(`Primary_Age_Group_2-5` ," & ", `Primary_Age_Group_5-12`),paste0(`Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`) )]
-# 
-# ggplot(DTplot[!is.na(Elements)]) +
-#    geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = avg_Daily_Users, fill = Elements)) +
-#    facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y", nrow = 3) +
-#    #facet_grid(`Primary_Age_Group_2-5` ~ `Primary_Age_Group_5-12`, scales = "free_y") +
-#    xlab("Average Daily number of playground users") +
-#    ylab("Park Name") +
-#    ggtitle("Average Daily Number of Playground Users Given \n Primary Age Group and Elements") +
-#    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-#    scale_y_discrete(limits = rev) +
-#    scale_x_continuous(labels = scales::comma) +
-#    scale_fill_gradient(low = "orange", high = "aquamarine")
- #aes(y = reorder(park_name,populationHalfMile),
-
-#per style advice, cap at 30 elements
-DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
-DTplot[Elements > 30, Elements := 31]
-
-ggplot(DTplot[!is.na(Elements)], aes(y = reorder(park_name, Elements), x = Elements, fill = avg_Daily_Users)) +
-   #geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = Elements, fill = avg_Daily_Users)) +
-  geom_bar(stat = "identity", position = "stack") +
-   facet_wrap(~Age_Group, scales = "free_y", nrow = 3) +
-   #facet_grid(`Primary_Age_Group_2-5` ~ `Primary_Age_Group_5-12`, scales = "free_y") +
-   xlab("Number of Play Elements") +
-   ylab("Park Name") +
-   labs(title = "TESTING Average Daily Number of Playground Users", 
-        subtitle = "By Primary Age Group and Number of Play Elements") +
-   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-   scale_y_discrete(limits = rev) +
-   scale_x_continuous(labels = scales::comma) +
-   #scale_fill_gradient(low = "orange", high = "aquamarine") +
-   scale_fill_gradientn(colors = c("orange","purple" ,"aquamarine"), guide = "colourbar", name = "Average Daily Users") +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))+
-  geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
-
-#The following parks do not have playground equipment age designated: `r unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])`
-```
-
-Notes:
-
-The following parks were excluded for not having element status: `r unique(DTplot[is.na(Elements),park_name])`
+#| eval: false
 
 #### TESTING chart of the ratio of average playground use to number of play elements by primary age group
-
-```{r}
 DT <- copy(ParkFull)
 
 DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( Elements,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "")][, Age_Group := ifelse(`Primary_Age_Group_2-5` != "" & `Primary_Age_Group_5-12` != "", paste0(`Primary_Age_Group_2-5` ," & ", `Primary_Age_Group_5-12`),paste0(`Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`) )][,"Usage:Element Ratio" := avg_Daily_Users/Elements]
@@ -1258,11 +1268,11 @@ ggplot(DTplot[!is.na(Elements)]) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 
+#Notes:
+
+#The following parks were excluded for not having element status: `r unique(DTplot[is.na(Elements),park_name])`
+
 ```
-
-Notes:
-
-The following parks were excluded for not having element status: `r unique(DTplot[is.na(Elements),park_name])`
 
 #### chart of median playground use by number of play elements and by primary age group
 
@@ -1270,24 +1280,13 @@ The following parks were excluded for not having element status: `r unique(DTplo
 DT <- copy(ParkFull)
 
 DTplot <- DT[playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( Elements,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "")][, Age_Group := ifelse(`Primary_Age_Group_2-5` != "" & `Primary_Age_Group_5-12` != "", paste0(`Primary_Age_Group_2-5` ," & ", `Primary_Age_Group_5-12`),paste0(`Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`) )]
-# 
-# ggplot(DTplot[!is.na(Elements)]) +
-#   geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = med_Daily_Users, fill = Elements)) +
-#   facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y", nrow = 3) +
-#   #facet_grid(`Primary_Age_Group_2-5` ~ `Primary_Age_Group_5-12`, scales = "free_y") +
-#   xlab("Median Daily number of playground users") +
-#   ylab("Park Name") +
-#   ggtitle("Median Daily Number of Playground Users Given \n Primary Age Group and Elements") +
-#   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-#   scale_y_discrete(limits = rev) +
-#   scale_x_continuous(labels = scales::comma) +
-#   scale_fill_gradient(low = "orange", high = "aquamarine")
 
+DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
+DTplot[Elements > 30, Elements := 31]
 
-ggplot(DTplot[!is.na(Elements)]) +
-  geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = med_Daily_Users, fill = Elements)) +
+ggplot(DTplot[!is.na(Elements)], aes(y = reorder(park_name, Elements), x = Elements, fill = med_Daily_Users)) +
+  geom_bar(stat = "identity", position = "stack") +
   facet_wrap(~Age_Group, scales = "free_y", nrow = 3) +
-  #facet_grid(`Primary_Age_Group_2-5` ~ `Primary_Age_Group_5-12`, scales = "free_y") +
   xlab("Median Daily number of playground users") +
   ylab("Park Name") +
    labs(title = "Median Daily Number of Playground Users", 
@@ -1295,8 +1294,13 @@ ggplot(DTplot[!is.na(Elements)]) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine") +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Median Daily Users", trans = "reverse") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))+
+  geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
+
+
+ggsave("./outputs/charts/MedianUse x AgeGroup x Elements.png", width = 10, height = 11, units = c("in"))
+
 
 ```
 
@@ -1314,34 +1318,26 @@ DT <- copy(ParkFull)
 
 DTplot <- DT[playground == 1, .(max_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Users") ,by = .( Elements,  `Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`, park_name)][, Elements := as.numeric(Elements)][, `Primary_Age_Group_2-5` := ifelse(`Primary_Age_Group_2-5` == "Yes", "2-5", "")][, `Primary_Age_Group_5-12` := ifelse(`Primary_Age_Group_5-12` == "Yes", "5-12", "")][, Age_Group := ifelse(`Primary_Age_Group_2-5` != "" & `Primary_Age_Group_5-12` != "", paste0(`Primary_Age_Group_2-5` ," & ", `Primary_Age_Group_5-12`),paste0(`Primary_Age_Group_2-5`, `Primary_Age_Group_5-12`) )]
 
-# ggplot(DTplot[!is.na(Elements)]) +
-#   geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = max_Daily_Users, fill = Elements)) +
-#   facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y", nrow = 3) +
-#   #facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y") +
-#   xlab("Max Daily number of playground users") +
-#   ylab("Park Name") +
-#   ggtitle("Max Daily Number of Playground Users Given \n Primary Age Group and Elements") +
-#   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-#   scale_y_discrete(limits = rev) +
-#   scale_x_continuous(labels = scales::comma) +
-#   scale_fill_gradient(low = "orange", high = "aquamarine")
+DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
+DTplot[Elements > 30, Elements := 31]
 
-
-ggplot(DTplot[!is.na(Elements)]) +
-  geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = max_Daily_Users, fill = Elements)) +
+ggplot(DTplot[!is.na(Elements)], aes(y = reorder(park_name, Elements), x = Elements, fill = max_Daily_Users)) +
+  geom_bar(stat = "identity", position = "stack") +
   facet_wrap(~Age_Group, scales = "free_y", nrow = 3) +
-  #facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y") +
-  xlab("Max Daily Number of Playground Users") +
+  xlab("Max Daily number of playground users") +
   ylab("Park Name") +
-  labs(title = "Max Daily Number of Playground Users", 
-       subtitle = "By Primary Age Group and Number of Playground Elements") +
+   labs(title = "Max Daily Number of Playground Users", 
+        subtitle = "By Primary Age Group and Number of Play Elements") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradient(low = "orange", high = "aquamarine") +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Max Daily Users", trans = "reverse") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))+
+  geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
-#The following parks do not have playground equipment age designated: `r unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])`
+
+ggsave("./outputs/charts/MaxUse x AgeGroup x Elements.png", width = 10, height = 11, units = c("in"))
+
 ```
 
 Notes:
@@ -1349,6 +1345,8 @@ Notes:
 The following parks were excluded for not having element status: `r unique(DTplot[is.na(Elements),park_name])`
 
 ### playground use by walkscore
+
+
 
 #### chart of average playground use by walkscore of park
 
@@ -1367,17 +1365,18 @@ ggplot(DTplot) +
        subtitle = "By Walkability Score") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma, limits = c(0,100)) +
-  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  #scale_fill_gradient(low = "orange", high = "aquamarine") +
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Average Daily Users", trans = "reverse") +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
-
+ggsave("./outputs/charts/AverageUse x walkability.png", width = 10, height = 11, units = c("in"))
 
 ```
 
-#### TESTING chart of average playground use by walkscore of park
 
 ```{r}
-
+#| eval: false
+#### chart of average playground use by walkscore of park
 DT <- copy(ParkFull)
 
 DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, WalkScore, park_name)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( WalkScore, park_name)]
@@ -1387,12 +1386,11 @@ ggplot(DTplot) +
   geom_bar(stat = "identity", position = "stack", aes(x = as.numeric(WalkScore), fill = avg_Daily_Users, y = reorder(park_name, WalkScore))) +
   xlab("Walkability Score") +
   ylab("Park Name") +
-  labs(title = "TESTING Average Daily Number of Playground Users", 
+  labs(title = "Average Daily Number of Playground Users", 
        subtitle = "By Walkability Score") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma, limits = c(0,100)) +
-  #scale_fill_gradient(low = "orange", high = "aquamarine") +
-     scale_fill_gradientn(colors = c("orange","purple" ,"aquamarine"), guide = "colourbar", name = "Average Daily Users") +
+  scale_fill_gradient(low = "orange", high = "aquamarine") +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 
@@ -1408,8 +1406,8 @@ DT <- copy(ParkFull)
 DTplot <- DT[playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, WalkScore, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( WalkScore, park_name)]
 
 
-ggplot(DTplot) +
-  geom_bar(stat = "identity", position = "stack", aes(x = as.numeric(WalkScore), fill = med_Daily_Users, y = reorder(park_name, WalkScore))) +
+ggplot(DTplot, aes(x = as.numeric(WalkScore), fill = med_Daily_Users, y = reorder(park_name, WalkScore))) +
+  geom_bar(stat = "identity", position = "stack") +
   xlab("Walkability Score") +
   ylab("Park Name") +
   guides(fill=guide_legend(title="Median Daily Users")) +
@@ -1417,8 +1415,10 @@ ggplot(DTplot) +
        subtitle = "By Walkability Score") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma, limits = c(0,100)) +
-  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Median Daily Users", trans = "reverse") +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
+ggsave("./outputs/charts/MedianUse x walkability.png", width = 10, height = 11, units = c("in"))
 
 
 
@@ -1435,8 +1435,8 @@ DT <- copy(ParkFull)
 DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, TransitScore, park_name)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("avg_Daily_Users") ,by = .( TransitScore, park_name)][, TransitScore := as.numeric(TransitScore)]
 
 
-ggplot(DTplot[!is.na(TransitScore),]) +
-  geom_bar(stat = "identity", position = "stack", aes(x = as.numeric(TransitScore), fill = avg_Daily_Users, y = reorder(park_name, TransitScore))) +
+ggplot(DTplot[!is.na(TransitScore),], aes(x = as.numeric(TransitScore), fill = avg_Daily_Users, y = reorder(park_name, TransitScore))) +
+  geom_bar(stat = "identity", position = "stack") +
   xlab("Transit Score") +
   ylab("Park Name") +
   guides(fill=guide_legend(title="Average Daily Users")) +
@@ -1444,8 +1444,10 @@ ggplot(DTplot[!is.na(TransitScore),]) +
        subtitle = "By Public Transit Score") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma, limits = c(0,100)) +
-  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Average Daily Users", trans = "reverse") +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
+ggsave("./outputs/charts/AverageUse x transit.png", width = 10, height = 11, units = c("in"))
 
 
 
@@ -1473,8 +1475,10 @@ ggplot(DTplot[!is.na(TransitScore),]) +
        subtitle = "By Transit Score") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma, limits = c(0,100)) +
-  scale_fill_gradient(low = "orange", high = "aquamarine") +
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Median Daily Users", trans = "reverse") +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
+ggsave("./outputs/charts/MedianUse x transit.png", width = 10, height = 11, units = c("in"))
 
 
 
@@ -1516,10 +1520,47 @@ Notes:
 
 The following parks were excluded for not having category status: `r unique(DTplot[is.na(Park_Category),park_name])`
 
+
+
 ### chart of playground popularity by play elements
 
 ```{r}
 
+DT <- copy(ParkFull[occupied == "Yes"])
+
+DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, park_name, Elements, playground)][, .(users = sum(users)),by = .(park_name,  Elements, playground)][,allusers := sum(users), by = .(park_name, Elements)][playground == 1, popularity := users/allusers][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("popularity") ,by = .(park_name, Elements)][, Elements := as.numeric(Elements)]
+
+
+ggplot(DTplot, aes(x = popularity, fill = Elements, y = reorder(park_name, popularity))) +
+  geom_bar(stat = "identity", position = "stack") +
+  xlab("Playground Popularity rate") +
+  ylab("Park Name") +
+  labs(title = "Playground Popularity Rate", 
+       subtitle = "By Number of Play Elements") +
+  scale_y_discrete(limits = rev) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_x_continuous(labels = scales::comma) +
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Number of Play Elements", trans = "reverse") +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
+ggsave("./outputs/charts/Popularity x Elements.png", width = 10, height = 11, units = c("in"))
+
+
+
+
+
+
+```
+
+Notes:
+
+The following parks were excluded for not having category status: `r unique(DTplot[is.na(Elements),park_name])`
+
+
+```{r}
+#| eval: false
+
+### chart of playground popularity by play elements
 DT <- copy(ParkFull[occupied == "Yes"])
 
 DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, park_name, Elements, playground)][, .(users = sum(users)),by = .(park_name,  Elements, playground)][,allusers := sum(users), by = .(park_name, Elements)][playground == 1, popularity := users/allusers][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("popularity") ,by = .(park_name, Elements)][, Elements := as.numeric(Elements)]
@@ -1537,19 +1578,19 @@ ggplot(DTplot) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 
+#Notes:
 
+#The following parks were excluded for not having category status: `r unique(DTplot[is.na(Elements),park_name])`
 
 
 ```
-Notes:
 
-The following parks were excluded for not having category status: `r unique(DTplot[is.na(Elements),park_name])`
+
+```{r}
+#| eval: false
 
 
 ### TESTING chart of playground popularity by play elements
-
-```{r}
-
 DT <- copy(ParkFull[occupied == "Yes"])
 
 DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, park_name, Elements, playground)][, .(users = sum(users)),by = .(park_name,  Elements, playground)][,allusers := sum(users), by = .(park_name, Elements)][playground == 1, popularity := users/allusers][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("popularity") ,by = .(park_name, Elements)][, Elements := as.numeric(Elements)]
@@ -1571,45 +1612,13 @@ ggplot(DTplot, aes(x = Elements, fill = popularity, y = reorder(park_name, Eleme
   geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
 
+#Notes:
+
+#The following parks were excluded for not having category status: `r unique(DTplot[is.na(Elements),park_name])`
 
 
 
 ```
-Notes:
-
-The following parks were excluded for not having category status: `r unique(DTplot[is.na(Elements),park_name])`
-
-
-### TESTING chart of playground popularity by play elements
-
-```{r}
-
-DT <- copy(ParkFull[occupied == "Yes"])
-
-DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, park_name, Elements, playground)][, .(users = sum(users)),by = .(park_name,  Elements, playground)][,allusers := sum(users), by = .(park_name, Elements)][playground == 1, popularity := users/allusers][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("popularity") ,by = .(park_name, Elements)][, Elements := as.numeric(Elements)]
-
-
-ggplot(DTplot, aes(x = popularity, fill = Elements, y = reorder(park_name, popularity))) +
-  geom_bar(stat = "identity", position = "stack") +
-  xlab("Playground Popularity rate") +
-  ylab("Park Name") +
-  labs(title = "TESTING Playground Popularity Rate", 
-       subtitle = "By Number of Play Elements") +
-  scale_y_discrete(limits = rev) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-  scale_x_continuous(labels = scales::comma) +
-      scale_fill_gradientn(colors = c("orange","purple" ,"aquamarine"), guide = "colourbar", name = "Play Elements") +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) 
-
-
-
-
-
-
-```
-Notes:
-
-The following parks were excluded for not having category status: `r unique(DTplot[is.na(Elements),park_name])`
 
 ### chart of playground popularity by number of play elements and by primary age group
 
@@ -1647,8 +1656,10 @@ ggplot(DTplot[!is.na(Elements)]) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
   #scale_fill_gradient(low = "orange", high = "aquamarine") +
-        scale_fill_gradientn(colors = c("orange","purple" ,"aquamarine"), guide = "colourbar", name = "Play Elements") +
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Number of Play Elements", trans = "reverse") +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
+ggsave("./outputs/charts/Popularity x AgeGroup x Elements.png", width = 10, height = 11, units = c("in"))
 
 
 #The following parks do not have playground equipment age designated: `r unique(DTplot[`Primary_Age_Group_2-5` == "" & `Primary_Age_Group_5-12` == "", park_name])`
@@ -1684,9 +1695,10 @@ ggplot(DTplot[!is.na(Elements)]) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-        scale_fill_gradientn(colors = c("orange","purple" ,"aquamarine"), guide = "colourbar", name = "Play Elements") +
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Number of Play Elements", trans = "reverse") +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
+ggsave("./outputs/charts/PopularityMinors x AgeGroup x Elements.png", width = 10, height = 11, units = c("in"))
 
 ```
 
@@ -1694,13 +1706,14 @@ Notes:
 
 The following parks were excluded for not having element status: `r unique(DTplot[is.na(Elements),park_name])`
 
-### TESTING chart of playground popularity among children and teens by number of play elements and by primary age group
-
-Here, popularity is:
-
-$\frac{\text{num of children and teens in playground}} {\text{num of children and teens in park}}$
 
 ```{r}
+#| eval: false
+### TESTING chart of playground popularity among children and teens by number of play elements and by primary age group
+
+#Here, popularity is:
+
+#$\frac{\text{num of children and teens in playground}} {\text{num of children and teens in park}}$
 
 DT <- copy(ParkFull[occupied == "Yes"])
 
@@ -1725,8 +1738,9 @@ ggplot(DTplot[!is.na(Elements)], aes(y = reorder(park_name, Elements), x = Eleme
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))+
   geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
+`
+
+#Notes:
+
+#The following parks were excluded for not having element status: `r unique(DTplot[is.na(Elements),park_name])`
 ```
-
-Notes:
-
-The following parks were excluded for not having element status: `r unique(DTplot[is.na(Elements),park_name])`
