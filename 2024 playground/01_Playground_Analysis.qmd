@@ -262,7 +262,7 @@ ParkFull <- ParkFull[!(park_name %in% c("Midway Park", "Garfield Playfield", "Br
 * "Opportunity Areas": indicator of  field for if park is located in an Opportunity Area for health and economics, per King County Parks analysis. 
 * "Restroom": indicator of if park has restroom facility (permanent or temporary) 
 * "Picnic Area": indicator of if park has area with tables and benches 
-* "Sport Fields": indicator of if park has area designated for organized team sports (all conditions). 
+* "Sports Field": indicator of if park has area designated for organized team sports (all conditions). 
 * "Play Elements": number of unique opportunities in playground for a type movement/activity. Movement/activities include: climbing, sliding, spinning, crawling, swinging, balancing, playing with sand, and water play (e.g., splash pads). 
 * "Playground Age": Year that the playground was installed or last significantly updated.
 * "Primary Age Group": Category of "2-5 years old" or "5-12 years old". Swing features included in 5-12; a playground is not fit 2-5 if it only has toddler bucket swings. Can be both categories. 
@@ -384,12 +384,52 @@ Notes:
 
 \newpage
 
-## Analyses of park catchment and status
+
+
+```{r Parks included in the analyses}
+
+#calculate total number of target areas
+areaCount <- 0
+for(park in unique(ParkObservations$park_name)){
+  areaSubCount <- length(unique(ParkObservations[park_name == park, tar_area]))
+  areaCount <- areaCount + areaSubCount
+}
+
+areaCountIncluded <- 0
+for(park in unique(ParkFull$park_name)){
+  areaSubCount <- length(unique(ParkFull[park_name == park, tar_area]))
+  areaCountIncluded <- areaCountIncluded + areaSubCount
+}
+
+TableParks <- data.table(`Park Name` = as.character(), `Times Observed` = as.numeric(), `First Year` = as.numeric(), `Latest Year` = as.numeric())
+i<- 0
+for(park in unique(ParkFull$park_name)) {
+  i <- i+1
+  timesObserved <- length(unique(ParkFull[park_name == park, studyDescription]))
+  years <- as.numeric(unique(substr(unique(ParkFull[park_name == park, studyDescription]),1,4)))
+  TableParks <- rbind(TableParks, list(park, timesObserved, min(years), max(years)))
+  #Table1[i, `:=`(`Park Name` = park, `Years Observed` = years  )]
+}
+
+totalParks <- length(unique(ParkObservations$park_name))
+includedParks <- length(unique(ParkFull$park_name))
+
+Table1 <- data.table(`Total Parks` = totalParks, 
+                     `Target Areas Total` = areaCount,
+                     `Parks With Playgrounds` = includedParks, 
+                     `Target Areas Included` = areaCountIncluded,
+                     `Years Included` = paste0(min(TableParks$`First Year`), "-", max(TableParks$`Latest Year`))
+                     )
+
+#t(Table1)
+```
+
 
 ```{r, replace park names}
 
 ParkFull$full_name <- ParkFull$park_name
 ParkFull$park_name <- ParkFull$`Park Short Name`
+
 ```
 
 These analyses explore the relationship between category, funding status, and the surrounding population (catchment) of a park. Park catchment may, additionally, provide context for later analyses below.
@@ -1264,7 +1304,7 @@ Primary age group is a status provided by parks managers that designates the age
 
 \newpage
 
-#### chart of average playground use by number of play elements and by primary age group, population as color
+#### chart of average playground use by number of play elements and by primary age group
 
 ```{r}
 DT <- copy(ParkFull)
@@ -1843,7 +1883,7 @@ ggplot(DTplot[!is.na(Elements)]) +
   #facet_wrap(~`Primary_Age_Group_2-5` + `Primary_Age_Group_5-12`, scales = "free_y") +
   xlab("Playground Popularity Rate") +
   ylab("Park Name") +
-  labs(title = "Playground Popularity Rate Among Children and Teens", 
+  labs(title = "Playground Popularity Rate Among \nChildren and Teens", 
        subtitle = "By Primary Age Group and Number of Play Elements") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +

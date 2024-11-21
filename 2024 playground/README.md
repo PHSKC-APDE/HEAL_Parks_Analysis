@@ -135,7 +135,7 @@ Buie (rbuie@kingcounty.gov) or Seth Schromen-Wawrin
 - “Restroom”: indicator of if park has restroom facility (permanent or
   temporary)
 - “Picnic Area”: indicator of if park has area with tables and benches
-- “Sport Fields”: indicator of if park has area designated for organized
+- “Sports Field”: indicator of if park has area designated for organized
   team sports (all conditions).
 - “Play Elements”: number of unique opportunities in playground for a
   type movement/activity. Movement/activities include: climbing,
@@ -213,8 +213,6 @@ Notes:
   suppressed, or show up as NA, tbd, or 0
 
 
-
-## Analyses of park catchment and status
 
 These analyses explore the relationship between category, funding
 status, and the surrounding population (catchment) of a park. Park
@@ -512,7 +510,7 @@ age groups are 5-12 and 2-5. A playground may be designed to serve both.
 
 
 
-#### chart of average playground use by number of play elements and by primary age group, population as color
+#### chart of average playground use by number of play elements and by primary age group
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-30-1.png)
 
