@@ -372,6 +372,18 @@ The following parks were excluded for not having category status:
 
 
 
+#### TESTING NO REGIONAL: chart of median playground use by number of playground elements
+
+![](01_Playground_Analysis_files/figure-commonmark/testing%20no%20regional-1.png)
+
+
+
+#### TESTING NO REGIONAL POP ON X: chart of median playground use by number of playground elements
+
+![](01_Playground_Analysis_files/figure-commonmark/testing%20no%20regional%20and%20pop%20x%20axis-1.png)
+
+
+
 #### chart of peak playground use by number of playground elements
 
 ![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-20-1.png)

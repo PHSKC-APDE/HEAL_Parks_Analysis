@@ -170,6 +170,15 @@ integer_breaks <- function(n = 5, ...) {
 return(fxn)
 }
 
+legend_breaker <- function(toBreak, n = 5){
+  bottom <- ceiling(min(toBreak))
+  top <- floor(max(toBreak))
+  
+  returner <- quantile(bottom:top, c(0,.25,.5,.75,1))
+  
+  return(as.integer(returner))
+} 
+
 ```
 
 # Data Preparation
@@ -839,7 +848,7 @@ DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
 DTplot[Elements > 30, Elements := 31]
 
 toBreak <- DTplot$avg_Daily_Users
-fiveBreaks <-  c(ceiling(min(toBreak)), round(max(toBreak)/4), round(max(toBreak)/2), round(max(toBreak)/(4/3)),floor(max(toBreak)))
+fiveBreaks <-  legend_breaker(toBreak)
 
 ggplot(DTplot, aes(x = Elements, fill = avg_Daily_Users, y = reorder(park_name, Elements))) +
   geom_bar(stat = "identity", position = "stack") +
@@ -932,7 +941,7 @@ DTplot[Elements > 30, Elements := 31]
 
 
 toBreak <- DTplot$med_Daily_Users
-fiveBreaks <-  c(ceiling(min(toBreak)), round(max(toBreak)/4), round(max(toBreak)/2), round(max(toBreak)/(4/3)),floor(max(toBreak)))
+fiveBreaks <-  legend_breaker(toBreak)
 
 ggplot(DTplot, aes(x = Elements, fill = med_Daily_Users, y = reorder(park_name, Elements))) +
   geom_bar(stat = "identity", position = "stack") +
@@ -947,6 +956,74 @@ ggplot(DTplot, aes(x = Elements, fill = med_Daily_Users, y = reorder(park_name, 
     geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
 ggsave("./outputs/charts/MedianUse x Elements.png", width = 10, height = 11, units = c("in"))
+
+
+
+```
+
+\newpage
+
+#### TESTING NO REGIONAL: chart of median playground use by number of playground elements
+
+```{r testing no regional}
+DT <- copy(ParkFull)
+
+DTplot <- DT[playground == 1 & Park_Category != "Regional", .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( Elements, park_name)][, Elements := as.numeric(Elements)]
+
+#per style advice, cap at 30 elements
+DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
+DTplot[Elements > 30, Elements := 31]
+
+
+toBreak <- DTplot$med_Daily_Users
+fiveBreaks <-  legend_breaker(toBreak)
+
+ggplot(DTplot, aes(x = Elements, fill = med_Daily_Users, y = reorder(park_name, Elements))) +
+  geom_bar(stat = "identity", position = "stack") +
+  xlab("Number of Elements") +
+  ylab("Park Name") +
+  labs(title = "TESTING NO REGIONAL: Median Daily Number of Playground Users", 
+       subtitle = "By Number of Elements") +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma) +
+ scale_fill_gradientn(colors = c("purple","#AAA","orange"), guide = "colourbar", name = "Median Daily Users", trans = "reverse", breaks = fiveBreaks ) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) +
+    geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
+
+ggsave("./outputs/charts/TESTING NO REGIONAL MedianUse x Elements.png", width = 10, height = 11, units = c("in"))
+
+```
+
+\newpage
+
+#### TESTING NO REGIONAL POP ON X: chart of median playground use by number of playground elements
+
+```{r testing no regional and pop x axis}
+DT <- copy(ParkFull)
+
+DTplot <- DT[playground == 1 & Park_Category != "Regional", .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( Elements, park_name)][, Elements := as.numeric(Elements)]
+
+#per style advice, cap at 30 elements
+#DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
+DTplot[Elements > 30, Elements := 31]
+
+
+toBreak <- DTplot$Elements
+fiveBreaks <-  legend_breaker(toBreak)
+
+
+ggplot(DTplot, aes(x = med_Daily_Users, fill = Elements, y = reorder(park_name, med_Daily_Users))) +
+  geom_bar(stat = "identity", position = "stack") +
+  xlab("Population") +
+  ylab("Park Name") +
+  labs(title = "TESTING NO REGIONAL POP ON X: Median Daily Number of Playground Users", 
+       subtitle = "By Number of Elements") +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma) +
+ scale_fill_gradientn(colors = c("purple","#AAA","orange"), guide = "colourbar", name = "Number of Elements \n(capped at 31)", trans = "reverse", breaks = fiveBreaks ) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
+ggsave("./outputs/charts/TESTING NO REGIONAL POP ON X MedianUse x Elements.png", width = 10, height = 11, units = c("in"))
 
 ```
 \newpage
@@ -964,7 +1041,7 @@ DTplot[Elements > 30, Elements := 31]
 
 
 toBreak <- DTplot$max_Daily_Users
-fiveBreaks <-  c(ceiling(min(toBreak)), round(max(toBreak)/4), round(max(toBreak)/2), round(max(toBreak)/(4/3)),floor(max(toBreak)))
+fiveBreaks <-  legend_breaker(toBreak)
 
 ggplot(DTplot, aes(x = Elements, fill = max_Daily_Users, y = reorder(park_name, Elements))) +
   geom_bar(stat = "identity", position = "stack") +
@@ -1000,7 +1077,7 @@ DTplot <- DT[, Playground_Age := (2024-as.numeric(DT$Playground_Age)) +1][playgr
 
 
 toBreak <- DTplot[!is.na(Playground_Age),]$avg_Daily_Users
-fiveBreaks <-  c(ceiling(min(toBreak)), round(max(toBreak)/4), round(max(toBreak)/2), round(max(toBreak)/(4/3)),floor(max(toBreak)))
+fiveBreaks <-  legend_breaker(toBreak)
 
 
 ggplot(DTplot[!is.na(Playground_Age),], aes(x = Playground_Age, fill = avg_Daily_Users, y = reorder(park_name, Playground_Age))) +
@@ -1037,7 +1114,7 @@ DTplot <- DT[, Playground_Age := (2024-as.numeric(DT$Playground_Age)) +1][playgr
 
 
 toBreak <- DTplot[!is.na(Playground_Age),]$med_Daily_Users
-fiveBreaks <-  c(ceiling(min(toBreak)), round(max(toBreak)/4), round(max(toBreak)/2), round(max(toBreak)/(4/3)),floor(max(toBreak)))
+fiveBreaks <-  legend_breaker(toBreak)
 
 ggplot(DTplot[!is.na(Playground_Age),], aes(x = as.numeric(Playground_Age), fill = med_Daily_Users, y = reorder(park_name, Playground_Age))) +
   geom_bar(stat = "identity", position = "stack") +
@@ -1069,7 +1146,7 @@ DTplot <- DT[, Playground_Age := (2024-as.numeric(DT$Playground_Age)) +1][playgr
 
 
 toBreak <- DTplot[!is.na(Playground_Age),]$max_Daily_Users
-fiveBreaks <-  c(ceiling(min(toBreak)), round(max(toBreak)/4), round(max(toBreak)/2), round(max(toBreak)/(4/3)),floor(max(toBreak)))
+fiveBreaks <-  legend_breaker(toBreak)
 
 
 ggplot(DTplot[!is.na(Playground_Age),]) +
@@ -1316,7 +1393,7 @@ DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
 DTplot[Elements > 30, Elements := 31]
 
 toBreak <- DTplot[!is.na(Elements),]$avg_Daily_Users
-fiveBreaks <-  c(ceiling(min(toBreak)), round(max(toBreak)/4), round(max(toBreak)/2), round(max(toBreak)/(4/3)),floor(max(toBreak)))
+fiveBreaks <-  legend_breaker(toBreak)
 
 ggplot(DTplot[!is.na(Elements)], aes(y = reorder(park_name, Elements), x = Elements, fill = avg_Daily_Users)) +
    #geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = Elements, fill = avg_Daily_Users)) +
@@ -1429,7 +1506,7 @@ DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
 DTplot[Elements > 30, Elements := 31]
 
 toBreak <- DTplot[!is.na(Elements),]$med_Daily_Users
-fiveBreaks <-  c(ceiling(min(toBreak)), round(max(toBreak)/4), round(max(toBreak)/2), round(max(toBreak)/(4/3)),floor(max(toBreak)))
+fiveBreaks <-  legend_breaker(toBreak)
 
 ggplot(DTplot[!is.na(Elements)], aes(y = reorder(park_name, Elements), x = Elements, fill = med_Daily_Users)) +
   geom_bar(stat = "identity", position = "stack") +
@@ -1470,7 +1547,7 @@ DTplot[Elements > 30, Elements := 31]
 
 toBreak <- DTplot[!is.na(Elements),]$max_Daily_Users
 
-fiveBreaks <-  c(ceiling(min(toBreak)), round(max(toBreak)/4), round(max(toBreak)/2), round(max(toBreak)/(4/3)),floor(max(toBreak)))
+fiveBreaks <-  legend_breaker(toBreak)
 
 ggplot(DTplot[!is.na(Elements)], aes(y = reorder(park_name, Elements), x = Elements, fill = max_Daily_Users)) +
   geom_bar(stat = "identity", position = "stack") +
@@ -1511,7 +1588,7 @@ DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_
 
 
 toBreak <- DTplot$avg_Daily_Users
-fiveBreaks <-  c(ceiling(min(toBreak)), round(max(toBreak)/4), round(max(toBreak)/2), round(max(toBreak)/(4/3)),floor(max(toBreak)))
+fiveBreaks <-  legend_breaker(toBreak)
 
 ggplot(DTplot) +
   geom_bar(stat = "identity", position = "stack", aes(x = as.numeric(WalkScore), fill = avg_Daily_Users, y = reorder(park_name, WalkScore))) +
@@ -1565,8 +1642,7 @@ DTplot <- DT[playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_
 
 
 toBreak <- DTplot$med_Daily_Users
-
-fiveBreaks <-  c(ceiling(min(toBreak)), round(max(toBreak)/4), round(max(toBreak)/2), round(max(toBreak)/(4/3)),floor(max(toBreak)))
+fiveBreaks <-  legend_breaker(toBreak)
 
 ggplot(DTplot, aes(x = as.numeric(WalkScore), fill = med_Daily_Users, y = reorder(park_name, WalkScore))) +
   geom_bar(stat = "identity", position = "stack") +
@@ -1601,8 +1677,7 @@ DTplot <- DT[playground == 1, .(avg_Daily_Users = sum(num_child_prim, num_child_
 
 
 toBreak <- DTplot[!is.na(TransitScore),]$avg_Daily_Users
-
-fiveBreaks <-  c(ceiling(min(toBreak)), round(max(toBreak)/4), round(max(toBreak)/2), round(max(toBreak)/(4/3)),floor(max(toBreak)))
+fiveBreaks <-  legend_breaker(toBreak)
 
 ggplot(DTplot[!is.na(TransitScore),], aes(x = as.numeric(TransitScore), fill = avg_Daily_Users, y = reorder(park_name, TransitScore))) +
   geom_bar(stat = "identity", position = "stack") +
@@ -1637,8 +1712,7 @@ DTplot <- DT[playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_
 
 
 toBreak <- DTplot[!is.na(TransitScore),]$med_Daily_Users
-
-fiveBreaks <-  c(ceiling(min(toBreak)), round(max(toBreak)/4), round(max(toBreak)/2), round(max(toBreak)/(4/3)),floor(max(toBreak)))
+fiveBreaks <-  legend_breaker(toBreak)
 
 ggplot(DTplot[!is.na(TransitScore),]) +
   geom_bar(stat = "identity", position = "stack", aes(x = as.numeric(TransitScore), fill = med_Daily_Users, y = reorder(park_name, TransitScore))) +
@@ -1710,8 +1784,7 @@ DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_tert, num_
 
 
 toBreak <- DTplot$Elements
-
-fiveBreaks <-  c(ceiling(min(toBreak)), round(max(toBreak)/4), round(max(toBreak)/2), round(max(toBreak)/(4/3)),floor(max(toBreak)))
+fiveBreaks <-  legend_breaker(toBreak)
 
 ggplot(DTplot, aes(x = popularity, fill = Elements, y = reorder(park_name, popularity))) +
   geom_bar(stat = "identity", position = "stack") +
@@ -1829,8 +1902,7 @@ DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_tert, num_
 
 
 toBreak <- DTplot[!is.na(Elements),]$Elements
-
-fiveBreaks <-  c(ceiling(min(toBreak)), round(max(toBreak)/4), round(max(toBreak)/2), round(max(toBreak)/(4/3)),floor(max(toBreak)))
+fiveBreaks <-  legend_breaker(toBreak)
 
 
 ggplot(DTplot[!is.na(Elements)]) +
@@ -1874,8 +1946,7 @@ DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_tert, num_
 
 
 toBreak <- DTplot$Elements
-
-fiveBreaks <-  c(ceiling(min(toBreak)), round(max(toBreak)/4), round(max(toBreak)/2), round(max(toBreak)/(4/3)),floor(max(toBreak)))
+fiveBreaks <-  legend_breaker(toBreak)
 
 ggplot(DTplot[!is.na(Elements)]) +
   geom_bar(stat = "identity", position = "stack", aes(y =  reorder(park_name, popularity), x = popularity, fill = Elements)) +
@@ -1931,10 +2002,9 @@ ggplot(DTplot[!is.na(Elements)], aes(y = reorder(park_name, Elements), x = Eleme
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))+
   geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
-`
-
 #Notes:
 
 #The following parks were excluded for not having element status: `r unique(DTplot[is.na(Elements),park_name])`
 ```
+
 
