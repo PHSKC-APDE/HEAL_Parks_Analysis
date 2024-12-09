@@ -173,8 +173,12 @@ return(fxn)
 legend_breaker <- function(toBreak, n = 5){
   bottom <- ceiling(min(toBreak))
   top <- floor(max(toBreak))
+  # incr <- (100/(n-1))/100
+  # for(i in 0:(n-1)) {
+  #   i*incr
+  # }
   
-  returner <- quantile(bottom:top, c(0,.25,.5,.75,1))
+  returner <- quantile(bottom:top, seq(0,1, length.out = n))
   
   return(as.integer(returner))
 } 
@@ -858,11 +862,9 @@ ggplot(DTplot, aes(x = Elements, fill = avg_Daily_Users, y = reorder(park_name, 
        subtitle = "By Number of Play Elements") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  #scale_fill_gradient2(low = "orange",mid = "purple" ,high = "aquamarine", guide = "colourbar", midpoint = median(DTplot$avg_Daily_Users) , name = "Average Daily Users") +
-      scale_fill_gradientn(colours = c("purple","#AAA","orange"), guide = "colourbar", name = "Average Daily Users", trans = "reverse", breaks = fiveBreaks ) +
-   #guides(fill=guide_legend(title="Average Daily Users")) +
+  scale_fill_gradientn(colours = c("purple","#AAA","orange"), guide = "colourbar", name = "Average Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks ) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) +
-    geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
+  geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
 ggsave("./outputs/charts/AverageUse x Elements.png", width = 10, height = 11, units = c("in"))
 ```
@@ -917,8 +919,6 @@ ggplot(DTplot, aes(x = Elements, fill = avg_Daily_Users, y = reorder(park_name, 
        subtitle = "By Number of Play Elements") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-      #scale_fill_gradientn(colors = c("orange","purple" ,"aquamarine"), guide = "colourbar", name = "Average Daily Users") +
-   #scale_fill_binned(breaks = c(1,50,100,150) )
   scale_fill_brewer(palette = "PuOr",name = "Average Daily Users") +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) +
     geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
@@ -951,7 +951,7 @@ ggplot(DTplot, aes(x = Elements, fill = med_Daily_Users, y = reorder(park_name, 
        subtitle = "By Number of Elements") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
- scale_fill_gradientn(colors = c("purple","#AAA","orange"), guide = "colourbar", name = "Median Daily Users", trans = "reverse", breaks = fiveBreaks ) +
+ scale_fill_gradientn(colors = c("purple","#AAA","orange"), guide = "colourbar", name = "Median Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks ) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) +
     geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
@@ -986,7 +986,7 @@ ggplot(DTplot, aes(x = Elements, fill = med_Daily_Users, y = reorder(park_name, 
        subtitle = "By Number of Elements") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
- scale_fill_gradientn(colors = c("purple","#AAA","orange"), guide = "colourbar", name = "Median Daily Users", trans = "reverse", breaks = fiveBreaks ) +
+ scale_fill_gradientn(colors = c("purple","#AAA","orange"), guide = "colourbar", name = "Median Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks ) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) +
     geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
@@ -1051,7 +1051,7 @@ ggplot(DTplot, aes(x = Elements, fill = max_Daily_Users, y = reorder(park_name, 
        subtitle = "By Number of Elements") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
- scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Max Daily Users", trans = "reverse", breaks = fiveBreaks ) +
+ scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Max Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks ) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) +
   
     geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
@@ -1088,7 +1088,7 @@ ggplot(DTplot[!is.na(Playground_Age),], aes(x = Playground_Age, fill = avg_Daily
        subtitle = "By Playground Equipment Age") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-        scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Average Daily Users", trans = "reverse" , breaks = fiveBreaks) +
+        scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Average Daily\nPlayground Users", trans = "reverse" , breaks = fiveBreaks) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) 
 
 ggsave("./outputs/charts/AverageUse x EquipmentAge.png", width = 10, height = 11, units = c("in"))
@@ -1124,7 +1124,7 @@ ggplot(DTplot[!is.na(Playground_Age),], aes(x = as.numeric(Playground_Age), fill
        subtitle ="By Playground Equipment Age") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-        scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Median Daily Users", trans = "reverse" , breaks = fiveBreaks) +
+        scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Median Daily\nPlayground Users", trans = "reverse" , breaks = fiveBreaks) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 ggsave("./outputs/charts/MedianUse x EquipmentAge.png", width = 10, height = 11, units = c("in"))
@@ -1157,7 +1157,7 @@ ggplot(DTplot[!is.na(Playground_Age),]) +
        subtitle ="By Playground Equipment Age") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Max Daily Users", trans = "reverse", breaks = fiveBreaks ) +
+  scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Max Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks ) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 ggsave("./outputs/charts/MaxUse x EquipmentAge.png", width = 10, height = 11, units = c("in"))
@@ -1407,7 +1407,7 @@ ggplot(DTplot[!is.na(Elements)], aes(y = reorder(park_name, Elements), x = Eleme
    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
    scale_y_discrete(limits = rev) +
    scale_x_continuous(labels = scales::comma) +
-   scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Average Daily Users", trans = "reverse", breaks = fiveBreaks) +
+   scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Average Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))+
   geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
@@ -1518,7 +1518,7 @@ ggplot(DTplot[!is.na(Elements)], aes(y = reorder(park_name, Elements), x = Eleme
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Median Daily Users", trans = "reverse", breaks = fiveBreaks) +
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Median Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))+
   geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
@@ -1559,7 +1559,7 @@ ggplot(DTplot[!is.na(Elements)], aes(y = reorder(park_name, Elements), x = Eleme
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Max Daily Users", trans = "reverse", breaks = fiveBreaks) +
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Max Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))+
   geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
@@ -1599,7 +1599,7 @@ ggplot(DTplot) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma, limits = c(0,100)) +
   #scale_fill_gradient(low = "orange", high = "aquamarine") +
-  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Average Daily Users", trans = "reverse", breaks = fiveBreaks) +
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Average Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 ggsave("./outputs/charts/AverageUse x walkability.png", width = 10, height = 11, units = c("in"))
@@ -1652,7 +1652,7 @@ ggplot(DTplot, aes(x = as.numeric(WalkScore), fill = med_Daily_Users, y = reorde
        subtitle = "By Walkability Score") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma, limits = c(0,100)) +
-  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Median Daily Users", trans = "reverse", breaks = fiveBreaks) +
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Median Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 ggsave("./outputs/charts/MedianUse x walkability.png", width = 10, height = 11, units = c("in"))
@@ -1687,7 +1687,7 @@ ggplot(DTplot[!is.na(TransitScore),], aes(x = as.numeric(TransitScore), fill = a
        subtitle = "By Public Transit Score") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma, limits = c(0,100)) +
-  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Average Daily Users", trans = "reverse", breaks = fiveBreaks) +
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Average Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 ggsave("./outputs/charts/AverageUse x transit.png", width = 10, height = 11, units = c("in"))
@@ -1722,7 +1722,7 @@ ggplot(DTplot[!is.na(TransitScore),]) +
        subtitle = "By Transit Score") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma, limits = c(0,100)) +
-  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Median Daily Users", trans = "reverse", breaks = fiveBreaks) +
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Median Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 ggsave("./outputs/charts/MedianUse x transit.png", width = 10, height = 11, units = c("in"))
