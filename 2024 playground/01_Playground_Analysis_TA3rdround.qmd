@@ -575,15 +575,71 @@ ggsave("./outputs/charts/CatchmentChild x Opportunity.png", width = 10, height =
 
 ```
 
+
 \newpage
 
-## Analyses of playground use
+## Analyses of use
 
-The below analyses explore relationships of the number of people observed in playgrounds and other characteristics or status of the park. We refer to this number of observed users as "use". For several of these analyses, use is provided in three forms, the average number of users observed across all observed days, the median number of users across all days, and the peak number of users across all days.
+The below analyses explore relationships of the number of people observed in parks and other characteristics or status of the park. We refer to this number of observed users as "use". For several of these analyses, use is provided in two forms, the median number of users across all days, and the peak number of users across all days.
 
 Notes: 
 
+* Analyses of playground use only consider observation areas designated as "playground".
 * Analyses of “average playground use” aggregate all playground target areas within the park (effectively calculated as one large playground) 
+
+\newpage
+
+
+### chart of median park use
+
+```{r}
+
+DT <- copy(ParkFull)
+
+DTplot <- DT[, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .(park_name)]
+
+
+#DTplot[,Opportunity_Area := ifelse(Opportunity_Area == "No",  "Not Opportunity Area","Opportunity Area")]
+
+ggplot(DTplot) +
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = med_Daily_Users)) +
+  xlab("Median Daily Number of Park Users") +
+  ylab("Park Name") +
+  labs(title = "Median Daily Number of Park Users") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
+ggsave("./outputs/charts/MedianParkUse.png", width = 10, height = 11, units = c("in"))
+```
+
+\newpage
+
+### chart of max park use
+
+```{r}
+
+DT <- copy(ParkFull)
+
+DTplot <- DT[, .(max_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, park_name)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Users") ,by = .(park_name)]
+
+
+#DTplot[,Opportunity_Area := ifelse(Opportunity_Area == "No",  "Not Opportunity Area","Opportunity Area")]
+
+ggplot(DTplot) +
+  geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = max_Daily_Users)) +
+  xlab("Max Daily Number of Park Users") +
+  ylab("Park Name") +
+  labs(title = "Maximum Daily Number of Park Users") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
+ggsave("./outputs/charts/MaxParkUse.png", width = 10, height = 11, units = c("in"))
+```
+
 
 \newpage
 
