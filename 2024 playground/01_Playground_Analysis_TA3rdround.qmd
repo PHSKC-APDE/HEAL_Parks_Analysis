@@ -34,37 +34,11 @@ execute:
   warning: false
   output: true
 ---
-# December 2024 Proposed Updates
+To do:
 
--	There was general interest about the seeing the park use as context for understanding the playgrounds. Could you include a simple chart of the median park use for all the parks?
-
-    - Sure (1hr)
-
-- We want to see the playground usage data normalized by something. Would you be able to make a chart showing the ratio of median park users by park catchment (1/2 mile)? To give you a sense of the thinking behind this, Elizabeth recalls seeing a paper where the research determined a benchmark of a ‘well used’ park having a daily use rate equal about 3% of the catchment area. She is looking back to try to find that article for the details, but we are interested in setting up the ability to see a similar comparison. We recognize that playground use is a subset of the total park use, so a ‘well used’ share would probably be a significantly lower number. 
-
-    - Yes, though we should talk about this. Since these statistics are of playground use, would you want to use all, or child catchment? Separately, my recollection is that park size and catchment are not well correlated. So, the proposed ratio would more describe the proportion of the population that, maximally, is using the park, but it wouldn't describe how heavily utilized the park is. In order to do that you would want some measure of expected occupancy (of which size may be a better approximation) rather than catchment. (1-5 hrs depending on what is desired)
-
--	There was also interest in normalizing the park use based on park size (acreage). Unfortunately, I don’t currently have park size for all the parks. Do you have access to that information through some public database (KC GIS?), or would we need to get that from everyone? Personally, I feel like this is less potentially useful as the use-by-catchment. Still want to respect the interest of the group to explore how laborious it would be to develop.
-
-    - I'll ask colleagues at this weeks epidemiologist coordination meeting, but I suspect these are numbers you would have to requests from the parks managers. I'll let you know what I find out tomorrow. (1-5 hrs depending on what is desired)
-
--	There was interest in mapping the locations of the parks on an equity index. I am not sure what the best map version we have for a composite equity index (or more focusing on health equity if there is something better there). The Opportunity Areas variable that we are using in the analysis used 3 areas to compile its index: proximity to parks, lower income, and health disparities (https://kingcounty.gov/en/legacy/services/environment/water-and-land/land-conservation/equity/map/opportunityareareport). Since we are talking about parks, we counting a park as ‘in’ if they met 2 of the 3 (the light pink on the map: https://experience.arcgis.com/experience/21ceceed70e54bb68f1d6fb855f2af9e/). Could use the same base map. How challenging would it be to plot locations on top of map? Would it be possible to show an analysis in the icons, such as changing the dot color based on the parks use-by-catchment ration?
-
-    - I'm unclear what you are asking. Do you mean you would like to add park locations to this map? https://experience.arcgis.com/experience/21ceceed70e54bb68f1d6fb855f2af9e/ If the shape files for the map are still available, then it may be doable to add the parks as point locations to it. Generally, yes, a dot could be colored based on some continuous variable and a color scale. I'll ask about getting a copy of the map, and an ArcGIS license. If both are possible, then adding parks to it should be 2-5 hours depending on details. But if not possible, we would need to talk about alternative approaches.
-
--	There was interest in knowing crime data around parks, and the potential relationship between crime (perceptions and/or reported) and numbers of people using a park space. Do you know of a data source that can be easily used on crime data down to our granularity? I am guessing this would be a second or third tier analysis.
-
-    - Regarding crime data, I don't know of a County source Off hand. I believe SPD has public crime data, but I don't know if it is in table form or only browsable on their webpage. I'll ask my colleagues tomorrow if they are aware of anything.
-  
--	Thinking ahead, can we have the analysis generate a ‘one-page’ that has the main analysis numbers for each park? For example, for Crystal Springs we would have the mean, median, max playground use, overall park use, catchment, the opportunity area status, number of play elements, playground popularity, etc. in one organized document. We hope that the number of analyses will get reduced in the next month so this would be just a selection of all the analyses you currently have. 
-
-    - Are you asking if a one-pager can be generated for each park showing a set of measures? Yes, that is very doable. For this, it would be good to have an exact list of what information you would want for each park. If I understand you correctly, you are asking for tables of data, so this would be a different format and likely have a different arrangement of the results from. We can discuss what that should look like. (5-10 hrs, depending on document structure)
-  
--	Similarly, we will probably want to be able to pull out the playground analysis data for each individual jurisdictions set of parks. I don’t anticipate needing this for the next meeting – I like the group seeing how parks compare across the geography and not just among their jurisdiction – but we will probably want it towards the end of the cohort. I know you have the park analysis set up to do this. Can you add to your to-do list to set the playground analysis up similarly?
-
-    - Yes. I have questions how you might like this. The annual parks reports are pieces for dropping into other documents. Is that what you want, or would you like a compiled report/dashboard? Also, are you looking for a static report that you would send as a document, or would you like a dashboard, perhaps something they could access? If dashboard, then this is likely something we should build in Tableau, though there are also other tools, such as R shiny, which would be able to use this existing work (whereas Tableau would be migrating data into Tableau and building Tableau specific visualizations.) Repeating the existing analyses, but for each jurisdiction, would be relatively quick to set up. I expect 3-5 hours depending on details and minor changes. This assumes they are receiving a pdf similar to what we have been using. Delivering a proper dashboard, such as a tableau visualization that you would host and they could log on to and view, or receive as a tableau file they could interact with would take closer to 10 hours for a crude prototype and 10-20 more for a polished version. While the design decisions from the current work would inform a Tableau build, it is a different system, so the programming work wouldn't carry over. R shiny could carry over much of the design work, saving some time, but there may be a steeper curve to hosting it for public access on your/PHSKC end, and unless they are R users, it won't be as simple for them to run it locally as a tableau file opened in tableau viewer would be. If they are Office365 users, power BI may also be a good choice, though I haven't made charts this complex in that platform yet so couldn't estimate they time.
-
-
+- ensure all charts have playground use on x axis and not as gradient
+- ratio of Median PARK use to area catchment
+- ratio of Median PLAYGROUND use to the area catchment
 
 # Front Matter
 
@@ -602,7 +576,7 @@ DTplot <- DT[, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_
 #DTplot[,Opportunity_Area := ifelse(Opportunity_Area == "No",  "Not Opportunity Area","Opportunity Area")]
 
 ggplot(DTplot) +
-  geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = med_Daily_Users)) +
+  geom_bar(stat = "identity", position = "stack", aes(y = reorder(park_name, med_Daily_Users), x = med_Daily_Users)) +
   xlab("Median Daily Number of Park Users") +
   ylab("Park Name") +
   labs(title = "Median Daily Number of Park Users") +
@@ -628,7 +602,7 @@ DTplot <- DT[, .(max_Daily_Users = sum(num_child_prim, num_child_snd, num_child_
 #DTplot[,Opportunity_Area := ifelse(Opportunity_Area == "No",  "Not Opportunity Area","Opportunity Area")]
 
 ggplot(DTplot) +
-  geom_bar(stat = "identity", position = "stack", aes(y = park_name, x = max_Daily_Users)) +
+  geom_bar(stat = "identity", position = "stack", aes(y =  reorder(park_name, max_Daily_Users), x = max_Daily_Users)) +
   xlab("Max Daily Number of Park Users") +
   ylab("Park Name") +
   labs(title = "Maximum Daily Number of Park Users") +
@@ -640,6 +614,67 @@ ggplot(DTplot) +
 ggsave("./outputs/charts/MaxParkUse.png", width = 10, height = 11, units = c("in"))
 ```
 
+\newpage
+
+### ratios of use and catchment
+
+\newpage
+
+#### chart of ratio of median park use and catchment
+
+```{r}
+DT <- copy(ParkFull)
+
+DTplot <- DT[, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, populationHalfMile, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( populationHalfMile, park_name)][, `Catchment Ratio` := populationHalfMile/med_Daily_Users]
+
+
+
+ggplot(DTplot) +
+  geom_bar(stat = "identity", position = "stack", aes(y = reorder(park_name,`Catchment Ratio`), x = `Catchment Ratio`)) +
+  xlab("Ratio of Median Daily Park Users and 1/2 Mile Catchment") +
+  ylab("Park Name") +
+  labs(title = "Ratio of Median Daily Park Users and 1/2 Mile Catchment") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
+ggsave("./outputs/charts/MedParkUseCatchment Ratio.png", width = 10, height = 11, units = c("in"))
+
+```
+
+Notes:
+
+The following parks were excluded for having "0" median users: `r unique(DTplot[med_Daily_Users == 0,park_name])`
+
+\newpage
+
+#### chart of ratio of median playground use and catchment
+
+```{r}
+DT <- copy(ParkFull)
+
+DTplot <- DT[playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, populationHalfMile, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( populationHalfMile, park_name)][, `Catchment Ratio` := populationHalfMile/med_Daily_Users]
+
+
+
+ggplot(DTplot) +
+  geom_bar(stat = "identity", position = "stack", aes(y = reorder(park_name,`Catchment Ratio`), x = `Catchment Ratio`)) +
+  xlab("Ratio of Median Daily Playground Users and 1/2 Mile Catchment") +
+  ylab("Park Name") +
+  labs(title = "Ratio of Median Daily Playground Users and 1/2 Mile Catchment") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+
+ggsave("./outputs/charts/MedPlaygroundUseCatchment Ratio.png", width = 10, height = 11, units = c("in"))
+
+```
+
+Notes:
+
+The following parks were excluded for having "0" median users: `r unique(DTplot[med_Daily_Users == 0,park_name])`
 
 \newpage
 
