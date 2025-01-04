@@ -34,11 +34,6 @@ execute:
   warning: false
   output: true
 ---
-To do:
-
-- ensure all charts have playground use on x axis and not as gradient
-- ratio of Median PARK use to area catchment
-- ratio of Median PLAYGROUND use to the area catchment
 
 # Front Matter
 
@@ -1194,7 +1189,8 @@ ggplot(DTplot[!is.na(TransitScore),]) +
        subtitle = "By Transit Score") +
   scale_y_discrete(limits = rev) +
   #scale_x_continuous(labels = scales::comma, limits = c(0,100)) +
-  scale_fill_gradientn(colours =  c("purple","#AAAAAA","orange"), name = "Transit Score", trans = "reverse", values = c(0,.3,.6,1), breaks = c(0,25,50,75,100), guide = "colorbar", limits = c(0,100)) +
+#  scale_fill_gradientn(colours =  c("purple","#AAAAAA","orange"), name = "Transit Score", trans = "reverse", values = c(0,.3,.6,1), breaks = c(0,25,50,75,100), guide = "colorbar", limits = c(0,100)) +
+    scale_fill_gradientn(colours =  c("purple","#AAAAAA","orange"), name = "Transit Score", trans = "reverse", values = c(0,.3,.6,1), breaks = c(0,25,50,75,100), guide = "colorbar") +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 ggsave("./outputs/charts/MedianUse x transit.png", width = 10, height = 11, units = c("in"))

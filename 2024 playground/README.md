@@ -222,81 +222,79 @@ catchment may, additionally, provide context for later analyses below.
 
 ### chart of park catchment
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-3-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-3-1.png)
 
 
 
 ### chart of 0-14 park catchment
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-4-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-4-1.png)
 
 
 
 ### chart of park catchment by opportunity area status
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-5-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-5-1.png)
 
 
 
 ### chart of 0-14 park catchment by opportunity area status
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-6-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-6-1.png)
 
 
 
-### chart of park catchment by park category
-
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-7-1.png)
-
-Notes:
-
-The following parks were excluded for not having category status:
-
-
-
-### chart of 0-14 park catchment by park category
-
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-8-1.png)
-
-Notes:
-
-The following parks were excluded for not having category status:
-
-
-
-## Analyses of playground structure and classifications
-
-
-
-### chart of playground equipment age by opportunity area status
-
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-9-1.png)
-
-Notes:
-
-The following parks were excluded for not having a playground
-installation date: Beverly Park El Sch (HSD), Cedarhurst El Sch (HSD),
-GB: N Playground (KCHA), GB: W4 Playground (KCHA), GB: Wave Playground
-(KCHA), GB: W Playground (KCHA), Gregory Heights El Sch (HSD), Hazel
-Valley El Sch (HSD), Mount View El Sch (HSD), Roxhill Park (SPR), Seola
-Gardens: N Playground (KCHA), Seola Gardens: Park (KCHA), Seola Gardens:
-S Playground (KCHA), Shorewood El Sch (HSD)
-
-
-
-## Analyses of playground use
+## Analyses of use
 
 The below analyses explore relationships of the number of people
-observed in playgrounds and other characteristics or status of the park.
-We refer to this number of observed users as “use”. For several of these
-analyses, use is provided in three forms, the average number of users
-observed across all observed days, the median number of users across all
-days, and the peak number of users across all days.
+observed in parks and other characteristics or status of the park. We
+refer to this number of observed users as “use”. For several of these
+analyses, use is provided in two forms, the median number of users
+across all days, and the peak number of users across all days.
 
 Notes:
 
+- Analyses of playground use only consider observation areas designated
+  as “playground”.
 - Analyses of “average playground use” aggregate all playground target
   areas within the park (effectively calculated as one large playground)
+
+
+
+### chart of median park use
+
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-7-1.png)
+
+
+
+### chart of max park use
+
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-8-1.png)
+
+
+
+### ratios of use and catchment
+
+
+
+#### chart of ratio of median park use and catchment
+
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-9-1.png)
+
+Notes:
+
+The following parks were excluded for having “0” median users:
+
+
+
+#### chart of ratio of median playground use and catchment
+
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-10-1.png)
+
+Notes:
+
+The following parks were excluded for having “0” median users:
+Cedarhurst El Sch (HSD)
 
 
 
@@ -304,21 +302,15 @@ Notes:
 
 
 
-#### chart of average playground use by opportunity area status
-
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-10-1.png)
-
-
-
 #### chart of median playground use by opportunity area status
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-11-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-11-1.png)
 
 
 
 #### chart of peak playground use by opportunity area status
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-12-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-12-1.png)
 
 
 
@@ -326,19 +318,9 @@ Notes:
 
 
 
-#### chart of average playground use by park category
-
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-13-1.png)
-
-Notes:
-
-The following parks were excluded for not having category status:
-
-
-
 #### chart of median playground use by park category
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-14-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-13-1.png)
 
 Notes:
 
@@ -348,7 +330,7 @@ The following parks were excluded for not having category status:
 
 #### chart of peak playground use by park category
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-15-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-14-1.png)
 
 Notes:
 
@@ -360,33 +342,21 @@ The following parks were excluded for not having category status:
 
 
 
-#### chart of average playground use by number of play elements
-
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-16-1.png)
-
-
-
 #### chart of median playground use by number of playground elements
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-19-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-15-1.png)
 
 
 
 #### TESTING NO REGIONAL: chart of median playground use by number of playground elements
 
-![](01_Playground_Analysis_files/figure-commonmark/testing%20no%20regional-1.png)
-
-
-
-#### TESTING NO REGIONAL POP ON X: chart of median playground use by number of playground elements
-
-![](01_Playground_Analysis_files/figure-commonmark/testing%20no%20regional%20and%20pop%20x%20axis-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/testing%20no%20regional-1.png)
 
 
 
 #### chart of peak playground use by number of playground elements
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-20-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-16-1.png)
 
 
 
@@ -394,25 +364,9 @@ The following parks were excluded for not having category status:
 
 
 
-#### chart of average playground use by playground equipment age
-
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-21-1.png)
-
-Notes:
-
-The following parks were excluded for not having playground equipment
-age: Beverly Park El Sch (HSD), Cedarhurst El Sch (HSD), GB: N
-Playground (KCHA), GB: W4 Playground (KCHA), GB: Wave Playground (KCHA),
-GB: W Playground (KCHA), Gregory Heights El Sch (HSD), Hazel Valley El
-Sch (HSD), Mount View El Sch (HSD), Roxhill Park (SPR), Seola Gardens: N
-Playground (KCHA), Seola Gardens: Park (KCHA), Seola Gardens: S
-Playground (KCHA), Shorewood El Sch (HSD)
-
-
-
 #### chart of median playground use by playground equipment age
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-22-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-17-1.png)
 
 Notes:
 
@@ -428,7 +382,7 @@ Playground (KCHA), Shorewood El Sch (HSD)
 
 #### chart of peak playground use by playground equipment age
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-23-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-18-1.png)
 
 Notes:
 
@@ -446,43 +400,9 @@ Playground (KCHA), Shorewood El Sch (HSD)
 
 
 
-#### chart of average playground use by restroom status and by park category
-
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-24-1.png)
-
-Notes:
-
-The following parks were excluded for not having category status:
-
-
-
 #### chart of median playground use by restroom status and by park category
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-25-1.png)
-
-Notes:
-
-The following parks were excluded for not having category status:
-
-
-
-### playground use by picnic area status and park category
-
-
-
-#### chart of average playground use by picnic area status and by park category
-
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-26-1.png)
-
-Notes:
-
-The following parks were excluded for not having category status:
-
-
-
-#### chart of median playground use by picnic area status and by park category
-
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-27-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-19-1.png)
 
 Notes:
 
@@ -494,19 +414,9 @@ The following parks were excluded for not having category status:
 
 
 
-#### chart of average playground use by sports field status and by park category
-
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-28-1.png)
-
-Notes:
-
-The following parks were excluded for not having category status:
-
-
-
 #### chart of median playground use by sports field status and by park category
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-29-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-20-1.png)
 
 Notes:
 
@@ -522,19 +432,9 @@ age groups are 5-12 and 2-5. A playground may be designed to serve both.
 
 
 
-#### chart of average playground use by number of play elements and by primary age group
-
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-30-1.png)
-
-Notes:
-
-The following parks were excluded for not having element status:
-
-
-
 #### chart of median playground use by number of play elements and by primary age group
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-33-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-21-1.png)
 
 Notes:
 
@@ -544,7 +444,7 @@ The following parks were excluded for not having element status:
 
 #### chart of peak playground use by number of playground elements and by primary age group
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-34-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-22-1.png)
 
 Notes:
 
@@ -556,15 +456,9 @@ The following parks were excluded for not having element status:
 
 
 
-#### chart of average playground use by walkscore of park
-
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-35-1.png)
-
-
-
 #### chart of median playground use by walkscore of park
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-37-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-23-1.png)
 
 
 
@@ -572,26 +466,9 @@ The following parks were excluded for not having element status:
 
 
 
-#### chart of average playground use by transit score of park
-
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-38-1.png)
-
-Notes:
-
-The following parks were excluded for not having a transit score:
-Beverly Park El Sch (HSD), Dick Thurnau Park (KC), Five Mile Lake Park
-(KC), GB: N Playground (KCHA), GB: W4 Playground (KCHA), GB: Wave
-Playground (KCHA), GB: W Playground (KCHA), Lake Geneva Park (KC), Maple
-Valley Heights Park (KC), Maplewood Park (KC), North Shorewood Park
-(KC), Seola Gardens: N Playground (KCHA), Seola Gardens: Park (KCHA),
-Seola Gardens: S Playground (KCHA), Skyway Park (KC), S County
-Ballfields (KC)
-
-
-
 #### chart of median playground use by transit score of park
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-39-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-24-1.png)
 
 Notes:
 
@@ -620,7 +497,7 @@ across all days, rather than a daily average.
 
 ### chart of playground popularity by park category
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-40-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-25-1.png)
 
 Notes:
 
@@ -630,36 +507,8 @@ The following parks were excluded for not having category status:
 
 ### chart of playground popularity by play elements
 
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-41-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-26-1.png)
 
 Notes:
 
 The following parks were excluded for not having category status:
-
-
-
-### chart of playground popularity by number of play elements and by primary age group
-
-Primary age group is a status provided by parks managers that designates
-the age groups that the playground is target for. The two age groups are
-5-12 and 2-5. A playground may be designed to serve both.
-
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-44-1.png)
-
-Notes:
-
-The following parks were excluded for not having element status:
-
-
-
-### chart of playground popularity among children and teens by number of play elements and by primary age group
-
-Here, popularity is:
-
-$\frac{\text{num of children and teens in playground}} {\text{num of children and teens in park}}$
-
-![](01_Playground_Analysis_files/figure-commonmark/unnamed-chunk-45-1.png)
-
-Notes:
-
-The following parks were excluded for not having element status:
