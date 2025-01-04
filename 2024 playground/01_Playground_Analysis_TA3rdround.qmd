@@ -817,20 +817,20 @@ DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
 DTplot[Elements > 30, Elements := 31]
 
 
-toBreak <- DTplot$med_Daily_Users
+toBreak <- DTplot$Elements
 fiveBreaks <-  legend_breaker(toBreak)
 
-ggplot(DTplot, aes(x = Elements, fill = med_Daily_Users, y = reorder(park_name, Elements))) +
+ggplot(DTplot, aes(x = med_Daily_Users, fill = Elements, y = reorder(park_name, med_Daily_Users))) +
   geom_bar(stat = "identity", position = "stack") +
-  xlab("Number of Elements") +
+  xlab("Median Daily Playground Users") +
   ylab("Park Name") +
   labs(title = "Median Daily Number of Playground Users", 
-       subtitle = "By Number of Elements") +
+       subtitle = "By Number of Play Elements") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
- scale_fill_gradientn(colors = c("purple","#AAA","orange"), guide = "colourbar", name = "Median Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks ) +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) +
-    geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
+ scale_fill_gradientn(colors = c("purple","#AAA","orange"), guide = "colourbar", name = "Number of Elements \n(capped at 31)", trans = "reverse", breaks = fiveBreaks ) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) 
+    #geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
 ggsave("./outputs/charts/MedianUse x Elements.png", width = 10, height = 11, units = c("in"))
 
@@ -852,57 +852,25 @@ DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
 DTplot[Elements > 30, Elements := 31]
 
 
-toBreak <- DTplot$med_Daily_Users
-fiveBreaks <-  legend_breaker(toBreak)
-
-ggplot(DTplot, aes(x = Elements, fill = med_Daily_Users, y = reorder(park_name, Elements))) +
-  geom_bar(stat = "identity", position = "stack") +
-  xlab("Number of Elements") +
-  ylab("Park Name") +
-  labs(title = "TESTING NO REGIONAL: Median Daily Number of Playground Users", 
-       subtitle = "By Number of Elements") +
-  scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma) +
- scale_fill_gradientn(colors = c("purple","#AAA","orange"), guide = "colourbar", name = "Median Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks ) +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) +
-    geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
-
-ggsave("./outputs/charts/TESTING NO REGIONAL MedianUse x Elements.png", width = 10, height = 11, units = c("in"))
-
-```
-
-\newpage
-
-#### TESTING NO REGIONAL POP ON X: chart of median playground use by number of playground elements
-
-```{r testing no regional and pop x axis}
-DT <- copy(ParkFull)
-
-DTplot <- DT[playground == 1 & Park_Category != "Regional", .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Elements, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( Elements, park_name)][, Elements := as.numeric(Elements)]
-
-#per style advice, cap at 30 elements
-#DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
-DTplot[Elements > 30, Elements := 31]
-
-
 toBreak <- DTplot$Elements
 fiveBreaks <-  legend_breaker(toBreak)
 
-
 ggplot(DTplot, aes(x = med_Daily_Users, fill = Elements, y = reorder(park_name, med_Daily_Users))) +
   geom_bar(stat = "identity", position = "stack") +
-  xlab("Population") +
+  xlab("Median Daily Playground Users") +
   ylab("Park Name") +
-  labs(title = "TESTING NO REGIONAL POP ON X: Median Daily Number of Playground Users", 
-       subtitle = "By Number of Elements") +
+  labs(title = "TESTING NO REGIONAL PARKS: Median Daily Number of Playground Users", 
+       subtitle = "By Number of Play Elements") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
  scale_fill_gradientn(colors = c("purple","#AAA","orange"), guide = "colourbar", name = "Number of Elements \n(capped at 31)", trans = "reverse", breaks = fiveBreaks ) +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) 
+    #geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
-ggsave("./outputs/charts/TESTING NO REGIONAL POP ON X MedianUse x Elements.png", width = 10, height = 11, units = c("in"))
+ggsave("./outputs/charts/TESTING NO REGIONAL PARKS MedianUse x Elements.png", width = 10, height = 11, units = c("in"))
 
 ```
+
 \newpage
 
 #### chart of peak playground use by number of playground elements
@@ -917,21 +885,21 @@ DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
 DTplot[Elements > 30, Elements := 31]
 
 
-toBreak <- DTplot$max_Daily_Users
+toBreak <- DTplot$Elements
 fiveBreaks <-  legend_breaker(toBreak)
 
-ggplot(DTplot, aes(x = Elements, fill = max_Daily_Users, y = reorder(park_name, Elements))) +
+ggplot(DTplot, aes(x = max_Daily_Users, fill = Elements, y = reorder(park_name, max_Daily_Users))) +
   geom_bar(stat = "identity", position = "stack") +
-  xlab("Number of Elements") +
+  xlab("Max Daily Users") +
   ylab("Park Name") +
   labs(title = "Max Daily Number of Playground Users", 
        subtitle = "By Number of Elements") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
- scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Max Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks ) +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) +
+ scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Number of Elements \n(capped at 31)", trans = "reverse", breaks = fiveBreaks ) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) 
   
-    geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
+    #geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
 ggsave("./outputs/charts/MaxUse x Elements.png", width = 10, height = 11, units = c("in"))
 
@@ -951,18 +919,18 @@ DT <- copy(ParkFull)
 DTplot <- DT[, Playground_Age := (2024-as.numeric(DT$Playground_Age)) +1][playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Playground_Age, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( Playground_Age, park_name)]
 
 
-toBreak <- DTplot[!is.na(Playground_Age),]$med_Daily_Users
+toBreak <- DTplot[!is.na(Playground_Age),]$Playground_Age
 fiveBreaks <-  legend_breaker(toBreak)
 
-ggplot(DTplot[!is.na(Playground_Age),], aes(x = as.numeric(Playground_Age), fill = med_Daily_Users, y = reorder(park_name, Playground_Age))) +
+ggplot(DTplot[!is.na(Playground_Age),], aes(x = med_Daily_Users , fill = as.numeric(Playground_Age), y = reorder(park_name, med_Daily_Users))) +
   geom_bar(stat = "identity", position = "stack") +
-  xlab("Years Age of Playground (1 = Built in 2024)") +
+  xlab("Median Daily Playground Users") +
   ylab("Park Name") +
   labs(title = "Median Daily Number of Playground Users", 
        subtitle ="By Playground Equipment Age") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-        scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Median Daily\nPlayground Users", trans = "reverse" , breaks = fiveBreaks) +
+        scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Years Age\nof Playground", trans = "reverse" , breaks = fiveBreaks) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 ggsave("./outputs/charts/MedianUse x EquipmentAge.png", width = 10, height = 11, units = c("in"))
@@ -983,19 +951,19 @@ DT <- copy(ParkFull)
 DTplot <- DT[, Playground_Age := (2024-as.numeric(DT$Playground_Age)) +1][playground == 1, .(max_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, Playground_Age, park_name)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Users") ,by = .( Playground_Age, park_name)]
 
 
-toBreak <- DTplot[!is.na(Playground_Age),]$max_Daily_Users
+toBreak <- DTplot[!is.na(Playground_Age),]$Playground_Age
 fiveBreaks <-  legend_breaker(toBreak)
 
 
 ggplot(DTplot[!is.na(Playground_Age),]) +
-  geom_bar(stat = "identity", position = "stack", aes(x = as.numeric(Playground_Age), fill = max_Daily_Users, y = reorder(park_name, Playground_Age))) +
-  xlab("Years Age of Playground (1 = Built in 2024)") +
+  geom_bar(stat = "identity", position = "stack", aes(x = max_Daily_Users, fill = as.numeric(Playground_Age), y = reorder(park_name, max_Daily_Users))) +
+  xlab("Max Daily Playground Users") +
   ylab("Park Name") +
   labs(title = "Max Number of Playground Users", 
        subtitle ="By Playground Equipment Age") +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Max Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks ) +
+  scale_fill_gradientn(colors = c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Years Age\nof Playground", trans = "reverse", breaks = fiveBreaks ) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 ggsave("./outputs/charts/MaxUse x EquipmentAge.png", width = 10, height = 11, units = c("in"))
@@ -1098,22 +1066,22 @@ DTplot <- DT[playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_
 DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
 DTplot[Elements > 30, Elements := 31]
 
-toBreak <- DTplot[!is.na(Elements),]$med_Daily_Users
+toBreak <- DTplot[!is.na(Elements),]$Elements
 fiveBreaks <-  legend_breaker(toBreak)
 
-ggplot(DTplot[!is.na(Elements)], aes(y = reorder(park_name, Elements), x = Elements, fill = med_Daily_Users)) +
+ggplot(DTplot[!is.na(Elements)], aes(y = reorder(park_name, med_Daily_Users), x = med_Daily_Users, fill = Elements)) +
   geom_bar(stat = "identity", position = "stack") +
   facet_wrap(~Age_Group, scales = "free_y", nrow = 3) +
-  xlab("Number of Play Elements") +
+  xlab("Median Daily Playground Users") +
   ylab("Park Name") +
    labs(title = "Median Daily Number of Playground Users", 
         subtitle = "By Primary Age Group and Number of Play Elements") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Median Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks) +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))+
-  geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Number of Elements \n(capped at 31)", trans = "reverse", breaks = fiveBreaks) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+  #geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
 
 ggsave("./outputs/charts/MedianUse x AgeGroup x Elements.png", width = 10, height = 11, units = c("in"))
@@ -1138,23 +1106,23 @@ DTplot <- DT[playground == 1, .(max_Daily_Users = sum(num_child_prim, num_child_
 DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
 DTplot[Elements > 30, Elements := 31]
 
-toBreak <- DTplot[!is.na(Elements),]$max_Daily_Users
+toBreak <- DTplot[!is.na(Elements),]$Elements
 
 fiveBreaks <-  legend_breaker(toBreak)
 
-ggplot(DTplot[!is.na(Elements)], aes(y = reorder(park_name, Elements), x = Elements, fill = max_Daily_Users)) +
+ggplot(DTplot[!is.na(Elements)], aes(y = reorder(park_name, max_Daily_Users), x = max_Daily_Users, fill = Elements)) +
   geom_bar(stat = "identity", position = "stack") +
   facet_wrap(~Age_Group, scales = "free_y", nrow = 3) +
-  xlab("Number of Play Elements") +
+  xlab("Max Daily Playground Users") +
   ylab("Park Name") +
    labs(title = "Max Daily Number of Playground Users", 
         subtitle = "By Primary Age Group and Number of Play Elements") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Max Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks) +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))+
-  geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Number of Elements \n(capped at 31)", trans = "reverse", breaks = fiveBreaks) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+  #geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
 
 
 ggsave("./outputs/charts/MaxUse x AgeGroup x Elements.png", width = 10, height = 11, units = c("in"))
@@ -1180,18 +1148,18 @@ DT <- copy(ParkFull)
 DTplot <- DT[playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, WalkScore, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( WalkScore, park_name)]
 
 
-toBreak <- DTplot$med_Daily_Users
-fiveBreaks <-  legend_breaker(toBreak)
+#toBreak <- DTplot$WalkScore
+#fiveBreaks <-  legend_breaker(toBreak )
 
-ggplot(DTplot, aes(x = as.numeric(WalkScore), fill = med_Daily_Users, y = reorder(park_name, WalkScore))) +
+ggplot(DTplot, aes(x = med_Daily_Users, fill = WalkScore, y = reorder(park_name, med_Daily_Users))) +
   geom_bar(stat = "identity", position = "stack") +
-  xlab("Walkability Score") +
+  xlab("Median Daily Playground Users") +
   ylab("Park Name") +
   labs(title = "Median Daily Number of Playground Users", 
        subtitle = "By Walkability Score") +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma, limits = c(0,100)) +
-  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Median Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks) +
+  #scale_x_continuous(labels = scales::comma, limits = c(0,100)) +
+  scale_fill_gradientn(colours =  c("purple","#AAAAAA","orange"), name = "Walkability Score", trans = "reverse", values = c(0,.3,.6,1), breaks = c(0,25,50,75,100), guide = "colorbar") +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 ggsave("./outputs/charts/MedianUse x walkability.png", width = 10, height = 11, units = c("in"))
@@ -1215,18 +1183,18 @@ DT <- copy(ParkFull)
 DTplot <- DT[playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, TransitScore, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( TransitScore, park_name)][, TransitScore := as.numeric(TransitScore)]
 
 
-toBreak <- DTplot[!is.na(TransitScore),]$med_Daily_Users
-fiveBreaks <-  legend_breaker(toBreak)
+#toBreak <- DTplot[!is.na(TransitScore),]$med_Daily_Users
+#fiveBreaks <-  legend_breaker(toBreak)
 
 ggplot(DTplot[!is.na(TransitScore),]) +
-  geom_bar(stat = "identity", position = "stack", aes(x = as.numeric(TransitScore), fill = med_Daily_Users, y = reorder(park_name, TransitScore))) +
-  xlab("Transit Score") +
+  geom_bar(stat = "identity", position = "stack", aes(x = med_Daily_Users, fill = as.numeric(TransitScore), y = reorder(park_name, med_Daily_Users))) +
+  xlab("Median Daily Playground Users") +
   ylab("Park Name") +
   labs(title = "Median Daily Number of Playground Users", 
        subtitle = "By Transit Score") +
   scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma, limits = c(0,100)) +
-  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Median Daily\nPlayground Users", trans = "reverse", breaks = fiveBreaks) +
+  #scale_x_continuous(labels = scales::comma, limits = c(0,100)) +
+  scale_fill_gradientn(colours =  c("purple","#AAAAAA","orange"), name = "Transit Score", trans = "reverse", values = c(0,.3,.6,1), breaks = c(0,25,50,75,100), guide = "colorbar", limits = c(0,100)) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 ggsave("./outputs/charts/MedianUse x transit.png", width = 10, height = 11, units = c("in"))
