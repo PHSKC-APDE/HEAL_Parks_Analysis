@@ -11,6 +11,7 @@ format:
     fig-width: 16
     prefer-html: true
   pdf:
+    output-file: "2024 playground analysis report.pdf"
     toc: true
     number-sections: true
     df-print: kable
@@ -23,6 +24,7 @@ format:
     fig-height: 10
     fig-width: 13
   docx:
+    output-file: "2024 playground analysis markup.docx"
     toc: false
     number-sections: true
     output: false
@@ -620,19 +622,25 @@ ggsave("./outputs/charts/MaxParkUse.png", width = 10, height = 11, units = c("in
 ```{r}
 DT <- copy(ParkFull)
 
-DTplot <- DT[, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, populationHalfMile, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( populationHalfMile, park_name)][, `Catchment Ratio` := populationHalfMile/med_Daily_Users]
+DTplot <- DT[, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, populationHalfMile, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( populationHalfMile, park_name)][, `Catchment Ratio` := med_Daily_Users/populationHalfMile]
+
+#per style advice, cap at 0.35
+DTplot[, CatchmentLabel := ifelse(`Catchment Ratio` > .25, paste0("~ ",round(`Catchment Ratio`,2)), "")]
+DTplot[`Catchment Ratio` > .25, `Catchment Ratio` := .25]
 
 
 
-ggplot(DTplot) +
-  geom_bar(stat = "identity", position = "stack", aes(y = reorder(park_name,`Catchment Ratio`), x = `Catchment Ratio`)) +
-  xlab("Ratio of Median Daily Park Users and 1/2 Mile Catchment") +
+ggplot(DTplot, aes(y = reorder(park_name,`Catchment Ratio`), x = `Catchment Ratio`)) +
+  geom_bar(stat = "identity", position = "stack") +
+  xlab("Ratio of Median Daily Park Users \nand 1/2 Mile Catchment") +
   ylab("Park Name") +
   labs(title = "Ratio of Median Daily Park Users and 1/2 Mile Catchment") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) +
+  geom_text(aes(label = CatchmentLabel), vjust = 0.4, hjust = 1.2, size = 4, color = "white" )
+
 
 ggsave("./outputs/charts/MedParkUseCatchment Ratio.png", width = 10, height = 11, units = c("in"))
 
@@ -649,19 +657,24 @@ The following parks were excluded for having "0" median users: `r unique(DTplot[
 ```{r}
 DT <- copy(ParkFull)
 
-DTplot <- DT[playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, populationHalfMile, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( populationHalfMile, park_name)][, `Catchment Ratio` := populationHalfMile/med_Daily_Users]
+DTplot <- DT[playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, populationHalfMile, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( populationHalfMile, park_name)][, `Catchment Ratio` := med_Daily_Users/populationHalfMile]
+
+#per style advice, cap at 0.35
+DTplot[, CatchmentLabel := ifelse(`Catchment Ratio` > .05, paste0("~ ",round(`Catchment Ratio`,2)), "")]
+DTplot[`Catchment Ratio` > .05, `Catchment Ratio` := .05]
 
 
 
-ggplot(DTplot) +
-  geom_bar(stat = "identity", position = "stack", aes(y = reorder(park_name,`Catchment Ratio`), x = `Catchment Ratio`)) +
-  xlab("Ratio of Median Daily Playground Users and 1/2 Mile Catchment") +
+ggplot(DTplot, aes(y = reorder(park_name,`Catchment Ratio`), x = `Catchment Ratio`)) +
+  geom_bar(stat = "identity", position = "stack") +
+  xlab("Ratio of Median Daily Playground Users \nand 1/2 Mile Catchment") +
   ylab("Park Name") +
   labs(title = "Ratio of Median Daily Playground Users and 1/2 Mile Catchment") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) +
+  geom_text(aes(label = CatchmentLabel), vjust = 0.4, hjust = 1.2, size = 4, color = "white" )
 
 ggsave("./outputs/charts/MedPlaygroundUseCatchment Ratio.png", width = 10, height = 11, units = c("in"))
 
@@ -1143,8 +1156,8 @@ DT <- copy(ParkFull)
 DTplot <- DT[playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, WalkScore, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( WalkScore, park_name)]
 
 
-#toBreak <- DTplot$WalkScore
-#fiveBreaks <-  legend_breaker(toBreak )
+toBreak <- DTplot$WalkScore
+fiveBreaks <-  legend_breaker(toBreak )
 
 ggplot(DTplot, aes(x = med_Daily_Users, fill = WalkScore, y = reorder(park_name, med_Daily_Users))) +
   geom_bar(stat = "identity", position = "stack") +
@@ -1154,7 +1167,8 @@ ggplot(DTplot, aes(x = med_Daily_Users, fill = WalkScore, y = reorder(park_name,
        subtitle = "By Walkability Score") +
   scale_y_discrete(limits = rev) +
   #scale_x_continuous(labels = scales::comma, limits = c(0,100)) +
-  scale_fill_gradientn(colours =  c("purple","#AAAAAA","orange"), name = "Walkability Score", trans = "reverse", values = c(0,.3,.6,1), breaks = c(0,25,50,75,100), guide = "colorbar") +
+  #scale_fill_gradientn(colours =  c("purple","#AAAAAA","orange"), name = "Walkability Score", trans = "reverse", values = c(0,.3,.6,1), breaks = c(0,25,50,75,100), guide = "colorbar") +
+      scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Walkability Score", trans = "reverse", breaks = fiveBreaks) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 ggsave("./outputs/charts/MedianUse x walkability.png", width = 10, height = 11, units = c("in"))
@@ -1177,9 +1191,11 @@ DT <- copy(ParkFull)
 
 DTplot <- DT[playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, TransitScore, park_name)][,lapply(.SD, median, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .( TransitScore, park_name)][, TransitScore := as.numeric(TransitScore)]
 
+DTplot[is.na(TransitScore), TransitScore := 0]
 
-#toBreak <- DTplot[!is.na(TransitScore),]$med_Daily_Users
-#fiveBreaks <-  legend_breaker(toBreak)
+toBreak <- DTplot[!is.na(TransitScore),]$TransitScore
+fiveBreaks <-  legend_breaker(toBreak)
+#fiveBreaks <- c(0,25,50,75, 100)
 
 ggplot(DTplot[!is.na(TransitScore),]) +
   geom_bar(stat = "identity", position = "stack", aes(x = med_Daily_Users, fill = as.numeric(TransitScore), y = reorder(park_name, med_Daily_Users))) +
@@ -1189,8 +1205,9 @@ ggplot(DTplot[!is.na(TransitScore),]) +
        subtitle = "By Transit Score") +
   scale_y_discrete(limits = rev) +
   #scale_x_continuous(labels = scales::comma, limits = c(0,100)) +
-#  scale_fill_gradientn(colours =  c("purple","#AAAAAA","orange"), name = "Transit Score", trans = "reverse", values = c(0,.3,.6,1), breaks = c(0,25,50,75,100), guide = "colorbar", limits = c(0,100)) +
-    scale_fill_gradientn(colours =  c("purple","#AAAAAA","orange"), name = "Transit Score", trans = "reverse", values = c(0,.3,.6,1), breaks = c(0,25,50,75,100), guide = "colorbar") +
+  #scale_fill_gradientn(colours =  c("purple","#AAAAAA","orange"), name = "Transit Score", trans = "reverse", values = c(0,.3,.6,1), breaks = c(0,25,50,75,100), guide = "colorbar", limits = c(0,100)) +
+    scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Transit Score", trans = "reverse", breaks = fiveBreaks) +
+  #  scale_fill_gradientn(colours =  c("purple","#AAAAAA","orange"), name = "Transit Score", trans = "reverse", values = c(0,.3,.6,1), breaks = c(0,25,50,75,100), guide = "colorbar") +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 ggsave("./outputs/charts/MedianUse x transit.png", width = 10, height = 11, units = c("in"))
@@ -1201,7 +1218,7 @@ ggsave("./outputs/charts/MedianUse x transit.png", width = 10, height = 11, unit
 
 Notes:
 
-The following parks were excluded for not having a transit score: `r unique(DTplot[is.na(TransitScore),park_name])`
+* Parks more than 1 mile from public transport were assigned a score of "0"
 
 \newpage
 
@@ -1309,36 +1326,159 @@ ggplot(DTplot) +
 ```
 
 
+## Geographical Visualizations
+
+### Map of park locations and opportunity areas
+
 ```{r}
-#| eval: false
+#| echo: false
+#| message: false
+
+library(httr)
+library(sf)
+library(plotly)
+library(leaflet)
+library(giscoR)
+
+# url <- parse_url("https://gisdata.kingcounty.gov/arcgis/rest/services/OpenDataPortal/natres___base/MapServer/2865")
+# #url$path <- paste(url$path, "https://gisdata.kingcounty.gov/arcgis/rest/services/OpenDataPortal/natres___base/MapServer/2865", sep = "/")
+# url$query <- list(where = "1=1",
+#                   outFields = "*",
+#                   returnGeometry = "true",
+#                   f = "geojson")
+# request <- build_url(url)
+
+  crsString <- "EPSG:2926" #preferred coordinate reference system for WA
+  
+  
+KCOpportunityArea <- st_read("https://gisdata.kingcounty.gov/arcgis/rest/services/OpenDataPortal/natres___base/MapServer/2865/query?where=1%3D1&text=&objectIds=&time=&timeRelation=esriTimeRelationOverlaps&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&distance=&units=esriSRUnit_Foot&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=&outSR=&havingClause=&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&historicMoment=&returnDistinctValues=false&resultOffset=&resultRecordCount=&returnExtentOnly=false&sqlFormat=none&datumTransformation=&parameterValues=&rangeValues=&quantizationParameters=&featureEncoding=esriDefault&f=pjson")
+KCOpportunityArea <- st_transform(x = KCOpportunityArea, st_crs(crsString)) #turn teh raw data into a geometry using crs 2926 (this is one recomended for WA)
 
 
-### TESTING chart of playground popularity by play elements
-DT <- copy(ParkFull[occupied == "Yes"])
+#tmap_mode(mode = "view")
+#tm_shape(KCarea)#+tm_lines(col="NET_DESC", palette = "Set1", lwd = 5)
 
-DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, park_name, Elements, playground)][, .(users = sum(users)),by = .(park_name,  Elements, playground)][,allusers := sum(users), by = .(park_name, Elements)][playground == 1, popularity := users/allusers][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("popularity") ,by = .(park_name, Elements)][, Elements := as.numeric(Elements)]
+#ggplot(KCarea) +
+ # geom_sf(fill = "#69b3a2", color = "white")
+#ggmap::(KCarea)
 
-#per style advice, cap at 30 elements
-DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
-DTplot[Elements > 30, Elements := 31]
+  crsString <- "EPSG:2926" #preferred coordinate reference system for WA
+  
+  ParkGeosCoord <- unique.data.frame(ParkFull[,.("park" = park_name, "long" = Longitude, "lat" = Latitude)]) #create a prototype data frame for holding our geometry. This has the raw lat long data
+  
+  ParkGeos <- st_as_sf(x = ParkGeosCoord,coords = c("long","lat"), crs = "EPSG:4326") #turn teh raw data into a geometry using crs 2926 (this is one recomended for WA)
+  ParkGeos <- st_transform(ParkGeos, st_crs(crsString))
+  ParkGeos <- st_buffer(ParkGeos, units::set_units(0.025, mile)) # units::set_units is intelligent about types of units so you can specify "mile". st_buffer will create a perimeter of the provided units.
+  
+  BlockShapes <- st_read("//dphcifs/APDE-CDIP/Shapefiles/Census_2020/block/kc_block.shp") 
+  BlockShapes <- st_transform(BlockShapes, st_crs(crsString)) #conform to same crs
+  
+```
 
-ggplot(DTplot, aes(x = Elements, fill = popularity, y = reorder(park_name, Elements))) +
-  geom_bar(stat = "identity", position = "stack") +
-  xlab("Number of Play Elements") +
-  ylab("Park Name") +
-  labs(title = "TESTING Playground Popularity Rate", 
-       subtitle = "By Number of Play Elements") +
-  scale_y_discrete(limits = rev) +
-  scale_x_continuous(labels = scales::comma) +
-      scale_fill_gradientn(colors = c("orange","purple" ,"aquamarine"), guide = "colourbar", name = "Playground \nPopularity Rate") +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE)) +
-  geom_text(aes(label = ElementsLabel), vjust = 0.6, hjust = -.1, size = 4)
+```{r}
 
+  xmin <- -122.37
+  xmax <- -122.07
+  ymin <- 47.26
+  ymax <- 47.53
 
-#Notes:
-
-#The following parks were excluded for not having category status: `r unique(DTplot[is.na(Elements),park_name])`
-
-
+  
+   ggplot() + geom_sf(data = BlockShapes, fill = "gray", color = "pink") +
+     geom_sf(data = KCOpportunityArea, fill = alpha("orange",0.5), color = "white") +
+     geom_sf(data = ParkGeos,fill = "purple", color = "purple") +
+     coord_sf(default_crs = sf::st_crs(4326),xlim = c(xmin,xmax), ylim = c(ymin,ymax) ) +
+   geom_sf_text(data = ParkGeos, aes(label = park), size = 1, colour = "black",hjust = -.0 )
 
 ```
+
+```{r}   
+
+
+  xmin <- -122.37
+  xmax <- -122.30
+  ymin <- 47.50
+  ymax <- 47.525
+
+  
+   ggplot() + geom_sf(data = BlockShapes, fill = "gray", color = "pink") +
+     geom_sf(data = KCOpportunityArea, fill = alpha("orange",0.5), color = "white") +
+     geom_sf(data = ParkGeos,fill = "purple", color = "purple") +
+     coord_sf(default_crs = sf::st_crs(4326),xlim = c(xmin,xmax), ylim = c(ymin,ymax) ) +
+   geom_sf_text(data = ParkGeos, aes(label = park), size = 1, colour = "black" , angle = 45,hjust = -.1 )
+
+```
+
+
+```{r}   
+
+
+  xmin <- -122.37
+  xmax <- -122.23
+  ymin <- 47.43
+  ymax <- 47.50
+
+  
+   ggplot() + geom_sf(data = BlockShapes, fill = "gray", color = "pink") +
+     geom_sf(data = KCOpportunityArea, fill = alpha("orange",0.5), color = "white") +
+     geom_sf(data = ParkGeos,fill = "purple", color = "purple") +
+     coord_sf(default_crs = sf::st_crs(4326),xlim = c(xmin,xmax), ylim = c(ymin,ymax) ) +
+   geom_sf_text(data = ParkGeos, aes(label = park), size = 2, colour = "black", angle = 45,hjust = -.1 )
+
+```
+
+
+```{r}   
+
+
+  xmin <- -122.20
+  xmax <- -122.07
+  ymin <- 47.40
+  ymax <- 47.50
+
+  
+   ggplot() + geom_sf(data = BlockShapes, fill = "gray", color = "pink") +
+     geom_sf(data = KCOpportunityArea, fill = alpha("orange",0.5), color = "white") +
+     geom_sf(data = ParkGeos,fill = "purple", color = "purple") +
+     coord_sf(default_crs = sf::st_crs(4326),xlim = c(xmin,xmax), ylim = c(ymin,ymax) ) +
+   geom_sf_text(data = ParkGeos, aes(label = park), size = 2, colour = "black", angle = 35,hjust = -.1 )
+
+```
+
+
+```{r}   
+
+
+  xmin <- -122.30
+  xmax <- -122.23
+  ymin <- 47.25
+  ymax <- 47.30
+
+  
+   ggplot() + geom_sf(data = BlockShapes, fill = "gray", color = "pink") +
+     geom_sf(data = KCOpportunityArea, fill = alpha("orange",0.5), color = "white") +
+     geom_sf(data = ParkGeos,fill = "purple", color = "purple") +
+     coord_sf(default_crs = sf::st_crs(4326),xlim = c(xmin,xmax), ylim = c(ymin,ymax) ) +
+   geom_sf_text(data = ParkGeos, aes(label = park), size = 2, colour = "black", angle = 35,hjust = -.1 )
+
+```
+
+```{r}
+KCOpportunityAreaLEAF <- copy(KCOpportunityArea)
+KCOpportunityAreaLEAF <- st_transform(KCOpportunityAreaLEAF, crs = '+proj=longlat +datum=WGS84')
+
+leaflet() %>% addTiles() %>%
+      setView(lat = 47.35, lng = -122.23, zoom = 10) %>%
+      addPolygons(data = KCOpportunityAreaLEAF, color = "blue", stroke = 0, opacity = 1) %>%
+      addMarkers(data =unique.data.frame(ParkFull[,.(lng = Longitude, lat =  Latitude, park_name)]), label = ~park_name, labelOptions = labelOptions(noHide = TRUE, textsize = "10px", textOnly = F ,opacity = .65 ))
+
+```
+
+\newpage
+![NorthWest Quadrant](./inputs/map nwquad.png)
+\newpage
+![Northern Half](./inputs/map northern.png)
+
+\newpage
+![Southern Half](./inputs/map southern.png)
+
+
