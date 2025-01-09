@@ -4,33 +4,35 @@ author: "Ronald W. Buie"
 date-modified: "`r Sys.Date()`"
 
 format:
-  gfm: 
+  gfm:
     output-file: "README.md"
     number-sections: true
     fig-height: 12
     fig-width: 16
     prefer-html: true
   pdf:
+    latex-clean: true
+    latex-output-dir: outputs
     output-file: "2024 playground analysis report.pdf"
     toc: true
     number-sections: true
     df-print: kable
     fig-height: 11
     fig-width: 10
+    fig-cap-location: bottom
   html:
     toc: true
     number-sections: true
     df-print: kable
     fig-height: 10
     fig-width: 13
-  docx:
+  docx: 
     output-file: "2024 playground analysis markup.docx"
     toc: false
     number-sections: true
     output: false
+    fig-format: jpeg
     df-print: kable
-    fig-height: 8
-    fig-width: 10
 execute: 
   echo: false
   warning: false
@@ -147,9 +149,17 @@ In addition, access to Public Health – Seattle & King County’s Assessment Po
 
 ```{r create target directories}
 
-dir.create("./outputs/charts", recursive = TRUE, showWarnings = FALSE)
-dir.create("./outputs/tables", recursive = TRUE, showWarnings = FALSE)
-# dir.create("./2024 playground/outputs/data-metadata", recursive = TRUE, showWarnings = FALSE)
+#clean old analysees, if any
+unlink(here("2024 playground/outputs/charts"), recursive = T, force = T)
+unlink(here("2024 playground/outputs/tables"), recursive = T, force = T)
+unlink(here("2024 playground/outputs/maps"), recursive = T, force = T)
+
+
+dir.create(here("2024 playground/outputs/charts"), recursive = TRUE, showWarnings = FALSE)
+dir.create(here("2024 playground/outputs/maps"), recursive = TRUE, showWarnings = FALSE)
+dir.create(here("2024 playground/outputs/tables"), recursive = TRUE, showWarnings = FALSE)
+
+
 ```
 
 ## Setup & environment
@@ -441,6 +451,16 @@ ParkFull$park_name <- ParkFull$`Park Short Name`
 
 ```
 
+```{r make or cleanup output directories}
+dir.create(here("2024 playground/outputs/charts"), recursive = TRUE, showWarnings = FALSE)
+dir.create(here("2024 playground/outputs/maps"), recursive = TRUE, showWarnings = FALSE)
+dir.create(here("2024 playground/outputs/tables"), recursive = TRUE, showWarnings = FALSE)
+
+unlink(here("2024 playground/outputs/charts/*"))
+unlink(here("2024 playground/tables/*"))
+unlink(here("2024 playground/maps/*"))
+
+```
 These analyses explore the relationship between category, funding status, and the surrounding population (catchment) of a park. Park catchment may, additionally, provide context for later analyses below.
 
 \newpage
@@ -571,16 +591,21 @@ DTplot <- DT[, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_
 
 
 #DTplot[,Opportunity_Area := ifelse(Opportunity_Area == "No",  "Not Opportunity Area","Opportunity Area")]
+DTplot[, old_med_Daily_Users := med_Daily_Users]
+DTplot[, usersLabel := ifelse(`med_Daily_Users` > 200, paste0("~",round(med_Daily_Users,0)), "")]
+DTplot[med_Daily_Users > 200, med_Daily_Users := 200]
 
-ggplot(DTplot) +
-  geom_bar(stat = "identity", position = "stack", aes(y = reorder(park_name, med_Daily_Users), x = med_Daily_Users)) +
+
+ggplot(DTplot, aes(y = reorder(park_name, old_med_Daily_Users), x = med_Daily_Users)) +
+  geom_bar(stat = "identity", position = "stack") +
   xlab("Median Daily Number of Park Users") +
   ylab("Park Name") +
   labs(title = "Median Daily Number of Park Users") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))+
+  geom_text(aes(label = usersLabel), vjust = 0.4, hjust = 1.2, size = 4, color = "white" )
 
 ggsave("./outputs/charts/MedianParkUse.png", width = 10, height = 11, units = c("in"))
 ```
@@ -593,20 +618,25 @@ ggsave("./outputs/charts/MedianParkUse.png", width = 10, height = 11, units = c(
 
 DT <- copy(ParkFull)
 
-DTplot <- DT[, .(max_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, park_name)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Users") ,by = .(park_name)]
+DTplot <- DT[, .(max_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, park_name)][,lapply(.SD, max, na.rm = TRUE), .SDcols = c("max_Daily_Users") ,by = .(park_name)][order(max_Daily_Users),]
 
 
 #DTplot[,Opportunity_Area := ifelse(Opportunity_Area == "No",  "Not Opportunity Area","Opportunity Area")]
+#per style advice, cap at 0.35
+DTplot[, old_max_Daily_Users := max_Daily_Users]
+DTplot[, usersLabel := ifelse(`max_Daily_Users` > 500, paste0(round(max_Daily_Users,0)), "")]
+DTplot[max_Daily_Users > 500, max_Daily_Users := 500]
 
-ggplot(DTplot) +
-  geom_bar(stat = "identity", position = "stack", aes(y =  reorder(park_name, max_Daily_Users), x = max_Daily_Users)) +
+ggplot(DTplot, aes(y =  reorder(park_name, old_max_Daily_Users), x = max_Daily_Users)) +
+  geom_bar(stat = "identity", position = "stack") +
   xlab("Max Daily Number of Park Users") +
   ylab("Park Name") +
   labs(title = "Maximum Daily Number of Park Users") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
-  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))+
+  geom_text(aes(label = usersLabel), vjust = 0.4, hjust = 1.2, size = 4, color = "white" )
 
 ggsave("./outputs/charts/MaxParkUse.png", width = 10, height = 11, units = c("in"))
 ```
@@ -1267,6 +1297,9 @@ DT <- copy(ParkFull[occupied == "Yes"])
 
 DTplot <- DT[, .(users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, park_name, Elements, playground)][, .(users = sum(users)),by = .(park_name,  Elements, playground)][,allusers := sum(users), by = .(park_name, Elements)][playground == 1, popularity := users/allusers][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("popularity") ,by = .(park_name, Elements)][, Elements := as.numeric(Elements)]
 
+#per style advice, cap at 30 elements
+DTplot[, ElementsLabel := ifelse(Elements > 30, ">30", "")]
+DTplot[Elements > 30, Elements := 31]
 
 toBreak <- DTplot$Elements
 fiveBreaks <-  legend_breaker(toBreak)
@@ -1280,14 +1313,10 @@ ggplot(DTplot, aes(x = popularity, fill = Elements, y = reorder(park_name, popul
   scale_y_discrete(limits = rev) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_x_continuous(labels = scales::comma) +
-  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Number of Play Elements", trans = "reverse", breaks = fiveBreaks) +
+  scale_fill_gradientn(colors =  c("purple","#AAAAAA","orange"), guide = "colourbar", name = "Number of Elements \n(capped at 31)", trans = "reverse", breaks = fiveBreaks) +
   theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))
 
 ggsave("./outputs/charts/Popularity x Elements.png", width = 10, height = 11, units = c("in"))
-
-
-
-
 
 
 ```
@@ -1333,12 +1362,14 @@ ggplot(DTplot) +
 ```{r}
 #| echo: false
 #| message: false
+#| output: false
 
 library(httr)
 library(sf)
 library(plotly)
 library(leaflet)
 library(giscoR)
+library(mapview)
 
 # url <- parse_url("https://gisdata.kingcounty.gov/arcgis/rest/services/OpenDataPortal/natres___base/MapServer/2865")
 # #url$path <- paste(url$path, "https://gisdata.kingcounty.gov/arcgis/rest/services/OpenDataPortal/natres___base/MapServer/2865", sep = "/")
@@ -1376,7 +1407,7 @@ KCOpportunityArea <- st_transform(x = KCOpportunityArea, st_crs(crsString)) #tur
 ```
 
 ```{r}
-
+#| eval: false
   xmin <- -122.37
   xmax <- -122.07
   ymin <- 47.26
@@ -1392,7 +1423,7 @@ KCOpportunityArea <- st_transform(x = KCOpportunityArea, st_crs(crsString)) #tur
 ```
 
 ```{r}   
-
+#| eval: false
 
   xmin <- -122.37
   xmax <- -122.30
@@ -1410,7 +1441,7 @@ KCOpportunityArea <- st_transform(x = KCOpportunityArea, st_crs(crsString)) #tur
 
 
 ```{r}   
-
+#| eval: false
 
   xmin <- -122.37
   xmax <- -122.23
@@ -1428,7 +1459,7 @@ KCOpportunityArea <- st_transform(x = KCOpportunityArea, st_crs(crsString)) #tur
 
 
 ```{r}   
-
+#| eval: false
 
   xmin <- -122.20
   xmax <- -122.07
@@ -1446,7 +1477,7 @@ KCOpportunityArea <- st_transform(x = KCOpportunityArea, st_crs(crsString)) #tur
 
 
 ```{r}   
-
+#| eval: false
 
   xmin <- -122.30
   xmax <- -122.23
@@ -1462,21 +1493,58 @@ KCOpportunityArea <- st_transform(x = KCOpportunityArea, st_crs(crsString)) #tur
 
 ```
 
+To view interactive versions of the below maps, please see "interactive map of park and opportunity areas.html" and "interactive map of park and opportunity areas with labels.html" in the maps folder.
+
 ```{r}
 KCOpportunityAreaLEAF <- copy(KCOpportunityArea)
 KCOpportunityAreaLEAF <- st_transform(KCOpportunityAreaLEAF, crs = '+proj=longlat +datum=WGS84')
 
+leafletvis <-leaflet() %>% addTiles() %>%
+      setView(lat = 47.35, lng = -122.23, zoom = 10) %>%
+      addPolygons(data = KCOpportunityAreaLEAF, color = "blue", stroke = 0, opacity = 1) %>%
+      addMarkers(data =unique.data.frame(ParkFull[,.(lng = Longitude, lat =  Latitude, park_name)]), label = ~park_name, labelOptions = labelOptions(noHide = FALSE, textsize = "10px", textOnly = F ,opacity = .65 ))
+
+library(htmlwidgets)
+
+#dir.create(here("2024 playground/outputs/maps/"), recursive = TRUE, showWarnings = FALSE)
+saveWidget(leafletvis,file = here("2024 playground/outputs/maps/interactive map of park and opportunity areas.html"), selfcontained = TRUE)
+
+leafletvislabels <-leaflet() %>% addTiles() %>%
+      setView(lat = 47.35, lng = -122.23, zoom = 10) %>%
+      addPolygons(data = KCOpportunityAreaLEAF, color = "blue", stroke = 0, opacity = 1) %>%
+      addMarkers(data =unique.data.frame(ParkFull[,.(lng = Longitude, lat =  Latitude, park_name)]), label = ~park_name, labelOptions = labelOptions(noHide = TRUE, textsize = "10px", textOnly = F ,opacity = .65 ))
+
+
+#dir.create(here("2024 playground/outputs/maps/"), recursive = TRUE, showWarnings = FALSE)
+saveWidget(leafletvislabels,file = here("2024 playground/outputs/maps/interactive map of park and opportunity areas with labels.html"), selfcontained = TRUE)
+```
+
+
+
+```{r}
+#| eval: false
 leaflet() %>% addTiles() %>%
       setView(lat = 47.35, lng = -122.23, zoom = 10) %>%
       addPolygons(data = KCOpportunityAreaLEAF, color = "blue", stroke = 0, opacity = 1) %>%
       addMarkers(data =unique.data.frame(ParkFull[,.(lng = Longitude, lat =  Latitude, park_name)]), label = ~park_name, labelOptions = labelOptions(noHide = TRUE, textsize = "10px", textOnly = F ,opacity = .65 ))
 
+leaflet() %>% addTiles() %>%
+      setView(lat = 47.35, lng = -122.23, zoom = 10) %>%
+      addPolygons(data = KCOpportunityAreaLEAF, color = "blue", stroke = 0, opacity = 1) %>%
+      addMarkers(data =unique.data.frame(ParkFull[,.(lng = Longitude, lat =  Latitude, park_name)]), label = ~park_name)
+
 ```
 
 \newpage
+![Full View](./inputs/map full.png)
+
+
+\newpage
 ![NorthWest Quadrant](./inputs/map nwquad.png)
+
 \newpage
 ![Northern Half](./inputs/map northern.png)
+
 
 \newpage
 ![Southern Half](./inputs/map southern.png)
