@@ -224,6 +224,17 @@ ParkFacilities[grepl( "Playground",paste0(ParkFacilities$`Prim Facility`, ParkFa
 ParkMetadata <- as.data.table(read_xlsx("./inputs/Parks_MASTER.xlsx", sheet = "ParkList"))
 ```
 
+## Manhattan Park Playground Updates
+
+Manhattan Park was renovated in 2024. Because this analysis includes age of playground, we have split Manhattan park observations into two sets, one for 2023 and earlier, and the other of 2024 and later.
+
+```{r splitting Manhattan park pre 2024}
+ParkObservations[park_name == "Manhattan Park" , park_name := ifelse(studyDescription == "2024 annual study", "Manhattan Park 2024", "Manhattan Park 2023")]
+
+ParksActivities[park_name == "Manhattan Park" , park_name := ifelse(studyDescription == "2024 annual study", "Manhattan Park 2024", "Manhattan Park 2023")]
+
+```
+
 ```{r merged tables}
 #these are tables used in most/all analyses
 
@@ -643,6 +654,67 @@ ggsave("./outputs/charts/MaxParkUse.png", width = 10, height = 11, units = c("in
 
 \newpage
 
+### chart of median playground use
+
+```{r}
+
+DT <- copy(ParkFull)
+
+DTplot <- DT[playground == 1, .(med_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, park_name)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("med_Daily_Users") ,by = .(park_name)][order(med_Daily_Users),]
+
+#DTplot[,Opportunity_Area := ifelse(Opportunity_Area == "No",  "Not Opportunity Area","Opportunity Area")]
+DTplot[, old_med_Daily_Users := med_Daily_Users]
+DTplot[, usersLabel := ifelse(`med_Daily_Users` > 200, paste0("~",round(med_Daily_Users,0)), "")]
+DTplot[med_Daily_Users > 200, med_Daily_Users := 200]
+
+
+ggplot(DTplot, aes(y = reorder(park_name, old_med_Daily_Users), x = med_Daily_Users)) +
+  geom_bar(stat = "identity", position = "stack") +
+  xlab("Median Daily Number of Playground Users") +
+  ylab("Park Name") +
+  labs(title = "Median Daily Number of Playground Users") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))+
+  geom_text(aes(label = usersLabel), vjust = 0.4, hjust = 1.2, size = 4, color = "white" )
+
+ggsave("./outputs/charts/MedianPlaygroundUse.png", width = 10, height = 11, units = c("in"))
+```
+
+\newpage
+
+### chart of max playground use
+
+```{r}
+
+DT <- copy(ParkFull)
+
+DTplot <- DT[playground == 1, .(max_Daily_Users = sum(num_child_prim, num_child_snd, num_child_tert, num_child_quat, num_teen_prim, num_teen_snd, num_teen_tert, num_teen_quat, num_adult_prim, num_adult_snd, num_adult_tert, num_adult_quat, num_senior_prim, num_senior_snd, num_senior_tert, num_senior_quat, na.rm = TRUE)), by = .(datePOSIX, park_name)][,lapply(.SD, mean, na.rm = TRUE), .SDcols = c("max_Daily_Users") ,by = .(park_name)][order(max_Daily_Users),]
+
+
+#DTplot[,Opportunity_Area := ifelse(Opportunity_Area == "No",  "Not Opportunity Area","Opportunity Area")]
+#per style advice, cap at 0.35
+DTplot[, old_max_Daily_Users := max_Daily_Users]
+DTplot[, usersLabel := ifelse(`max_Daily_Users` > 500, paste0(round(max_Daily_Users,0)), "")]
+DTplot[max_Daily_Users > 500, max_Daily_Users := 500]
+
+ggplot(DTplot, aes(y =  reorder(park_name, old_max_Daily_Users), x = max_Daily_Users)) +
+  geom_bar(stat = "identity", position = "stack") +
+  xlab("Max Daily Number of Playground Users") +
+  ylab("Park Name") +
+  labs(title = "Maximum Daily Number of Playground Users") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(labels = scales::comma) +
+  theme(plot.title = element_text(size = TITLESIZE), plot.subtitle = element_text(size = SUBTITLESIZE))+
+  geom_text(aes(label = usersLabel), vjust = 0.4, hjust = 1.2, size = 4, color = "white" )
+
+ggsave("./outputs/charts/MaxPlaygroundUse.png", width = 10, height = 11, units = c("in"))
+```
+
+\newpage
+
 ### ratios of use and catchment
 
 \newpage
@@ -662,9 +734,9 @@ DTplot[`Catchment Ratio` > .25, `Catchment Ratio` := .25]
 
 ggplot(DTplot, aes(y = reorder(park_name,`Catchment Ratio`), x = `Catchment Ratio`)) +
   geom_bar(stat = "identity", position = "stack") +
-  xlab("Ratio of Median Daily Park Users \nand 1/2 Mile Catchment") +
+  xlab("Ratio of Median Daily Park Users and 1/2 Mile Catchment") +
   ylab("Park Name") +
-  labs(title = "Ratio of Median Daily Park Users and 1/2 Mile Catchment") +
+  labs(title = "Ratio of Median Daily Park Users \nand 1/2 Mile Catchment") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
@@ -697,9 +769,9 @@ DTplot[`Catchment Ratio` > .05, `Catchment Ratio` := .05]
 
 ggplot(DTplot, aes(y = reorder(park_name,`Catchment Ratio`), x = `Catchment Ratio`)) +
   geom_bar(stat = "identity", position = "stack") +
-  xlab("Ratio of Median Daily Playground Users \nand 1/2 Mile Catchment") +
+  xlab("Ratio of Median Daily Playground Users and 1/2 Mile Catchment") +
   ylab("Park Name") +
-  labs(title = "Ratio of Median Daily Playground Users and 1/2 Mile Catchment") +
+  labs(title = "Ratio of Median Daily Playground Users \nand 1/2 Mile Catchment") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_discrete(limits = rev) +
   scale_x_continuous(labels = scales::comma) +
@@ -1497,6 +1569,7 @@ To view interactive versions of the below maps, please see "interactive map of p
 
 ```{r}
 KCOpportunityAreaLEAF <- copy(KCOpportunityArea)
+
 KCOpportunityAreaLEAF <- st_transform(KCOpportunityAreaLEAF, crs = '+proj=longlat +datum=WGS84')
 
 leafletvis <-leaflet() %>% addTiles() %>%
@@ -1504,7 +1577,7 @@ leafletvis <-leaflet() %>% addTiles() %>%
       addPolygons(data = KCOpportunityAreaLEAF, color = "blue", stroke = 0, opacity = 1) %>%
       addMarkers(data =unique.data.frame(ParkFull[,.(lng = Longitude, lat =  Latitude, park_name)]), label = ~park_name, labelOptions = labelOptions(noHide = FALSE, textsize = "10px", textOnly = F ,opacity = .65 ))
 
-library(htmlwidgets)
+library(htmlwidgets) 
 
 #dir.create(here("2024 playground/outputs/maps/"), recursive = TRUE, showWarnings = FALSE)
 saveWidget(leafletvis,file = here("2024 playground/outputs/maps/interactive map of park and opportunity areas.html"), selfcontained = TRUE)

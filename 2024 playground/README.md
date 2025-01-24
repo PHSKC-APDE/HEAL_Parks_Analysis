@@ -120,6 +120,12 @@ Buie (rbuie@kingcounty.gov) or Seth Schromen-Wawrin
 - Census data on population surrounding park (from Census data
   calculated by PHSKC)
 
+## Manhattan Park Playground Updates
+
+Manhattan Park was renovated in 2024. Because this analysis includes age
+of playground, we have split Manhattan park observations into two sets,
+one for 2023 and earlier, and the other of 2024 and later.
+
 ## Variable definitions
 
 - “Park Category”: category of park”s intended reach, set by Parks
@@ -273,13 +279,25 @@ Notes:
 
 
 
+### chart of median playground use
+
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-9-1.png)
+
+
+
+### chart of max playground use
+
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-10-1.png)
+
+
+
 ### ratios of use and catchment
 
 
 
 #### chart of ratio of median park use and catchment
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-9-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-11-1.png)
 
 Notes:
 
@@ -289,7 +307,7 @@ The following parks were excluded for having “0” median users:
 
 #### chart of ratio of median playground use and catchment
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-10-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-12-1.png)
 
 Notes:
 
@@ -304,13 +322,13 @@ Cedarhurst El Sch (HSD)
 
 #### chart of median playground use by opportunity area status
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-11-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-13-1.png)
 
 
 
 #### chart of peak playground use by opportunity area status
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-12-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-14-1.png)
 
 
 
@@ -320,7 +338,7 @@ Cedarhurst El Sch (HSD)
 
 #### chart of median playground use by park category
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-13-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-15-1.png)
 
 Notes:
 
@@ -330,7 +348,7 @@ The following parks were excluded for not having category status:
 
 #### chart of peak playground use by park category
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-14-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-16-1.png)
 
 Notes:
 
@@ -344,7 +362,7 @@ The following parks were excluded for not having category status:
 
 #### chart of median playground use by number of playground elements
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-15-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-17-1.png)
 
 
 
@@ -356,7 +374,7 @@ The following parks were excluded for not having category status:
 
 #### chart of peak playground use by number of playground elements
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-16-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-18-1.png)
 
 
 
@@ -366,7 +384,7 @@ The following parks were excluded for not having category status:
 
 #### chart of median playground use by playground equipment age
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-17-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-19-1.png)
 
 Notes:
 
@@ -382,7 +400,7 @@ Playground (KCHA), Shorewood El Sch (HSD)
 
 #### chart of peak playground use by playground equipment age
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-18-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-20-1.png)
 
 Notes:
 
@@ -402,7 +420,7 @@ Playground (KCHA), Shorewood El Sch (HSD)
 
 #### chart of median playground use by restroom status and by park category
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-19-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-21-1.png)
 
 Notes:
 
@@ -416,7 +434,7 @@ The following parks were excluded for not having category status:
 
 #### chart of median playground use by sports field status and by park category
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-20-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-22-1.png)
 
 Notes:
 
@@ -434,7 +452,7 @@ age groups are 5-12 and 2-5. A playground may be designed to serve both.
 
 #### chart of median playground use by number of play elements and by primary age group
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-21-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-23-1.png)
 
 Notes:
 
@@ -444,7 +462,7 @@ The following parks were excluded for not having element status:
 
 #### chart of peak playground use by number of playground elements and by primary age group
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-22-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-24-1.png)
 
 Notes:
 
@@ -458,7 +476,7 @@ The following parks were excluded for not having element status:
 
 #### chart of median playground use by walkscore of park
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-23-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-25-1.png)
 
 
 
@@ -468,7 +486,7 @@ The following parks were excluded for not having element status:
 
 #### chart of median playground use by transit score of park
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-24-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-26-1.png)
 
 Notes:
 
@@ -491,7 +509,7 @@ across all days, rather than a daily average.
 
 ### chart of playground popularity by park category
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-25-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-27-1.png)
 
 Notes:
 
@@ -501,7 +519,7 @@ The following parks were excluded for not having category status:
 
 ### chart of playground popularity by play elements
 
-![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-26-1.png)
+![](01_Playground_Analysis_TA3rdround_files/figure-commonmark/unnamed-chunk-28-1.png)
 
 Notes:
 
